@@ -163,8 +163,10 @@ class FakeReaper(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0]
-        if path == "/_/TRANSPORT":
+        if path.startswith("/_/TRANSPORT"):           # + GET/EXTSTATE/ReaCue/mix (instruments) : vide
             body = f"TRANSPORT\t0\t{self.pos:.4f}\t0\t1.1.00\t1.1.00\n".encode()
+            if "GET/EXTSTATE/ReaCue/mix" in path:
+                body += b"EXTSTATE\tReaCue\tmix\t\n"
             ctype = "text/plain"
         elif path == "/reacue_song.json":
             body, ctype = json.dumps(self.song, ensure_ascii=False).encode("utf-8"), "application/json"

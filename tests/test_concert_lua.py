@@ -311,17 +311,22 @@ def test_window_detached(concert, lang):
     nxt = "Ensuite : 3 · Third Demo" if lang == "fr" else "Next: 3 · Third Demo"
     assert any(t.startswith(nxt) for t in T), T
     assert any(("mesure" if lang == "fr" else "bar") in t and "BPM" in t for t in T), T
-    bw = (gx.w - 28 - 32) / 5
-    bx = lambda k: 14 + k * (bw + 8) + bw / 2
-    frame(L, g, (bx(2), 140)); assert st.play == 1                     # Lecture
+    # transport : libellés des boutons (fenêtre ReaCue, onglet Scène)
+    lab = (lambda fr, en: fr if lang == "fr" else en)
+    def press(label):
+        xy = find_text(g, label); assert xy, (label, texts(g))
+        frame(L, g, (xy[0] + 2, xy[1] - 12))
+    press(lab("Lecture", "Play")); assert st.play == 1                  # Lecture
     st.pos = st.cursor
     frame(L, g)
     assert ("Pause" in texts(g)) and (("Lecture" if lang == "fr" else "Playing") in texts(g))
-    frame(L, g, (bx(3), 140)); assert st.play == 1                     # Stop : 1er appui = armé
+    press("Stop"); assert st.play == 1                                  # Stop : 1er appui = armé
     assert ("encore ?" if lang == "fr" else "again?") in texts(g)
     st.t += 0.5
-    frame(L, g, (bx(3), 140)); assert st.play == 0                     # 2e appui : stop
-    frame(L, g, (bx(4), 140))                                          # à l'arrêt : Suivant en un appui
+    xy = find_text(g, "encore ?" if lang == "fr" else "again?"); frame(L, g, (xy[0] + 2, xy[1] - 12))
+    assert st.play == 0                                                  # 2e appui : stop
+    frame(L, g)
+    press(lab("Suivant", "Next"))                                        # à l'arrêt : Suivant en un appui
     assert st.cursor == pytest.approx(res.songs[2]["start"])
     st.cursor = res.songs[1]["bar1"] + 1.0; frame(L, g)
     xy = find_text(g, "Solo"); assert xy
@@ -370,12 +375,12 @@ def test_window_docked_and_empty(concert, tmp_path):
     g.state.pos = res.songs[1]["stop"] - 0.2; frame(L, g)
     g.state.pos = res.songs[1]["stop"] + 0.05; frame(L, g)
     assert g.state.play == 0 and g.state.cursor == pytest.approx(res.songs[2]["start"])
-    # sans concert : liste des concerts à ouvrir
+    # sans concert : onglet Scène vide, concerts existants à ouvrir
     L2, g2 = runtime(concert, lang="en", proj=tmp_path / "other.RPP")
     window(L2, g2)
     frame(L2, g2); frame(L2, g2)
     T = texts(g2)
-    assert "No concert in this project" in T and any("Concert test" in t for t in T), T
+    assert "No concert or song open" in T and any("Concert test" in t for t in T), T
     st = g2.state
     st.ext["remote"] = f"toggle||{st.persist['remote_pin']}|z1"; frame(L2, g2)
     assert st.ext["remote_ack"] == "z1|noconcert"

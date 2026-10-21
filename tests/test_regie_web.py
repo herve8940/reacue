@@ -20,13 +20,17 @@ PAGE = (ROOT / "reacue_mcp" / "web" / "prompteur.html").read_text(encoding="utf-
 
 TXT = {
     "fr": {"pick": "Régie", "state_play": "Lecture", "state_stop": "Arrêt", "pin4": "4 chiffres.",
-           "bad": "incorrect", "again": "Encore ?", "closed": "Ouvre la fenêtre ReaCue - Concert",
+           "bad": "incorrect", "again": "Encore ?", "closed": "Ouvre la fenêtre ReaCue sur",
            "noanswer": "Pas de réponse", "pin_foot": "Code PIN : 2468", "reh": "Répétition", "reh_on": "Répétition ✓",
-           "banner": "Répétition · boucle : ", "loopoff": "Boucle off"},
+           "banner": "Répétition · boucle : ", "loopoff": "Boucle off", "drums": "Batterie", "vocals": "Chant",
+           "cut": "coupé", "on": "joué", "solo": "solo", "hear": "Tout entendre",
+           "stem_cut": "ton stem est coupé", "stem_on": "ton stem est joué"},
     "en": {"pick": "Stage control", "state_play": "Playing", "state_stop": "Stopped", "pin4": "4 digits.",
-           "bad": "Wrong", "again": "Again?", "closed": "Open the ReaCue - Concert window",
+           "bad": "Wrong", "again": "Again?", "closed": "Open the ReaCue window",
            "noanswer": "No answer", "pin_foot": "PIN code: 2468", "reh": "Rehearsal", "reh_on": "Rehearsal ✓",
-           "banner": "Rehearsal · loop: ", "loopoff": "Loop off"},
+           "banner": "Rehearsal · loop: ", "loopoff": "Loop off", "drums": "Drums", "vocals": "Vocals",
+           "cut": "muted", "on": "playing", "solo": "solo", "hear": "Hear everything",
+           "stem_cut": "your stem is muted", "stem_on": "your stem is playing"},
 }
 
 
@@ -37,6 +41,8 @@ class Fake:
         self.C = self.M.load_concert()
         self.st = self.g.state
         self.M.set_remote_pin("2468")
+        self.L.execute("""TRACKS = { {name="Chant"}, {name="Batterie"}, {name="Basse"}, {name="Guitares"},
+                                     {name="CUES"}, {name="VOIX"}, {name="CLICK"} }""")
         self.alive = True
         self.log = []
         self.lock = threading.Lock()
@@ -82,6 +88,7 @@ class Fake:
                             fake.M.remote_alive(st.t)
                             fake.M.poll_seen(st.t)
                             fake.M.remote_poll(fake.C)
+                            fake.M.mix_tick(fake.C, st.t)
                         if st.play == 1:
                             st.pos = st.pos + 0.02
                     return self.send("\n".join(out) + "\n")
@@ -153,6 +160,25 @@ def test_regie_end_to_end(TL_concert, lang):
             assert st.pos == pytest.approx(exp, abs=0.3) and st.play == 1
             pg.click("#rHome"); pg.wait_for_timeout(300)        # pendant la lecture : sans confirmation
             pg.wait_for_timeout(400)
+            # instruments : mute (appui), solo (appui long), tout entendre
+            pg.click("#rStop"); pg.click("#rStop"); pg.wait_for_timeout(600)
+            assert st.play == 0
+            mut = lambda n: next(t.mute or 0 for t in fake.g.TRACKS.values() if t.name == n)
+            assert pg.is_visible("#rMix") and pg.inner_text("#rMixT").lower().startswith("instruments")
+            drums = "#rMix button[data-r=drums]"
+            assert tx["drums"] in pg.inner_text(drums) and tx["on"] in pg.inner_text(drums)
+            pg.click(drums); pg.wait_for_timeout(700)
+            assert mut("Batterie") == 1 and tx["cut"] in pg.inner_text(drums) and "cut" in pg.get_attribute(drums, "class")
+            voc = "#rMix button[data-r=vocals]"
+            pg.hover(voc); pg.mouse.down(); pg.wait_for_timeout(800); pg.mouse.up(); pg.wait_for_timeout(600)
+            assert mut("Chant") == 0 and mut("Basse") == 1 and mut("Guitares") == 1
+            assert tx["solo"] in pg.inner_text(voc)
+            pg.click("#rHearAll"); pg.wait_for_timeout(700)
+            assert {mut(n) for n in ("Chant", "Batterie", "Basse", "Guitares")} == {0}
+            assert "on" in pg.get_attribute("#rHearAll", "class") and pg.inner_text("#rHearAll") == tx["hear"]
+            pg.click("#rHearAll"); pg.wait_for_timeout(700)
+            assert any("mute%7Cdrums%7C2468" in x or "mute|drums|2468" in x for x in fake.log)
+            pg.click("#rHome"); pg.wait_for_timeout(300)
             # mode répétition : boucle sur une section (1 mesure avant), vitesse, boucle off, sortie
             assert pg.inner_text("#rRehBtn") == tx["reh"] and not pg.is_visible("#rLoopOff")
             pg.click("#rRehBtn"); pg.wait_for_timeout(700)
@@ -180,12 +206,19 @@ def test_regie_end_to_end(TL_concert, lang):
             # PIN mémorisé après rechargement ; autres rôles : aucune requête Régie
             pg.reload(); pg.wait_for_timeout(800)
             assert pg.is_visible("#regie") and tx["pin_foot"] in pg.inner_text("#rFootL")
+            # musiciens : seulement l'état des stems (« ton stem est coupé / joué ») ; vue générale : rien
+            fake.M.mix_toggle(fake.C, "drums")
             for r in ["drums", "vocals", "all"]:
-                pg.evaluate(f"localStorage.setItem('reacue_role','{r}')"); pg.reload(); pg.wait_for_timeout(600)
+                pg.evaluate(f"localStorage.setItem('reacue_role','{r}')"); pg.reload(); pg.wait_for_timeout(900)
                 assert not pg.is_visible("#regie")
-            n0 = len(fake.log)
-            pg.wait_for_timeout(500)
-            assert all(not x.startswith("GET/EXTSTATE") for x in fake.log[n0:])
+                n0 = len(fake.log)
+                pg.wait_for_timeout(400)
+                got = {x for x in fake.log[n0:] if x.startswith(("GET/EXTSTATE", "SET/EXTSTATE"))}
+                if r == "all":
+                    assert not got and not pg.is_visible("#stemNote")
+                else:
+                    assert got == {"GET/EXTSTATE/ReaCue/mix"}, got
+                    assert pg.inner_text("#stemNote") == (tx["stem_cut"] if r == "drums" else tx["stem_on"])
             br.close()
     finally:
         srv.shutdown()

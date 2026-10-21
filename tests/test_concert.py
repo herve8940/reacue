@@ -156,3 +156,54 @@ def test_mcp_build_concert_and_set_sections(demo, tmp_path, bridge_dir, lang, mo
     assert out2["concert"] == "Concert MCP 2" and (tmp_path / "Shows" / "Concert MCP 2.RPP").exists()
     bad = asyncio.run(server.build_concert("X", ["nope"]))
     assert "error" in bad
+
+
+def test_live_profile_build_rebuild_and_edit(demo, tmp_path):
+    """« Joué en live » : profil enregistré dans la setlist, gardé à la reconstruction, modifiable sans
+    reconstruire ; noms FR/EN acceptés ; exceptions par morceau nettoyées."""
+    res = build(demo, tmp_path, live=["Batterie", "bass", "Guitares"],
+                live_exceptions={"Second Demo": {"Basse": "stem"}, "3": ["keys"]})
+    d = json.loads(res.setlist.read_text(encoding="utf-8"))
+    assert d["live"] == ["drums", "bass", "guitars"]
+    assert d["live_exceptions"] == {"Second Demo": {"bass": "stem"}, "Third Demo": {"keys": "live"}}
+    s = res.summary()
+    assert s["joue_en_live"] == ["Batterie", "Basse", "Guitares"] and "Second Demo" in s["exceptions_par_morceau"]
+    # reconstruction depuis la setlist : profil gardé
+    res2 = C.build_from_setlist(res.setlist, publish=False)
+    assert json.loads(res2.setlist.read_text(encoding="utf-8"))["live"] == ["drums", "bass", "guitars"]
+    # reconstruction sans profil donné (build_concert) : celui déjà enregistré est repris
+    res3 = build(demo, tmp_path)
+    assert json.loads(res3.setlist.read_text(encoding="utf-8"))["live_exceptions"]["Second Demo"] == {"bass": "stem"}
+    # modification sans reconstruire
+    out = C.set_live_profile(res.setlist, live=["Drums"], exceptions={"Second Demo": None, "Demo Song": {"vocals": "live"}})
+    d = json.loads(res.setlist.read_text(encoding="utf-8"))
+    assert d["live"] == ["drums"] and d["live_exceptions"] == {"Demo Song": {"vocals": "live"}, "Third Demo": {"keys": "live"}}
+    assert out["joue_en_live"] == ["Batterie"] and "reconstruire" in out["info"]
+    out = C.set_live_profile(res.setlist, exceptions={}, replace_exceptions=True)
+    assert json.loads(res.setlist.read_text(encoding="utf-8"))["live_exceptions"] == {}
+    with pytest.raises(ValueError):
+        C.set_live_profile(res.setlist, live=["trombone"])
+    with pytest.raises(ValueError):
+        C.set_live_profile(res.setlist, exceptions={"Nope": {"bass": "stem"}})
+    with pytest.raises(FileNotFoundError):
+        C.set_live_profile(tmp_path / "missing.setlist.json")
+
+
+def test_mcp_live_profile(demo, tmp_path, bridge_dir, lang, monkeypatch):
+    import asyncio
+    from reacue_mcp import server
+    lang("en", concert_dir=str(tmp_path / "Shows"))
+    monkeypatch.setattr(server, "_spawn_concert_extras", lambda p: None)
+    out = asyncio.run(server.build_concert("Gig", [str(p) for p in demo], 4.0, ["Drums", "Bass"]))
+    assert out["joue_en_live"] == ["Drums", "Bass"]
+    sl = tmp_path / "Shows" / "Gig.setlist.json"
+    out = asyncio.run(server.set_live_profile("Gig", ["vocals"], {"Second Demo": {"keys": "live"}}))
+    assert out["joue_en_live"] == ["Vocals"] and "rebuild" in out["info"]
+    assert json.loads(sl.read_text(encoding="utf-8"))["live_exceptions"] == {"Second Demo": {"keys": "live"}}
+    # même chose par set_sections (liste d'outils figée)
+    out = asyncio.run(server.set_sections([{"concert_live": {"concert": "Gig", "live": []}}]))
+    assert out["joue_en_live"] == [] and json.loads(sl.read_text(encoding="utf-8"))["live"] == []
+    out = asyncio.run(server.set_sections([{"concert": {"name": "Gig 2", "songs": [str(demo[0])], "live": ["keys"]}}]))
+    assert json.loads((tmp_path / "Shows" / "Gig 2.setlist.json").read_text(encoding="utf-8"))["live"] == ["keys"]
+    bad = asyncio.run(server.set_live_profile("Nope"))
+    assert "error" in bad
