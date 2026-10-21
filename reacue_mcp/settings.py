@@ -29,6 +29,8 @@ DEFAULTS: dict = {
     "tempo_mode": "auto",        # auto | constant | beatmap
     "count_rate": 240,           # débit du décompte (mots/min)
     "stems_model": "htdemucs_6s",  # séparation de stems (action REAPER) : htdemucs_6s (6 stems) | htdemucs (4)
+    "projects_dir": None,        # mode concert : dossier des projets des morceaux ; None = <Documents>/REAPER Media
+    "concert_dir": None,         # mode concert : dossier des concerts ; None = <dossier des projets>/Concerts
 }
 
 LANGS = ("fr", "en")

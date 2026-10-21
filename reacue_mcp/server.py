@@ -374,8 +374,15 @@ async def set_sections(sections: list[dict]) -> dict:
     Option : ajouter un élément {"grid": {"bpm": 168, "bar1_s": 8.6, "n_bars": 185}} pour imposer en même
     temps une grille à tempo constant (bar1_s = début de la mesure 1 dans le fichier de référence).
     Les noms de sections sont libres, en français ou en anglais (Verse, Chorus…).
+    Mode concert : un élément {"concert": {"name": "Concert du 15/11", "songs": ["Song A", "Song B", …],
+    "gap_s": 4}} construit un projet concert à partir des projets déjà préparés de chaque morceau
+    (même effet que build_concert) ; le dernier morceau préparé n'est pas modifié.
     """
     use_settings_lang()
+    conc = next((d["concert"] for d in sections if isinstance(d, dict) and isinstance(d.get("concert"), dict)), None)
+    if conc is not None:
+        return await build_concert(conc.get("name") or "Concert", list(conc.get("songs") or []),
+                                   float(conc.get("gap_s", 4.0)))
     a, item, opts, items = _load()
     # option : {"prompteur_seul": true} = republier seulement le prompteur, sans toucher à REAPER
     only = any(isinstance(d, dict) and (d.get("prompteur_seul") or d.get("publish_only")) for d in sections)
@@ -506,6 +513,54 @@ async def goto_section(name: str | None = None, index: int | None = None) -> dic
 async def transport(action: Literal["play", "stop", "pause"]) -> dict:
     """Lecture / stop / pause dans REAPER."""
     return await bridge.call("transport", {"action": action})
+
+
+def _spawn_concert_extras(setlist: Path):
+    """Accords, paroles, batterie et entrées par morceau : calcul long, lancé en arrière-plan."""
+    import subprocess
+    import sys
+    log = BRIDGE_DIR / "cli.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    root = Path(__file__).resolve().parent.parent
+    kw = {}
+    if os.name == "nt":
+        kw["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
+    else:
+        kw["start_new_session"] = True
+    with open(log, "a", encoding="utf-8") as f:
+        subprocess.Popen([sys.executable, "-m", "reacue_mcp.cli", "concert-extras", "--setlist", str(setlist),
+                          "--resource-dir", str(BRIDGE_DIR.parent)],
+                         cwd=str(root), stdout=f, stderr=f, stdin=subprocess.DEVNULL, **kw)
+
+
+@mcp.tool()
+async def build_concert(name: str, songs: list[str], gap_s: float = 4.0) -> dict:
+    """Mode concert : enchaîne plusieurs morceaux DÉJÀ PRÉPARÉS dans un seul projet REAPER.
+
+    name : nom du concert (fichier <dossier des concerts>/<name>.RPP ; réglage concert_dir,
+    défaut <Documents>/REAPER Media/Concerts).
+    songs : morceaux dans l'ordre, par nom de projet (« Demo Song ») ou chemin .RPP.
+    gap_s : blanc minimum entre deux morceaux (arrondi à des mesures entières).
+    Chaque morceau est repris de son projet (stems, tempo, structure validée, annonces, click) sans
+    réanalyse. Le projet en cours n'est pas touché : dans REAPER, l'action « ReaCue - Concert » ouvre le
+    concert dans un nouvel onglet, arrête la lecture à la fin de chaque morceau et place le curseur au
+    début du suivant (Espace relance). Le prompteur suit tout le concert ; accords, paroles et batterie de
+    chaque morceau s'ajoutent en arrière-plan (quelques minutes la première fois).
+    """
+    use_settings_lang()
+    from . import concert as conc
+    try:
+        res = await asyncio.to_thread(conc.build_concert, name, songs, gap_s)
+    except (FileNotFoundError, ValueError) as e:
+        return {"error": str(e)}
+    out = res.summary()
+    try:
+        _spawn_concert_extras(res.setlist)
+        out["prompteur"] = t("concert_extras_spawned")
+    except Exception as e:
+        out["warnings"].append(t("concert_extras_not_spawned", e=e))
+    out["ouvrir"] = t("concert_open_hint")
+    return out
 
 
 def main():

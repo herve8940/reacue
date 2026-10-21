@@ -62,9 +62,12 @@ def _shifts(items: list[dict]) -> dict[str, float]:
     return {d["file"]: t0(d) - t0(ref) for d in items}
 
 
-def stem_activity(a: Analysis, items: list[dict] | None, min_share: float = 0.2) -> dict[str, list[int]]:
+def stem_activity(a: Analysis, items: list[dict] | None, min_share: float = 0.2,
+                  cache: Path | None = None) -> dict[str, list[int]]:
     """{rôle: [1 si l'instrument joue dans la mesure, sinon 0]} ; vide sans stems.
-    Seuil relatif au niveau actif du stem (p90 − 20 dB) : la repisse est ignorée."""
+    Seuil relatif au niveau actif du stem (p90 − 20 dB) : la repisse est ignorée.
+    cache : fichier de cache (défaut : un seul morceau mémorisé dans ReaCueMCP ; mode concert : un par morceau)."""
+    cache = Path(cache) if cache else CACHE
     if not items or len(items) < 2:
         return {}
     import librosa
@@ -75,7 +78,7 @@ def stem_activity(a: Analysis, items: list[dict] | None, min_share: float = 0.2)
     key = hashlib.md5(json.dumps([files, [round(shifts[f], 4) for f in files],
                                   a.downbeats[:1], a.downbeats[-1:], len(a.downbeats)]).encode()).hexdigest()
     try:
-        c = json.loads(CACHE.read_text(encoding="utf-8"))
+        c = json.loads(cache.read_text(encoding="utf-8"))
         if c.get("key") == key:
             return c["activity"]
     except Exception:
@@ -95,8 +98,8 @@ def stem_activity(a: Analysis, items: list[dict] | None, min_share: float = 0.2)
         share = _bar_agg(act, frames, len(act))
         out[role] = [int(s >= min_share) for s in share]
     try:
-        CACHE.parent.mkdir(parents=True, exist_ok=True)
-        CACHE.write_text(json.dumps({"key": key, "activity": out}), encoding="utf-8")
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps({"key": key, "activity": out}), encoding="utf-8")
     except OSError:
         pass
     return out
