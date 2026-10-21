@@ -226,7 +226,10 @@ répétition, la télécommande Régie et le profil « joué en live ».
 
 *(Morceaux de démonstration inventés.)*
 
-- **Morceau** — le projet ouvert : état (préparé, tempo, mesures, tonalité).
+- **Morceau** — le projet ouvert : état (préparé, tempo, mesures, tonalité, enregistré ou non) et
+  **+ Nouveau morceau** (un fichier ou un dossier de stems, copiés dans le dossier des projets, nouvel onglet).
+  Après *Séparer stems*, *Préparer* ou *Appliquer* réussis depuis la fenêtre, le projet du morceau est
+  enregistré automatiquement.
   **1. Préparer** : *Séparer stems* (un seul MP3/WAV), *Préparer*, *Réanalyser* (recalcule la structure,
   après confirmation), *Republier* (prompteur) ; l'avancement s'affiche dans l'onglet.
   **2. Structure** : les sections avec leur première mesure et leur longueur (en orange si ce n'est pas 4, 8
@@ -246,9 +249,12 @@ répétition, la télécommande Régie et le profil « joué en live ».
 
 ## Utilisation
 
-1. **Importe le morceau** dans un projet REAPER, un stem par piste, tous calés au même départ (glisser-déposer
-   des fichiers). Un seul MP3/WAV marche aussi, avec moins de détails — ou sépare-le d'abord avec
-   **ReaCue - Séparer les stems** (voir plus haut).
+1. **Importe le morceau** : dans la fenêtre ReaCue, **+ Nouveau morceau** (onglet Morceau, ou sous la liste
+   de l'onglet Concert) → un fichier (MP3, WAV…) ou un dossier de stems → titre. ReaCue copie les fichiers dans
+   `<dossier des projets>/<Titre>/`, ouvre un nouvel onglet avec un fichier par piste et enregistre
+   `<Titre>/<Titre>.RPP` (un morceau existant n'est jamais écrasé). À la main, ça marche aussi : un stem par
+   piste, tous calés au même départ (glisser-déposer). Un seul MP3/WAV marche avec moins de détails — mieux
+   vaut le séparer d'abord avec **Séparer stems** (voir plus haut).
    - Le rôle de chaque stem est lu dans le **nom du fichier** : `drum`/`batterie`/`kick`/`perc`,
      `bass`/`basse`, `guitar`/`guitare`/`gtr` (`lead`/`solo` = guitare solo), `vocal`/`voice`/`vox`/`chant`/`voix` ;
      tout le reste compte comme claviers/autre.

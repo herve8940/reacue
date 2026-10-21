@@ -192,6 +192,31 @@ port everywhere below). On Windows, if the firewall asks about REAPER, tick **Pr
 **One REAPER project per song.** ReaCue replaces the regions, the tempo map and the CLICK / CUES / VOICE
 tracks every time it prepares a song: do not put several songs in the same project.
 
+### The easy way: “+ New song”
+
+1. Open the **ReaCue** window (action **ReaCue**). The **+ New song** button is at the top of the **Song**
+   tab (and under the list of songs in the **Concert** tab).
+2. Click it and choose:
+   - **One file (MP3, WAV…)**: pick the song's file;
+   - **Stems (a folder)**: pick **one of the stem files** — every audio file in the same folder is used (with
+     the *js_ReaScriptAPI* extension installed, you pick the folder directly).
+3. ReaCue suggests a **title** from the name (without “-Bass-”, the key, the BPM, “Official Video”…): fix it
+   if needed, **OK**. If a song with that title already exists, ReaCue asks for another title: nothing is
+   ever overwritten.
+4. ReaCue **copies** the files to `Documents/REAPER Media/<Title>/` (progress in the tab; file names are
+   kept), opens a **new project tab** (your open project is not touched), puts **one file per track** at the
+   start, and **saves** the project `<Title>/<Title>.RPP`.
+
+**You should see** the new project's **Song** tab with “not prepared yet” and the next step: **Split stems**
+(single file, step 9) or **Prepare** (stems, step 10). The song also appears in the **Concert** tab's list
+(orange until it is prepared; click its name to open it).
+
+> Copying the files avoids the “OFFLINE” problem with files left in *Downloads* on a Mac. After a successful
+> **Split stems**, **Prepare** or **Apply** from the window, the song's project is **saved automatically**
+> (“saved ✓” in the tab): the concert always finds its sections and tempo.
+
+### Other way (by hand)
+
 1. Create a folder for the song, for example `Documents/REAPER Media/Demo Song/`.
 2. **Copy the song's audio files into it** (stems or MP3).
    > ⚠️ On a Mac, avoid leaving the files in *Downloads*: macOS may prevent REAPER from reading them (the
@@ -199,10 +224,13 @@ tracks every time it prepares a song: do not put several songs in the same proje
 3. In REAPER: **File → New project**.
 4. **File → Save project as…**, pick the song's folder, name the project (`Demo Song`) and tick **Copy all
    media into project directory** if the option is offered. **Save**.
+5. Import the audio (step 8).
 
 ---
 
 ## 8. Import the audio: stems or a single MP3
+
+*Not needed if you used **+ New song** (step 7): just read the file-name table.*
 
 ### Case A: you have the stems
 
@@ -749,15 +777,13 @@ needs to run during rehearsal: Claude is not needed.
 
 ## 19. Cheat sheet: a new song, a concert
 
-1. Song folder in `Documents/REAPER Media/`, audio files copied into it.
-2. REAPER: *File → New project*, then *File → Save project as…* in that folder.
-3. Drag the stems (one per track) **or** the MP3.
-4. **ReaCue** window, **Song** tab. MP3 only: select the item → **Split stems** (5 to 8 min).
-5. **Prepare**.
-6. Check the structure (lengths in orange, names); if needed **Name** / **◀ ▶** / **✕** / **+ Section**, then **Apply**.
-7. Optional: `lyrics.txt` next to the files → **Republish**.
-8. Save the project (**Cmd+S** / **Ctrl+S**).
-9. Phones: `http://<IP>:8080/prompteur.html`, pick your role.
+1. **ReaCue** window → **+ New song** → one file **or** a folder of stems → title → **OK** (copied to
+   `Documents/REAPER Media/<Title>/`, new tab, project saved).
+2. MP3 only: **Split stems** (5 to 8 min).
+3. **Prepare** (the project is saved automatically).
+4. Check the structure (lengths in orange, names); if needed **Name** / **◀ ▶** / **✕** / **+ Section**, then **Apply**.
+5. Optional: `lyrics.txt` next to the files → **Republish**.
+6. Phones: `http://<IP>:8080/prompteur.html`, pick your role.
 
 **A concert:**
 

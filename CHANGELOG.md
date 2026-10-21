@@ -3,6 +3,18 @@
 ## 0.12.0-beta — 2026-10
 
 ### Added / Ajouts
+- **“+ New song” / « + Nouveau morceau »** (Song tab header, under the Concert tab's song list): one file
+  (MP3, WAV, AIFF, FLAC, OGG, M4A) or a folder of stems (REAPER's file dialog: pick one stem and its folder is
+  used; with js_ReaScriptAPI, `JS_Dialog_BrowseForFolder`). Title suggested from the name (no “-Bass-”, key,
+  BPM, “441hz”, “Official … Video”), confirmed, never overwrites an existing song. Files copied (block by
+  block in the background, size checked) to `<projects folder>/<Title>/` with their original names, new
+  project tab, one file per track at 0 s, project saved as `<Title>/<Title>.RPP`, then the Song tab shows the
+  next step (*Split stems* for a single file, otherwise *Prepare*). New `reaper/ReaCue_newsong.lua`.
+  Claude: new tool `new_song(files, title)` (`reacue_mcp/newsong.py`: same copy and project file).
+  Ajouter un nouveau morceau (MP3 ou stems) depuis la fenêtre.
+- **Automatic save of the song's project** after a successful *Split stems*, *Prepare*, *Apply* or
+  *Re-analyse* started from the window (never a concert project); “saved ✓” / “not saved” in the Song tab.
+  Concert tab: click a song's name to open it in a new tab.
 - **The ReaCue window / la fenêtre ReaCue** (new main action **ReaCue**, `reaper/ReaCue.lua`): one window with
   four tabs — **Song** (status; *Split stems*, *Prepare*, *Re-analyse*, *Republish* with the progress in the
   tab; structure list with first bar and length, odd lengths in orange, click = go and listen, rename, move

@@ -220,7 +220,9 @@ concert's automatic stop, the rehearsal loop, the Stage control remote and the �
 
 *(Made-up demo songs.)*
 
-- **Song** — the project that is open: status (prepared, tempo, bars, key).
+- **Song** — the project that is open: status (prepared, tempo, bars, key, saved / not saved) and
+  **+ New song** (a file or a folder of stems, copied into the projects folder, new project tab). After a
+  successful *Split stems*, *Prepare* or *Apply* from the window, the song's project is saved automatically.
   **1. Prepare**: *Split stems* (a single MP3/WAV), *Prepare*, *Re-analyse* (computes the structure again,
   after a confirmation), *Republish* (prompter); the progress shows in the tab.
   **2. Structure**: the sections with their first bar and length (orange when not 4, 8 or 16 bars); click a
@@ -239,9 +241,12 @@ concert's automatic stop, the rehearsal loop, the Stage control remote and the �
 
 ## Usage
 
-1. **Import the song** into a REAPER project, one stem per track, all starting at the same time (drag and
-   drop the files). A single MP3/WAV also works, with less detail — or split it first with
-   **ReaCue - Separate stems** (see above).
+1. **Import the song**: in the ReaCue window, **+ New song** (Song tab, or under the Concert tab's list) →
+   one file (MP3, WAV…) or a folder of stems → title. ReaCue copies the files to
+   `<projects folder>/<Title>/`, opens a new project tab with one file per track and saves
+   `<Title>/<Title>.RPP` (an existing song is never overwritten). By hand also works: one stem per track, all
+   starting at the same time (drag and drop). A single MP3/WAV works with less detail — better split it first
+   with **Split stems** (see above).
    - The role of each stem is read from its **file name**: `drum`/`batterie`/`kick`/`perc`, `bass`/`basse`,
      `guitar`/`guitare`/`gtr` (`lead`/`solo` = lead guitar), `vocal`/`voice`/`vox`/`chant`/`voix`;
      anything else counts as keys/other.

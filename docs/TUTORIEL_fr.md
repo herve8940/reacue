@@ -195,6 +195,33 @@ coche **Réseaux privés** et clique **Autoriser**.
 **Un projet REAPER par morceau.** ReaCue remplace les régions, le tempo et les pistes CLICK / CUES / VOIX à
 chaque préparation : ne mets pas plusieurs morceaux dans le même projet.
 
+### Le plus simple : « + Nouveau morceau »
+
+1. Ouvre la fenêtre **ReaCue** (action **ReaCue**). Le bouton **+ Nouveau morceau** est en haut de l'onglet
+   **Morceau** (et sous la liste des morceaux de l'onglet **Concert**).
+2. Clique dessus et choisis :
+   - **Un fichier (MP3, WAV…)** : choisis le fichier du morceau ;
+   - **Des stems (un dossier)** : choisis **un des fichiers de stems** — tous les fichiers audio du même
+     dossier sont pris (si l'extension *js_ReaScriptAPI* est installée, tu choisis directement le dossier).
+3. ReaCue propose un **titre** déduit du nom (sans « -Bass- », la tonalité, le BPM, « Official Video »…) :
+   corrige-le si besoin, **OK**. Si un morceau de ce titre existe déjà, ReaCue te demande un autre titre :
+   rien n'est jamais écrasé.
+4. ReaCue **copie** les fichiers dans `Documents/REAPER Media/<Titre>/` (la progression s'affiche dans
+   l'onglet ; les noms des fichiers sont gardés), ouvre un **nouvel onglet de projet** (ton projet ouvert
+   n'est pas touché), place **un fichier par piste** au début, et **enregistre** le projet
+   `<Titre>/<Titre>.RPP`.
+
+**Tu dois voir** l'onglet **Morceau** du nouveau projet avec « pas encore préparé » et l'étape suivante :
+**Séparer stems** (un seul fichier, étape 9) ou **Préparer** (stems, étape 10). Le morceau apparaît aussi
+dans la liste de l'onglet **Concert** (en orange tant qu'il n'est pas préparé ; un clic sur son nom l'ouvre).
+
+> Copier les fichiers évite le problème des fichiers « OFFLINE » laissés dans *Téléchargements* sur Mac.
+> Après **Séparer stems**, **Préparer** ou **Appliquer** réussis depuis la fenêtre, le projet du morceau est
+> **enregistré automatiquement** (« enregistré ✓ » dans l'onglet) : le concert retrouvera toujours ses
+> sections et son tempo.
+
+### Autre méthode (à la main)
+
 1. Crée un dossier pour le morceau, par exemple `Documents/REAPER Media/Demo Song/`.
 2. **Copie dedans les fichiers audio du morceau** (stems ou MP3).
    > ⚠️ Sur Mac, évite de laisser les fichiers dans *Téléchargements* : macOS peut empêcher REAPER de les
@@ -202,10 +229,13 @@ chaque préparation : ne mets pas plusieurs morceaux dans le même projet.
 3. Dans REAPER : **File → New project**.
 4. **File → Save project as…**, choisis le dossier du morceau, nomme le projet (`Demo Song`), et coche
    **Copy all media into project directory** si l'option est proposée. **Save**.
+5. Importe l'audio (étape 8).
 
 ---
 
 ## 8. Importer l'audio : des stems ou un seul MP3
+
+*Inutile si tu as utilisé **+ Nouveau morceau** (étape 7) : lis seulement le tableau des noms de fichiers.*
 
 ### Cas A : tu as les stems
 
@@ -769,15 +799,13 @@ boucle) doit tourner pendant la répétition : Claude n'est pas nécessaire.
 
 ## 19. Pense-bête : un nouveau morceau, un concert
 
-1. Dossier du morceau dans `Documents/REAPER Media/`, fichiers audio copiés dedans.
-2. REAPER : *File → New project*, puis *File → Save project as…* dans ce dossier.
-3. Glisser les stems (un par piste) **ou** le MP3.
-4. Fenêtre **ReaCue**, onglet **Morceau**. MP3 seul : sélectionner l'item → **Séparer stems** (5 à 8 min).
-5. **Préparer**.
-6. Vérifier la structure (longueurs en orange, noms) ; au besoin **Nom** / **◀ ▶** / **✕** / **+ Section**, puis **Appliquer**.
-7. Facultatif : `paroles.txt` à côté des fichiers → **Republier**.
-8. Enregistrer le projet (**Cmd+S** / **Ctrl+S**).
-9. Téléphones : `http://<IP>:8080/prompteur.html`, choisir son rôle.
+1. Fenêtre **ReaCue** → **+ Nouveau morceau** → un fichier **ou** un dossier de stems → titre → **OK**
+   (copie dans `Documents/REAPER Media/<Titre>/`, nouvel onglet, projet enregistré).
+2. MP3 seul : **Séparer stems** (5 à 8 min).
+3. **Préparer** (le projet est enregistré automatiquement).
+4. Vérifier la structure (longueurs en orange, noms) ; au besoin **Nom** / **◀ ▶** / **✕** / **+ Section**, puis **Appliquer**.
+5. Facultatif : `paroles.txt` à côté des fichiers → **Republier**.
+6. Téléphones : `http://<IP>:8080/prompteur.html`, choisir son rôle.
 
 **Un concert :**
 
