@@ -74,8 +74,9 @@ async def _run(cmd: str, args) -> dict:
     if cmd == "prepare":
         # morceau déjà préparé (mêmes pistes) : on reconstruit en gardant la structure validée
         if not args.reanalyse and await _same_song(server):
+            # régions modifiées à la main dans REAPER : reprises comme structure (update_options)
             res = await server.update_options(**_changed_settings(server))
-            res["_title"] = t("cli_rebuilt")
+            res["_title"] = t("cli_from_regions") if res.get("structure_from_regions") else t("cli_rebuilt")
             return res
         kw = {}
         if args.bpm:
@@ -111,13 +112,7 @@ async def _same_song(server) -> bool:
         _, item, _, items = server._load()
     except Exception:
         return False
-    try:
-        found = (await server.bridge.call("get_audio_items")).get("items") or []
-    except Exception:
-        return False
-    want = items or [item]
-    key = lambda L: sorted((d.get("guid"), d.get("file")) for d in L)
-    return bool(found) and key(found) == key(want)
+    return await server._same_song(item, items)
 
 
 def main(argv=None):

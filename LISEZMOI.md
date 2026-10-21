@@ -5,7 +5,7 @@
 *[English version: README.md](README.md)*
 
 ReaCue s'adresse aux groupes qui jouent en live avec REAPER. À partir des stems d'un morceau (ou d'un seul
-MP3), il détecte le tempo, la grille des mesures et la structure, puis construit tout dans le projet REAPER :
+MP3, qu'il sait séparer lui-même en stems, en local), il détecte le tempo, la grille des mesures et la structure, puis construit tout dans le projet REAPER :
 carte de tempo, régions nommées et colorées, click avec count-in, annonces vocales (« Refrain »…) et décompte
 « one two three four » avant chaque section. Il publie aussi un **prompteur web** que chaque musicien ouvre
 sur son téléphone, servi par l'interface web intégrée de REAPER : structure, accords (basse / guitares),
@@ -14,7 +14,10 @@ paroles calées (chant) et une vue batteur dédiée avec les grooves et les fill
 Tout tourne en local : ni IA ni internet une fois installé. Un mode facultatif permet de piloter ReaCue en
 langage naturel avec Claude (serveur MCP).
 
-> **État : 0.9.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
+> **Nouveau sur ReaCue ? Suis le tutoriel pas à pas : [docs/TUTORIEL_fr.md](docs/TUTORIEL_fr.md)**
+> (anglais : [docs/TUTORIAL_en.md](docs/TUTORIAL_en.md)).
+
+> **État : 0.10.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
 
 | Batterie | Basse | Chant | Guitare |
@@ -32,6 +35,7 @@ langage naturel avec Claude (serveur MCP).
 - [Prérequis](#prérequis)
 - [Installation](#installation)
 - [Activer l'interface web de REAPER (prompteur)](#activer-linterface-web-de-reaper-prompteur)
+- [Séparation de stems (facultatif)](#séparation-de-stems-facultatif)
 - [Utilisation](#utilisation)
 - [Paroles](#paroles)
 - [Réglages](#réglages)
@@ -56,6 +60,9 @@ Dans REAPER, à partir de l'audio déjà présent dans le projet :
 - **Piste VOIX** : annonce vocale (« Refrain ») sur l'avant-dernière mesure de chaque section et « one two
   three four » sur la dernière, routée comme le click. Utilise les voix du système (macOS `say`, Windows SAPI).
 - **Piste CUES** et marqueurs « → Refrain », lisibles d'un coup d'œil.
+- **Séparation de stems** (facultatif) : transforme un seul MP3/WAV en 6 stems (voix, batterie, basse,
+  guitare, piano, autres) avec [Demucs](https://github.com/facebookresearch/demucs), sur ton ordinateur, sans
+  abonnement ni envoi en ligne — puis ReaCue prépare le morceau à partir des stems.
 
 Sur les téléphones et tablettes des musiciens (prompteur web) :
 
@@ -85,7 +92,8 @@ Sur les téléphones et tablettes des musiciens (prompteur web) :
 
 - **REAPER 7** ou plus récent (la 6.x marche probablement, non testée).
 - **macOS 12+** (Intel ou Apple Silicon) ou **Windows 10/11** (bêta).
-- Environ 1,5 Go d'espace disque (environnement Python et bibliothèques).
+- Environ 1,5 Go d'espace disque (environnement Python et bibliothèques), plus 1,5 Go environ pour la
+  séparation de stems facultative.
 - **Internet seulement pendant l'installation** (téléchargement de Python et des bibliothèques). Rien n'est
   envoyé ensuite ; aucune parole n'est jamais téléchargée.
 - Pour le prompteur : téléphones et ordinateur sur le même réseau Wi-Fi.
@@ -102,11 +110,13 @@ Sur les téléphones et tablettes des musiciens (prompteur web) :
      `bash "Install ReaCue.command"`.
    - **Windows** : double-clic sur **`Install ReaCue.bat`**. Si SmartScreen affiche un avertissement :
      *Informations complémentaires* → *Exécuter quand même*.
-4. Réponds aux questions : langue (`fr` / `en`) et déclaration de ReaCue dans Claude Desktop (facultatif,
-   réponds *non* si tu n'utilises pas Claude).
-5. Lance REAPER. Le pont démarre tout seul et deux actions sont disponibles dans *Actions → Show action list* :
+4. Réponds aux questions : langue (`fr` / `en`), déclaration de ReaCue dans Claude Desktop (facultatif,
+   réponds *non* si tu n'utilises pas Claude) et installation de la **séparation de stems** (facultatif,
+   environ 1 Go à télécharger, 5 à 15 minutes ; voir [Séparation de stems](#séparation-de-stems-facultatif)).
+5. Lance REAPER. Le pont démarre tout seul et trois actions sont disponibles dans *Actions → Show action list* :
    - **ReaCue - Préparer le morceau**
    - **ReaCue - Republier le prompteur**
+   - **ReaCue - Séparer les stems** (fonctionne une fois la séparation de stems installée)
 
    Astuce : ajoute-les à une barre d'outils (clic droit sur une barre → *Customize toolbar* → *Add*).
 
@@ -116,12 +126,12 @@ et tes morceaux préparés sont conservés.
 Ce qu'il fait : installe [uv](https://docs.astral.sh/uv/) (gestionnaire Python d'Astral) si besoin, crée un
 environnement Python 3.12 privé dans le dossier `.venv` (paquets précompilés uniquement, aucun compilateur
 nécessaire), copie les scripts REAPER dans `<ressources REAPER>/Scripts/ReaCue/`, ajoute le pont à
-`Scripts/__startup.lua`, enregistre les deux actions dans `reaper-kb.ini` (seulement si REAPER est fermé) et
+`Scripts/__startup.lua`, enregistre les actions dans `reaper-kb.ini` (seulement si REAPER est fermé) et
 écrit `<ressources REAPER>/ReaCueMCP/reacue_settings.json`. Rien d'autre n'est modifié sur le système.
 
 Si REAPER était ouvert pendant l'installation, charge les actions une fois à la main : *Actions → Show action
-list → New action → Load ReaScript…* → choisis `ReaCue_Preparer.lua` et `ReaCue_Republier_prompteur.lua`
-dans `<ressources REAPER>/Scripts/ReaCue/`. (*Options → Show REAPER resource path* ouvre ce dossier.)
+list → New action → Load ReaScript…* → choisis `ReaCue_Preparer.lua`, `ReaCue_Republier_prompteur.lua` et
+`ReaCue_Separer_stems.lua` dans `<ressources REAPER>/Scripts/ReaCue/`. (*Options → Show REAPER resource path* ouvre ce dossier.)
 
 ## Activer l'interface web de REAPER (prompteur)
 
@@ -151,10 +161,46 @@ Conseils :
 - Le bouton **FR/EN** change la langue du prompteur sur ce téléphone (mémorisé).
 - Le point vert indique que la liaison avec REAPER est active.
 
+## Séparation de stems (facultatif)
+
+ReaCue donne ses meilleurs résultats avec des stems (un fichier par instrument). Si tu n'as que le MP3 d'un
+morceau, ReaCue peut le séparer pour toi avec [Demucs](https://github.com/facebookresearch/demucs)
+(recherche Meta AI, licence MIT), entièrement sur ton ordinateur : rien n'est envoyé en ligne, aucun abonnement.
+
+**Installation** (une fois) : réponds *oui* à la question de l'installateur sur la séparation de stems, ou
+plus tard double-clic sur **`Install ReaCue Stems.command`** (macOS) / **`Install ReaCue Stems.bat`**
+(Windows). Cela crée un environnement Python séparé `.venv-demucs` dans le dossier de ReaCue (PyTorch +
+Demucs, environ 1 Go), télécharge les deux modèles et mesure la vitesse de ton ordinateur. L'environnement
+de ReaCue lui-même n'est pas touché.
+
+**Utilisation** :
+
+1. Glisse le MP3 (ou le WAV) dans un projet REAPER vide et clique dessus pour le sélectionner.
+2. Lance **ReaCue - Séparer les stems**. Une fenêtre montre l'avancement (tu peux la fermer).
+3. À la fin, six pistes apparaissent (Chant, Batterie, Basse, Guitare, Piano, Autres), calées exactement
+   comme l'item d'origine, qui est retiré du projet (un seul *Annuler* le remet ; le fichier reste sur le disque).
+4. Lance **ReaCue - Préparer le morceau** comme d'habitude.
+
+Détails :
+
+- Durée : environ **5 à 8 minutes pour un morceau de 4 minutes** sur un Mac Intel récent (4 cœurs), plus
+  rapide sur Apple Silicon. C'est le processeur qui travaille (aucune carte graphique nécessaire).
+- Les stems sont écrits à côté du fichier d'origine, dans `<nom du morceau>-stems/htdemucs_6s/`, et gardent
+  le nom du fichier d'origine (tonalité et tempo dans le nom restent lus par ReaCue). Relancer l'action sur le
+  même fichier les importe immédiatement, sans refaire la séparation.
+- `stems_model` dans les réglages : `"htdemucs_6s"` (6 stems, par défaut) ou `"htdemucs"` (4 stems : voix,
+  batterie, basse, autres — guitare et claviers restent ensemble dans « autres »).
+- Qualité : voix, batterie et basse sont très bonnes ; guitare et surtout piano sont moins propres qu'avec
+  les services commerciaux (un peu de repisse). Guitare lead et rythmique ne sont pas séparées : la détection
+  des solos, qui s'appuie sur un stem de guitare lead, n'est donc pas disponible.
+- Mac Intel : PyTorch n'est plus publié pour les Mac Intel après la version 2.2.2 ; l'installateur choisit
+  automatiquement les bonnes versions.
+
 ## Utilisation
 
 1. **Importe le morceau** dans un projet REAPER, un stem par piste, tous calés au même départ (glisser-déposer
-   des fichiers). Un seul MP3/WAV marche aussi, avec moins de détails.
+   des fichiers). Un seul MP3/WAV marche aussi, avec moins de détails — ou sépare-le d'abord avec
+   **ReaCue - Séparer les stems** (voir plus haut).
    - Le rôle de chaque stem est lu dans le **nom du fichier** : `drum`/`batterie`/`kick`/`perc`,
      `bass`/`basse`, `guitar`/`guitare`/`gtr` (`lead`/`solo` = guitare solo), `vocal`/`voice`/`vox`/`chant`/`voix` ;
      tout le reste compte comme claviers/autre.
@@ -162,15 +208,44 @@ Conseils :
      aident les accords et le choix entre tempo double et moitié.
 2. Lance **ReaCue - Préparer le morceau**. Une petite fenêtre montre l'avancement (de 20 s à 1 min environ) ;
    tu peux la fermer, le résultat s'affiche à la fin : tempo, structure (mesures et longueurs), ce qui a été publié.
-3. Vérifie la structure (régions) et écoute. Les régions modifiées à la main dans REAPER ne sont **pas**
-   relues par ReaCue : pour corriger la structure, utilise le mode Claude (`set_sections`, voir plus bas).
-   Relancer *Préparer* sur le même projet **garde la structure validée** et reconstruit tout (click, annonces,
-   prompteur), en appliquant le fichier de réglages s'il a été modifié entre-temps.
+3. Vérifie la structure (régions) et écoute. Pour la corriger, **modifie les régions à la main dans REAPER**
+   (déplacer, renommer, ajouter, supprimer), puis relance *Préparer* : voir
+   [Corriger la structure](#corriger-la-structure). Relancer *Préparer* sur le même projet **garde la
+   structure validée** (ou reprend tes régions modifiées) et reconstruit tout (click, annonces, prompteur),
+   en appliquant le fichier de réglages s'il a été modifié entre-temps.
 4. Après avoir ajouté ou modifié un fichier de paroles, lance **ReaCue - Republier le prompteur** (rien
    n'est modifié dans le projet REAPER).
 
 Chaque préparation **remplace** les régions, marqueurs, la carte de tempo et les pistes CLICK / CUES / VOIX
 du projet (un seul *Annuler* revient en arrière). Prévois un projet par morceau.
+
+### Corriger la structure
+
+Deux méthodes, qu'on peut mélanger :
+
+- **À la main dans REAPER, puis *Préparer*.** Double-clique sur une région dans la barre des régions (en haut
+  de la fenêtre) pour changer son nom ou son début ; ajoutes-en une avec une sélection de temps et *Markers →
+  Insert region from time selection* (Maj+R) ; supprimes-en une avec clic droit → *Remove region* ; ou fais
+  simplement glisser ses bords, puis lance
+  **ReaCue - Préparer le morceau**. Quand le morceau est déjà préparé (mêmes items audio), ReaCue lit les
+  régions du projet et, si elles diffèrent de la structure enregistrée, **les adopte comme nouvelle
+  structure** ; la fenêtre de fin indique alors « Structure reprise de tes régions REAPER ». Règles :
+  - seul le **début** de chaque région compte : une section dure jusqu'au début de la région suivante ;
+  - le début est placé sur la barre de mesure la plus proche (à moins d'un quart de mesure, sans rien dire ;
+    au-delà, arrondi avec un avertissement) ;
+  - les noms sont repris tels quels (français ou anglais) ; le type de section — couleur, annonce, rôle dans
+    le prompteur — est déduit du nom (« Refrain 2 », « Chorus », « Solo »…) ;
+  - une région avant la mesure 1, après la fin du morceau ou sur la même mesure qu'une autre est ignorée
+    avec un avertissement ; si aucune région ne commence à la mesure 1, les premières mesures sont
+    rattachées à la première région ;
+  - régions, couleurs, marqueurs « → », CUES, VOIX, CLICK et prompteur sont ensuite reconstruits.
+  Si aucune région n'a changé, rien ne change (structure conservée). Dans un autre projet (consolidé, autre
+  morceau), les régions ne sont jamais lues et rien n'est modifié.
+- **Avec Claude** (mode facultatif, plus bas) : « le refrain 1 commence mesure 37 », « renomme la section 6
+  en Solo ».
+
+*Republier le prompteur* ne reprend **pas** les régions modifiées (le prompteur doit rester d'accord avec les
+annonces et le click déjà dans REAPER) : un avertissement demande de lancer *Préparer*.
 
 ## Paroles
 
@@ -225,6 +300,7 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `click_to_master` | `true` | `false` = click et voix seulement sur `click_hw_output` (in-ears) |
 | `click_hw_output` | `null` | sortie physique (0 = sorties 1/2, 2 = 3/4…) |
 | `tempo_mode` | `"auto"` | `auto`, `constant` (un seul tempo) ou `beatmap` (un tempo par mesure) |
+| `stems_model` | `"htdemucs_6s"` | modèle de séparation de stems : `"htdemucs_6s"` (6 stems) ou `"htdemucs"` (4 stems) |
 
 Voix : sous Windows, on ajoute des voix (par exemple françaises) dans *Paramètres → Heure et langue →
 Voix*. Seules les voix visibles par SAPI (voix « Desktop ») sont utilisées. Sans aucune voix, tout fonctionne
@@ -241,13 +317,14 @@ l'installateur). Le serveur `reacue` est ajouté à la configuration de Claude D
 - « Renomme la section 6 en Solo guitare. » → `rename_section`
 - « 1 mesure de count-in, click seulement sur les sorties 3/4. » → `update_options`
 - « C'est à 94 BPM, pas 188. » → `prepare_song` avec `bpm_hint`
+- « J'ai déplacé les régions dans REAPER, reprends-les. » → `prepare_song` (régions reprises, sans réanalyse)
 
 | Outil | Rôle |
 |---|---|
 | `reaper_status` | REAPER et le pont répondent ? |
 | `prepare_song` | Préparation complète (peut importer un fichier) |
 | `analyze_audio` | Analyse seule, sans toucher au projet |
-| `set_sections` / `rename_section` | Corriger la structure ; tout est reconstruit (noms en français ou en anglais) |
+| `set_sections` / `rename_section` | Corriger la structure ; tout est reconstruit (noms en français ou en anglais). `set_sections` **l'emporte** sur les régions modifiées à la main ; `rename_section` les reprend d'abord (numéros = régions actuelles) |
 | `set_grid` | Imposer une grille à tempo fixe quand la détection se trompe |
 | `update_options` | Count-in, mode de tempo, click, annonces, voix… sans réanalyser |
 | `get_project_state`, `goto_section`, `transport` | État du projet, navigation, lecture/arrêt |
@@ -255,18 +332,28 @@ l'installateur). Le serveur `reacue` est ajouté à la configuration de Claude D
 Les deux modes partagent la même mémoire du dernier morceau préparé : on peut préparer avec le bouton et
 affiner avec Claude, ou l'inverse.
 
+Les régions modifiées à la main dans REAPER sont reprises par `prepare_song` (morceau déjà préparé ;
+`reanalyse=true`, `bpm_hint` ou `beats_per_bar` forcent une analyse complète), `update_options` et
+`rename_section`. Sur un morceau déjà préparé dont les régions n'ont pas été modifiées, `prepare_song` refait
+une analyse (le bouton *Préparer*, lui, garde la structure). `set_sections` et `set_grid` imposent la structure donnée et remplacent ces régions. Les
+outils de Claude sont chargés au début d'une conversation : après une mise à jour de ReaCue, ouvre une
+nouvelle conversation.
+
 ## Limites connues
 
 - **La détection de structure n'est pas parfaite** : elle dépend des morceaux. Les limites de sections sont
   en général justes à une mesure près ; les noms (couplet ou refrain, pré-refrain collé au refrain…) sont à
   vérifier. Les longueurs qui ne font pas 4, 8 ou 16 mesures méritent un coup d'œil.
 - **Un MP3 seul est moins précis que des stems** : pas d'entrées/silences par instrument, pas de transcription
-  de batterie, noms de sections et accords moins fiables.
+  de batterie, noms de sections et accords moins fiables. Utilise d'abord *Séparer les stems*.
+- **Séparation de stems** : les stems guitare et piano gardent un peu de repisse ; la séparation prend
+  plusieurs minutes par morceau sur le processeur (une seule fois par morceau : le résultat est gardé).
 - **Batterie** : grosse caisse, caisse claire et charley sont fiables ; toms et ride sont approximatifs. Les
   fills sont les mesures qui s'écartent du groove de la section.
 - **Accords** : accords parfaits, septièmes, sus et power chords ; les voicings jazz complexes sont simplifiés.
-- Sans Claude, la structure détectée ne peut pas encore être modifiée (seulement réanalysée) ; les régions
-  modifiées à la main dans REAPER sont écrasées à la préparation suivante.
+- Régions modifiées à la main : seuls leurs débuts et leurs noms sont lus (pas leurs fins) ; une réanalyse
+  complète d'un morceau déjà préparé n'est possible qu'avec Claude (`reanalyse`) ou en ligne de commande
+  (`reacue_cli.py prepare --reanalyse`).
 - Mesures en x/4 uniquement (4/4 et 3/4 détectés).
 - **Windows : bêta, pas encore testé sur une vraie machine.** À vérifier en particulier : le lancement en
   arrière-plan depuis REAPER, les voix SAPI et les chemins avec accents. Merci de signaler les problèmes.
@@ -302,14 +389,32 @@ Voix*). L'avertissement de la fenêtre finale indique quelle voix manquait.
 **Tempo faux (double ou moitié).** Indique le tempo dans le nom des stems (ex. `-94bpm`), ou passe par
 Claude (`bpm_hint`).
 
-**Où sont les journaux ?** `<ressources REAPER>/ReaCueMCP/cli.log`.
+**L'item audio affiche « OFFLINE » dans REAPER (macOS).** REAPER n'arrive pas à lire le fichier. Ça arrive
+notamment avec les fichiers laissés dans *Téléchargements* : macOS peut refuser à REAPER l'accès à ce dossier.
+Déplace ou copie le fichier dans le dossier du projet (par exemple `Documents/REAPER Media/<morceau>/`), puis
+dans REAPER clic droit sur l'item → *Item properties…* → *Choose new file*, ou glisse simplement le fichier à
+nouveau. Autre solution : autorise REAPER dans *Réglages Système → Confidentialité et sécurité → Fichiers et
+dossiers* puis redémarre REAPER. *Séparer les stems* a aussi besoin de pouvoir lire le fichier.
+
+**« La séparation de stems n'est pas installée. »** Double-clic sur `Install ReaCue Stems.command` / `.bat`
+dans le dossier de ReaCue (internet nécessaire une fois).
+
+**La séparation est lente / l'avancement reste à 0 %.** Le premier pour cent peut prendre une minute
+(chargement du modèle). Compte 1,5 à 2 fois la durée du morceau sur un Mac Intel. Ferme les autres
+applications gourmandes. Le journal est `<nom du morceau>-stems/demucs.log`, à côté du fichier d'origine.
+
+**Où sont les journaux ?** `<ressources REAPER>/ReaCueMCP/cli.log` (préparation) et
+`<nom du morceau>-stems/demucs.log` (séparation de stems).
 
 ## Désinstallation
 
 Double-clic sur **`Uninstall ReaCue.command`** (macOS) ou **`Uninstall ReaCue.bat`** (Windows), REAPER fermé.
 Cela retire les scripts REAPER, la ligne de démarrage du pont, les actions et l'entrée Claude Desktop. Tes
 réglages et le dernier morceau préparé restent dans `<ressources REAPER>/ReaCueMCP/` (ajoute `--purge` au
-script de désinstallation pour les supprimer). Supprime ensuite le dossier de ReaCue.
+script de désinstallation pour les supprimer ; `--purge` supprime aussi l'environnement de séparation de
+stems `.venv-demucs`). Supprime ensuite le dossier de ReaCue. Les modèles Demucs restent dans le cache de
+PyTorch (`~/.cache/torch/hub/checkpoints`, quelques centaines de Mo) : supprime ce dossier si tu n'en as plus
+besoin. Les stems séparés restent à côté de tes morceaux.
 
 ## Pour les développeurs
 
@@ -325,7 +430,8 @@ Organisation :
 |---|---|
 | `reacue_mcp/` | Paquet Python : analyse, planification, client du pont, prompteur, accords, paroles, batterie, voix, i18n, réglages, CLI, serveur MCP |
 | `reacue_mcp/web/prompteur.html` | La page du prompteur (un seul fichier) |
-| `reaper/` | Scripts REAPER : le pont et les deux actions |
+| `reaper/` | Scripts REAPER : le pont et les actions (`ReaCue_stems.lua` : séparation de stems) |
+| `reacue_stems.py`, `requirements-stems.txt` | Lanceur de la séparation de stems (tourne dans `.venv-demucs`) et ses dépendances figées |
 | `install/` | Installateurs (macOS, Windows) et `reacue_setup.py` commun |
 | `tests/` | Tests pytest (faux pont REAPER, Lua exécuté via `lupa`, installateur, page du prompteur) |
 | `tools/` | **Outils de développement uniquement** (non utilisés par ReaCue) : `struct_eval.py` (banc d'essai de la détection de structure sur tes propres morceaux, configuré par un fichier JSON privé), `asr_anchor.py` (fichier d'ancres de paroles par reconnaissance vocale, modèles lourds, Linux), `make_screenshots.py` |
@@ -336,6 +442,9 @@ Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : 
 ## Crédits et licence
 
 ReaCue par Hervé Naessens. Licence MIT, voir [LICENSE](LICENSE).
+
+Séparation de stems par [Demucs](https://github.com/facebookresearch/demucs) (Alexandre Défossez, Meta AI,
+licence MIT) sur [PyTorch](https://pytorch.org/).
 
 S'appuie sur [librosa](https://librosa.org/), [NumPy](https://numpy.org/), [SciPy](https://scipy.org/),
 [soundfile](https://github.com/bastibe/python-soundfile), le SDK Python du

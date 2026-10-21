@@ -20,6 +20,7 @@ from . import prompter
 from . import chords
 from . import lyrics
 from . import drums
+from .regions import regions_to_sections, same_structure
 
 mcp = FastMCP(
     "reacue",
@@ -28,7 +29,10 @@ mcp = FastMCP(
         "tempo, mesures et sections, puis crée la carte de tempo, les régions, les marqueurs de cue, "
         "une piste CUES et une piste CLICK. Outil principal : prepare_song. Après coup, utilise "
         "set_sections pour corriger les noms/limites si l'utilisateur le demande. Les numéros de mesure "
-        "côté outils commencent à 1 (1re mesure du morceau, après le count-in)."
+        "côté outils commencent à 1 (1re mesure du morceau, après le count-in). Les régions que "
+        "l'utilisateur a modifiées à la main dans REAPER sont reprises automatiquement par prepare_song "
+        "(morceau déjà préparé), update_options et rename_section ; set_sections et set_grid imposent "
+        "la structure donnée et remplacent ces régions."
     ),
 )
 bridge = Bridge()
@@ -132,12 +136,62 @@ async def _check_items(plan: dict, info: dict | None):
         raise BridgeError(t("wrong_project"))
 
 
+async def _same_song(item: dict, items: list[dict] | None) -> bool:
+    """Les items audio du projet ouvert sont-ils ceux du dernier morceau préparé (GUID + fichier) ?"""
+    try:
+        found = (await bridge.call("get_audio_items")).get("items") or []
+    except Exception:
+        return False
+    want = items or [item]
+    key = lambda L: sorted((d.get("guid"), d.get("file")) for d in L)
+    return bool(found) and key(found) == key(want)
+
+
+async def _from_regions(a: Analysis, item: dict, opts: Options, items: list[dict] | None,
+                        adopt: bool = True) -> tuple[Analysis, bool, list[str]]:
+    """Structure lue dans les régions du projet REAPER, si elles ont été modifiées à la main.
+
+    Seulement pour le MÊME morceau (mêmes items) : un autre projet ou un projet consolidé n'est jamais
+    lu (il sera refusé ensuite par _check_items, rien n'est modifié). Renvoie (analyse, changé ?,
+    avertissements). adopt=False : détecte seulement (l'analyse renvoyée est inchangée)."""
+    if not await _same_song(item, items):
+        return a, False, []
+    try:
+        regions = (await bridge.call("get_state")).get("regions")
+    except Exception:
+        return a, False, []
+    if regions is None:
+        return a, False, []
+    plan, _ = await asyncio.to_thread(build_plan, a, item, opts, None, None, items)
+    timeline = plan["prompter"]
+    ignore = (plan["regions"][0]["name"],) if opts.song_region and plan["regions"] else ()
+    secs, warns = regions_to_sections(regions, timeline["bar_times"], timeline["count_in_bars"], a.n_bars,
+                                      a.sections, ignore)
+    if not secs:
+        return a, False, [t("regions_none")] if regions else []
+    if same_structure(secs, a.sections):
+        return a, False, []
+    if not adopt:
+        return a, True, warns
+    return resection(a, secs), True, warns
+
+
+async def _apply_from_regions(a, item, opts, items) -> dict:
+    """Reprend les régions modifiées à la main (si besoin), puis reconstruit tout."""
+    a, changed, warns = await _from_regions(a, item, opts, items)
+    res = await _apply(a, item, opts, items)
+    if changed:
+        res["structure_from_regions"] = True
+    res["warnings"] = warns + res.get("warnings", [])
+    return res
+
+
 async def _publish_only(analysis, item, opts, items) -> dict:
     """Met à jour le prompteur des musiciens (paroles, accords…) sans rien changer dans REAPER."""
     plan, summary = await asyncio.to_thread(build_plan, analysis, item, opts, None, None, items)
     timeline = plan.pop("prompter")
     out = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items)
-    return {"prompteur": out, "reaper": t("unchanged"),
+    return {"prompteur": out, "reaper": t("unchanged"), "warnings": [],
             "sections": [{"name": s.name, "bars": f"{s.start_bar + 1}-{s.end_bar}"} for s in analysis.sections]}
 
 
@@ -199,6 +253,7 @@ async def prepare_song(
     voice_count_in: bool | None = None,
     voice_count_each: bool | None = None,
     voice_name: str | None = None,
+    reanalyse: bool = False,
 ) -> dict:
     """Prépare tout automatiquement dans REAPER pour le morceau importé.
 
@@ -217,8 +272,30 @@ async def prepare_song(
     (0 = sorties 1/2, 2 = 3/4…), avec click_to_master=False pour qu'il n'aille pas en façade.
     Les paramètres non donnés prennent les valeurs de reacue_settings.json (count-in 2, annonce sur
     l'avant-dernière mesure, décompte anglais, langue des régions et annonces…).
+    Morceau déjà préparé dont l'utilisateur a modifié les régions à la main dans REAPER (déplacées,
+    renommées, ajoutées, supprimées) : ces régions deviennent la structure, sans réanalyse
+    (résultat : structure_from_regions). reanalyse=True, bpm_hint ou beats_per_bar : analyse complète.
     """
     use_settings_lang()
+    if not (file_path or reanalyse or bpm_hint or beats_per_bar):
+        try:
+            a, item0, opts0, items0 = _load()
+        except Exception:
+            a = None
+        if a is not None:
+            a, changed, warns = await _from_regions(a, item0, opts0, items0)
+            if changed:
+                given = dict(count_in_bars=count_in_bars, tempo_mode=tempo_mode, click_to_master=click_to_master,
+                             click_hw_output=click_hw_output, cue_lead_bars=cue_lead_bars,
+                             voice_cues=voice_cues, voice_count_in=voice_count_in,
+                             voice_count_each=voice_count_each, voice_name=voice_name)
+                for k, v in given.items():
+                    if v is not None:
+                        setattr(opts0, k, v)
+                res = await _apply(a, item0, opts0, items0)
+                res["structure_from_regions"] = True
+                res["warnings"] = warns + res.get("warnings", [])
+                return res
     items = None
     if file_path:
         p = Path(file_path).expanduser()
@@ -287,6 +364,7 @@ async def analyze_audio(file_path: str, beats_per_bar: int | None = None, bpm_hi
 @mcp.tool()
 async def set_sections(sections: list[dict]) -> dict:
     """Corrige la structure du dernier morceau préparé et reconstruit régions, cues et click.
+    Prioritaire : la liste donnée remplace la structure, y compris les régions modifiées à la main.
 
     sections : liste complète, dans l'ordre, de {"start_bar": int, "name": str}. start_bar commence à 1
     (1re mesure du morceau). Chaque section va jusqu'au début de la suivante.
@@ -313,7 +391,14 @@ async def set_sections(sections: list[dict]) -> dict:
     if only:
         if sections or grid:
             _save(a, item, opts, items)
-        return await _publish_only(a, item, opts, items)
+            return await _publish_only(a, item, opts, items)
+        # prompteur seul : les régions modifiées à la main ne sont PAS reprises ici (le prompteur doit
+        # rester d'accord avec les annonces et le click déjà dans REAPER) ; on le signale seulement
+        _, changed, _ = await _from_regions(a, item, opts, items, adopt=False)
+        res = await _publish_only(a, item, opts, items)
+        if changed:
+            res["warnings"].append(t("regions_changed_publish"))
+        return res
     return await _apply(a, item, opts, items)
 
 
@@ -366,10 +451,15 @@ async def rename_section(index: int, name: str) -> dict:
     """Renomme la section n° index (1 = première) du dernier morceau préparé."""
     use_settings_lang()
     a, item, opts, items = _load()
+    a, changed, warns = await _from_regions(a, item, opts, items)     # numéros = régions actuelles
     if not 1 <= index <= len(a.sections):
         return {"error": t("n_sections", n=len(a.sections))}
     a.sections[index - 1].name = name
-    return await _apply(a, item, opts, items)
+    res = await _apply(a, item, opts, items)
+    if changed:
+        res["structure_from_regions"] = True
+    res["warnings"] = warns + res.get("warnings", [])
+    return res
 
 
 @mcp.tool()
@@ -390,13 +480,14 @@ async def update_options(
     count_rate: int | None = None,
     count_anticipation_ms: float | None = None,
 ) -> dict:
-    """Change des réglages (appels vocaux et voix compris, count-in, mode de tempo, click…) et reconstruit sans réanalyser l'audio."""
+    """Change des réglages (appels vocaux et voix compris, count-in, mode de tempo, click…) et reconstruit sans réanalyser l'audio.
+    Les régions modifiées à la main dans REAPER sont reprises comme structure (structure_from_regions)."""
     use_settings_lang()
     a, item, opts, items = _load()
     for k, v in locals().copy().items():
         if k not in ("a", "item", "opts") and v is not None and hasattr(opts, k):
             setattr(opts, k, v)
-    return await _apply(a, item, opts, items)
+    return await _apply_from_regions(a, item, opts, items)
 
 
 @mcp.tool()

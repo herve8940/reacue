@@ -2,6 +2,7 @@
 # Installation de ReaCue sur macOS / ReaCue installer for macOS.
 # Lancé par « Install ReaCue.command » (double-clic) ; ou : bash install/install_mac.sh [fr|en]
 # Relançable sans risque (idempotent). Internet n'est nécessaire que pendant l'installation.
+# REACUE_STEMS=yes|no : installer ou non la séparation de stems sans poser la question.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
@@ -30,7 +31,7 @@ fail() {
 REAPER_DIR="${REAPER_RESOURCE_PATH:-$HOME/Library/Application Support/REAPER}"
 
 echo
-t "== 1/4 Vérifications" "== 1/4 Checks"
+t "== 1/5 Vérifications" "== 1/5 Checks"
 [ "$(uname -s)" = "Darwin" ] || fail "ce script est pour macOS." "this script is for macOS."
 if [ ! -d "$REAPER_DIR" ]; then
   fail "dossier REAPER introuvable ($REAPER_DIR). Lance REAPER une fois, ferme-le, puis relance l'installation." \
@@ -40,7 +41,7 @@ echo "  REAPER : $REAPER_DIR"
 echo "  ReaCue : $HERE"
 
 echo
-t "== 2/4 uv (gestionnaire Python d'Astral)" "== 2/4 uv (Astral's Python manager)"
+t "== 2/5 uv (gestionnaire Python d'Astral)" "== 2/5 uv (Astral's Python manager)"
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 if ! command -v uv >/dev/null 2>&1; then
   t "  installation de uv (https://astral.sh/uv)…" "  installing uv (https://astral.sh/uv)…"
@@ -50,7 +51,7 @@ fi
 echo "  $(uv --version)"
 
 echo
-t "== 3/4 Environnement Python 3.12 (.venv) et dépendances" "== 3/4 Python 3.12 environment (.venv) and dependencies"
+t "== 3/5 Environnement Python 3.12 (.venv) et dépendances" "== 3/5 Python 3.12 environment (.venv) and dependencies"
 rm -rf .venv
 uv venv .venv --python 3.12 || fail "création du .venv impossible." "could not create .venv."
 # --no-build : paquets précompilés uniquement (pas de compilateur nécessaire)
@@ -61,6 +62,31 @@ uv pip install --no-build --python .venv/bin/python -r requirements.txt \
 command -v say >/dev/null 2>&1 || t "  ! commande say absente : pas d'annonces vocales." "  ! say command missing: no spoken cues."
 
 echo
-t "== 4/4 Configuration de REAPER" "== 4/4 REAPER configuration"
+t "== 4/5 Configuration de REAPER" "== 4/5 REAPER configuration"
 REAPER_RESOURCE_PATH="$REAPER_DIR" .venv/bin/python install/reacue_setup.py install --lang "$L" --install-dir "$HERE" \
   --reaper-dir "$REAPER_DIR" ${REACUE_MCP:+--mcp "$REACUE_MCP"} || fail "configuration incomplète." "configuration incomplete."
+
+echo
+t "== 5/5 Séparation de stems (optionnel)" "== 5/5 Stem separation (optional)"
+STEMS="${REACUE_STEMS:-ask}"
+if [ "$STEMS" = ask ] && [ -x .venv-demucs/bin/python ]; then
+  STEMS=yes     # déjà installée : mise à jour
+fi
+if [ "$STEMS" = ask ]; then
+  t "  Sépare un MP3 en stems (voix, batterie, basse, guitare, piano, autres) dans REAPER, en local, sans abonnement." \
+    "  Splits an MP3 into stems (vocals, drums, bass, guitar, piano, other) inside REAPER, locally, no subscription."
+  read -r -p "$(t '  Installer la séparation de stems (Demucs, environ 1 Go à télécharger, 5 à 15 min) ? [o/N] ' \
+                  '  Install stem separation (Demucs, about 1 GB to download, 5 to 15 min)? [y/N] ')" A || true
+  case "$(echo "${A:-n}" | tr '[:upper:]' '[:lower:]')" in
+    o*|y*) STEMS=yes ;;
+    *) STEMS=no ;;
+  esac
+fi
+if [ "$STEMS" = yes ]; then
+  bash install/install_stems_mac.sh "$L" \
+    || t "  ! séparation de stems non installée (le reste de ReaCue fonctionne). Réessaie avec « Install ReaCue Stems.command »." \
+         "  ! stem separation not installed (the rest of ReaCue works). Try again with “Install ReaCue Stems.command”."
+else
+  t "  Non installée. Plus tard : double-clic sur « Install ReaCue Stems.command »." \
+    "  Not installed. Later: double-click “Install ReaCue Stems.command”."
+fi

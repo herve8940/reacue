@@ -78,13 +78,17 @@ _EXTS = (".txt", ".rtf")
 # --------------------------------------------------------------------------- #
 def find_lyrics_file(paths: list[str]) -> Path | None:
     """Premier fichier paroles*/parole*/lyrics* (.txt, .rtf) dans le dossier des fichiers donnés
-    (ou dans les dossiers donnés). Insensible à la casse ; .txt préféré à .rtf à préfixe égal."""
+    (ou dans les dossiers donnés) ; pour des stems séparés par ReaCue (<morceau>-stems/<modèle>/), aussi
+    dans le dossier du morceau d'origine. Insensible à la casse ; .txt préféré à .rtf à préfixe égal."""
     dirs = []
     for p in paths or []:
         p = Path(str(p)).expanduser()
         d = p if p.is_dir() else p.parent
         if d not in dirs:
             dirs.append(d)
+    for d in list(dirs):       # stems séparés par ReaCue : <morceau>-stems/<modèle>/ -> dossier du morceau
+        if d.parent.name.endswith("-stems") and d.parent.parent not in dirs:
+            dirs.append(d.parent.parent)
     for d in dirs:
         try:
             files = sorted(f for f in d.iterdir() if f.is_file())

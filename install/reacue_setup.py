@@ -25,17 +25,19 @@ ROOT = HERE.parent
 
 STARTUP_MARK = "-- ReaCue MCP"
 STARTUP_LINE = 'dofile(reaper.GetResourcePath() .. "/Scripts/ReaCue/ReaCue_Bridge.lua") ' + STARTUP_MARK
-SCRIPT_FILES = ("ReaCue_Bridge.lua", "ReaCue_run.lua", "ReaCue_Preparer.lua", "ReaCue_Republier_prompteur.lua")
+SCRIPT_FILES = ("ReaCue_Bridge.lua", "ReaCue_run.lua", "ReaCue_Preparer.lua", "ReaCue_Republier_prompteur.lua",
+                "ReaCue_stems.lua", "ReaCue_Separer_stems.lua")
 ACTIONS = (   # (identifiant de commande, fichier, nom FR, nom EN)
     ("REACUE_PREPARE", "ReaCue_Preparer.lua", "ReaCue - Préparer le morceau", "ReaCue - Prepare the song"),
     ("REACUE_PUBLISH", "ReaCue_Republier_prompteur.lua", "ReaCue - Republier le prompteur",
      "ReaCue - Republish the prompter"),
+    ("REACUE_STEMS", "ReaCue_Separer_stems.lua", "ReaCue - Séparer les stems", "ReaCue - Separate stems"),
 )
 SETTINGS_DEFAULTS = {
     "language": "fr", "announce_voice": None, "count_voice": None, "count_lang": "en",
     "count_in_bars": 2, "cue_lead_bars": 2, "voice_cues": True, "voice_count_in": True,
     "voice_count_each": True, "voice_volume": 0.8, "click_volume": 0.5, "click_to_master": True,
-    "click_hw_output": None, "tempo_mode": "auto", "count_rate": 240,
+    "click_hw_output": None, "tempo_mode": "auto", "count_rate": 240, "stems_model": "htdemucs_6s",
 }
 
 MSG = {
@@ -56,10 +58,10 @@ MSG = {
                        "REAPER is running: the actions cannot be registered automatically."),
     "actions_manual": (
         "Dans REAPER : Actions > Show action list > New action > Load ReaScript…, puis choisis\n"
-        "      {d}{sep}ReaCue_Preparer.lua et ReaCue_Republier_prompteur.lua\n"
+        "      {d}{sep}ReaCue_Preparer.lua, ReaCue_Republier_prompteur.lua et ReaCue_Separer_stems.lua\n"
         "      (ou ferme REAPER et relance l'installation).",
         "In REAPER: Actions > Show action list > New action > Load ReaScript…, then pick\n"
-        "      {d}{sep}ReaCue_Preparer.lua and ReaCue_Republier_prompteur.lua\n"
+        "      {d}{sep}ReaCue_Preparer.lua, ReaCue_Republier_prompteur.lua and ReaCue_Separer_stems.lua\n"
         "      (or close REAPER and run the installer again)."),
     "action_added": ("Action enregistrée : « {name} »", "Action registered: “{name}”"),
     "action_present": ("Action déjà présente : « {name} »", "Action already there: “{name}”"),
@@ -90,15 +92,20 @@ MSG = {
         "      Then, on the phones: http://<this computer's IP>:8080/prompteur.html"),
     "ip": ("Adresse(s) IP probable(s) de cet ordinateur : {ips}", "Likely IP address(es) of this computer: {ips}"),
     "done": ("Installation terminée. Redémarre REAPER : le pont se lance tout seul, et les actions\n"
-             "« ReaCue - Préparer le morceau » / « ReaCue - Republier le prompteur » sont dans la liste des actions.",
+             "« ReaCue - Préparer le morceau », « ReaCue - Republier le prompteur » et « ReaCue - Séparer les stems »\n"
+             "sont dans la liste des actions.",
              "Installation complete. Restart REAPER: the bridge starts by itself, and the actions\n"
-             "“ReaCue - Prepare the song” / “ReaCue - Republish the prompter” are in the action list."),
+             "“ReaCue - Prepare the song”, “ReaCue - Republish the prompter” and “ReaCue - Separate stems”\n"
+             "are in the action list."),
     "uninstalled": ("Désinstallation terminée. Données conservées (réglages, dernier morceau) : {d}\n"
                     "(--purge pour les supprimer). Le dossier de ReaCue lui-même peut être supprimé à la main.",
                     "Uninstall complete. Data kept (settings, last song): {d}\n"
                     "(--purge to delete it). The ReaCue folder itself can be deleted by hand."),
     "purged": ("Données supprimées : {d}", "Data deleted: {d}"),
     "removed": ("Supprimé : {p}", "Removed: {p}"),
+    "stems_kept": ("Séparation de stems conservée : {d} (--purge pour la supprimer ; modèles Demucs dans le "
+                   "cache de PyTorch : {c})",
+                   "Stem separation kept: {d} (--purge to delete it; Demucs models in the PyTorch cache: {c})"),
 }
 
 LANG = "fr"
@@ -147,6 +154,22 @@ def venv_python(install_dir: Path, platform: str | None = None, windowed: bool =
     if platform.startswith("win"):
         return Path(install_dir) / ".venv" / "Scripts" / ("pythonw.exe" if windowed else "python.exe")
     return Path(install_dir) / ".venv" / "bin" / "python"
+
+
+def torch_hub_dir(env: dict | None = None, home: Path | None = None) -> Path:
+    """Cache des modèles Demucs (PyTorch Hub) : $TORCH_HOME/hub, sinon ~/.cache/torch/hub."""
+    env = os.environ if env is None else env
+    home = home or Path.home()
+    if env.get("TORCH_HOME"):
+        return Path(env["TORCH_HOME"]) / "hub"
+    return Path(env.get("XDG_CACHE_HOME") or home / ".cache") / "torch" / "hub"
+
+
+def stems_python(install_dir: Path, platform: str | None = None, windowed: bool = False) -> Path:
+    platform = platform or sys.platform
+    if platform.startswith("win"):
+        return Path(install_dir) / ".venv-demucs" / "Scripts" / ("pythonw.exe" if windowed else "python.exe")
+    return Path(install_dir) / ".venv-demucs" / "bin" / "python"
 
 
 def reaper_running(platform: str | None = None, run=subprocess.run) -> bool:
@@ -457,6 +480,13 @@ def do_uninstall(args) -> int:
     cfg = claude_config_path()
     if remove_mcp(cfg):
         say("mcp_removed", f=cfg)
+    stems_env = None
+    try:
+        inst = (rdir / "ReaCueMCP" / "reacue_install.txt").read_text(encoding="utf-8").strip()
+        if inst and (Path(inst) / ".venv-demucs").is_dir():
+            stems_env = Path(inst) / ".venv-demucs"
+    except OSError:
+        pass
     for p in (rdir / "ReaCueMCP" / "reacue_install.txt", rdir / "reaper_www_root" / "prompteur.html",
               rdir / "reaper_www_root" / "reacue_song.json"):
         if p.exists():
@@ -466,6 +496,12 @@ def do_uninstall(args) -> int:
     if args.purge and data.exists():
         shutil.rmtree(data, ignore_errors=True)
         say("purged", d=data)
+    if stems_env is not None:
+        if args.purge:
+            shutil.rmtree(stems_env, ignore_errors=True)
+            say("purged", d=stems_env)
+        else:
+            say("stems_kept", d=stems_env, c=torch_hub_dir())
     print()
     print(msg("uninstalled", d=data))
     return 0
@@ -484,6 +520,7 @@ def do_status(args) -> int:
         if (data / "heartbeat.txt").exists() else None,
         "web_ports": web_ports(rdir / "reaper.ini"),
     }
+    info["stems"] = bool(info["install_dir"]) and stems_python(Path(info["install_dir"])).exists()
     print(json.dumps(info, indent=2, ensure_ascii=False))
     return 0
 

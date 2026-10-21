@@ -1,4 +1,4 @@
-# ReaCue 0.9 — dépendances (paquets précompilés seulement : uv pip install --no-build)
+# ReaCue 0.10 — dépendances (paquets précompilés seulement : uv pip install --no-build)
 # Testé avec Python 3.12 (installé par uv) ; librosa 0.10 à 1.0.
 mcp>=1.2,<2
 librosa>=0.10,<2
