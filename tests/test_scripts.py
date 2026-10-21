@@ -8,9 +8,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SH = [ROOT / "install" / "install_mac.sh", ROOT / "install" / "uninstall_mac.sh",
-      ROOT / "Install ReaCue.command", ROOT / "Uninstall ReaCue.command"]
-PS1 = [ROOT / "install" / "install_windows.ps1", ROOT / "install" / "uninstall_windows.ps1"]
-BAT = [ROOT / "Install ReaCue.bat", ROOT / "Uninstall ReaCue.bat"]
+      ROOT / "install" / "install_stems_mac.sh",
+      ROOT / "Install ReaCue.command", ROOT / "Uninstall ReaCue.command", ROOT / "Install ReaCue Stems.command"]
+PS1 = [ROOT / "install" / "install_windows.ps1", ROOT / "install" / "uninstall_windows.ps1",
+       ROOT / "install" / "install_stems_windows.ps1"]
+BAT = [ROOT / "Install ReaCue.bat", ROOT / "Uninstall ReaCue.bat", ROOT / "Install ReaCue Stems.bat"]
 
 
 @pytest.mark.parametrize("path", SH, ids=lambda p: p.name)
@@ -51,3 +53,12 @@ def test_setup_runs_with_old_python_syntax():
     import ast
     src = (ROOT / "install" / "reacue_setup.py").read_text(encoding="utf-8")
     ast.parse(src, feature_version=(3, 9))
+
+
+def test_stems_installers_use_separate_env_and_binaries():
+    for p in (ROOT / "install" / "install_stems_mac.sh", ROOT / "install" / "install_stems_windows.ps1"):
+        t = p.read_text(encoding="utf-8-sig")
+        assert ".venv-demucs" in t and "requirements-stems.txt" in t and "--no-binary demucs" in t
+        assert "reacue_stems.py" in t and "check" in t
+    assert "install_stems_mac.sh" in (ROOT / "install" / "install_mac.sh").read_text(encoding="utf-8")
+    assert "install_stems_windows.ps1" in (ROOT / "install" / "install_windows.ps1").read_text(encoding="utf-8-sig")

@@ -163,3 +163,39 @@ def test_reaper_running_detection():
         return subprocess.CompletedProcess(cmd, 1, "", "")
     assert S.reaper_running("win32", run=fake_win) is True
     assert S.reaper_running("darwin", run=fake_mac) is False
+
+
+def test_stems_action_and_setting(reaper):
+    run_install(reaper, "en")
+    kb = (reaper / "reaper-kb.ini").read_text(encoding="utf-8")
+    assert 'SCR 4 0 REACUE_STEMS "Custom: ReaCue - Separate stems" "ReaCue/ReaCue_Separer_stems.lua"' in kb
+    for f in ("ReaCue_stems.lua", "ReaCue_Separer_stems.lua"):
+        assert (reaper / "Scripts" / "ReaCue" / f).exists()
+    s = json.loads((reaper / "ReaCueMCP" / "reacue_settings.json").read_text(encoding="utf-8"))
+    assert s["stems_model"] == "htdemucs_6s"
+
+
+def test_uninstall_stems_env(reaper, monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(S, "claude_config_path", lambda *a, **k: tmp_path / "none.json")
+    inst = tmp_path / "ReaCue"
+    (inst / "reaper").mkdir(parents=True)
+    for f in S.SCRIPT_FILES:
+        (inst / "reaper" / f).write_bytes((ROOT / "reaper" / f).read_bytes())
+    (inst / ".venv-demucs" / "bin").mkdir(parents=True)
+    (inst / ".venv-demucs" / "bin" / "python").write_text("")
+    run_install(reaper, install_dir=inst)
+    capsys.readouterr()
+    S.main(["status", "--reaper-dir", str(reaper)])
+    assert json.loads(capsys.readouterr().out)["stems"] is True
+    assert S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no"]) == 0
+    assert (inst / ".venv-demucs").exists() and "conservée" in capsys.readouterr().out
+    run_install(reaper, install_dir=inst)
+    S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no", "--purge"])
+    assert not (inst / ".venv-demucs").exists()
+
+
+def test_stems_paths():
+    assert S.stems_python(Path("C:/R"), "win32", windowed=True) == Path("C:/R/.venv-demucs/Scripts/pythonw.exe")
+    assert S.stems_python(Path("/r"), "darwin") == Path("/r/.venv-demucs/bin/python")
+    assert S.torch_hub_dir({"TORCH_HOME": "/t"}) == Path("/t/hub")
+    assert S.torch_hub_dir({}, Path("/h")) == Path("/h/.cache/torch/hub")
