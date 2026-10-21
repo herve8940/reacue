@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0d10">
+<title>ReaCue Prompteur</title>
+<style>
+  :root {
+    --bg: #0b0d10; --panel: #15191f; --line: #262c35; --ink: #f2f4f7; --dim: #8a94a3;
+    --ok: #3ddc84; --warn: #ffb020; --hot: #ff4d4f; --sec: #3c78dc; --next: #888;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-user-select: none; user-select: none; overflow: hidden; }
+  body { display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) 14px max(10px, env(safe-area-inset-bottom)); gap: 10px; }
+
+  /* barre du haut */
+  .top { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--dim); min-height: 34px; }
+  .role { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: 999px;
+    padding: 6px 14px; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .title b { color: var(--ink); font-weight: 600; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--hot); flex: none; }
+  .dot.on { background: var(--ok); }
+  .iconbtn { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 8px; padding: 5px 9px; font-size: 14px; }
+
+  /* section en cours */
+  .now { position: relative; border-radius: 18px; background: var(--panel); padding: 14px 18px 16px;
+    border-left: 12px solid var(--sec); overflow: hidden; }
+  .now .label { font-size: 14px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
+  .now .name { font-size: clamp(38px, 11vw, 96px); font-weight: 800; line-height: 1.02; margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .progress { height: 8px; background: var(--line); border-radius: 4px; margin-top: 12px; overflow: hidden; }
+  .progress i { display: block; height: 100%; background: var(--sec); width: 0; }
+  .beats { display: flex; gap: 10px; margin-top: 12px; }
+  .beats span { flex: 1; height: 22px; border-radius: 6px; background: var(--line); }
+  .beats span.on { background: var(--ink); }
+  .beats span.one.on { background: var(--warn); }
+
+  /* prochain changement */
+  .next { display: flex; align-items: stretch; gap: 10px; }
+  .next .box { flex: 1; background: var(--panel); border-radius: 16px; padding: 10px 16px; border-left: 8px solid var(--next); min-width: 0; }
+  .next .box .k { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+  .next .box .v { font-size: clamp(26px, 7vw, 54px); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .next .count { flex: none; width: clamp(110px, 30vw, 220px); background: var(--panel); border-radius: 16px; text-align: center; padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; }
+  .next .count .v { font-size: clamp(44px, 14vw, 110px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .next .count .k { font-size: 13px; color: var(--dim); }
+  .next.last .count { background: var(--warn); color: #000; }
+  .next.last .count .k { color: #000; }
+
+  /* alertes du rôle */
+  .side { display: flex; flex-direction: column; gap: 10px; }
+  .alerts { display: flex; flex-direction: column; gap: 8px; }
+  .alert { border-radius: 14px; padding: 10px 16px; font-size: clamp(20px, 5.5vw, 40px); font-weight: 800; background: var(--panel); border: 2px solid var(--line); }
+  .alert small { display: block; font-size: 14px; font-weight: 500; color: var(--dim); }
+  .alert.play { border-color: var(--ok); color: var(--ok); }
+  .alert.rest { border-color: var(--line); color: var(--dim); }
+  .alert.soon { border-color: var(--warn); color: var(--warn); }
+  .alert.now, .alert.imm { background: var(--warn); color: #000; border-color: var(--warn); }
+  .alert.now small, .alert.imm small { color: #000; }
+  .alert.stop { border-color: var(--hot); color: var(--hot); }
+  .alert.info { font-size: 16px; font-weight: 500; color: var(--dim); }
+
+  /* accords */
+  .chords { background: var(--panel); border-radius: 16px; padding: 10px 14px 12px; display: none; }
+  .chords.show { display: block; }
+  .chords .head2 { display: flex; align-items: flex-end; gap: 14px; }
+  .chords .cur { font-size: clamp(56px, 18vw, 130px); font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+  .chords .cur small { font-size: .38em; color: var(--dim); font-weight: 700; margin-left: 8px; letter-spacing: 0; }
+  .chords .nx { margin-left: auto; text-align: right; color: var(--dim); font-size: 14px; }
+  .chords .nx b { display: block; color: var(--ink); font-size: clamp(30px, 9vw, 60px); font-weight: 800; line-height: 1.05; }
+  .chords .nx.soon b { color: var(--warn); }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+  .grid4 div { background: var(--bg); border-radius: 7px; padding: 5px 6px; font-size: clamp(15px, 4.2vw, 22px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 2px solid transparent; }
+  .grid4 div i { font-style: normal; display: block; font-size: 10px; color: var(--dim); font-weight: 500; }
+  .grid4 div.here { border-color: var(--warn); }
+  .grid4 div.past { opacity: .4; }
+  .grid4 div.doubt { color: var(--dim); }
+
+  /* paroles */
+  .lyr { background: var(--panel); border-radius: 16px; padding: 12px 16px 14px; display: none; }
+  .lyr.show { display: block; }
+  .lyr .prev { font-size: clamp(15px, 4vw, 22px); color: var(--dim); opacity: .55; min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lyr .line { font-size: clamp(26px, 7.5vw, 58px); font-weight: 800; line-height: 1.12; margin: 4px 0; }
+  .lyr .line.wait { color: var(--dim); }
+  .lyr .line.ready { color: var(--warn); }
+  .lyr .sweep { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .lyr .sweep i { display: block; height: 100%; width: 0; background: var(--ok); }
+  .lyr .nextl { font-size: clamp(18px, 5vw, 32px); font-weight: 600; color: var(--dim); margin-top: 8px; }
+  .lyr .when { font-size: 14px; color: var(--dim); display: flex; justify-content: space-between; margin-top: 2px; }
+  .lyr .when b { color: var(--warn); font-size: 18px; }
+
+  /* vue batteur */
+  #drum { display: none; flex-direction: column; gap: 10px; min-height: 0; }
+  body.drummer #drum { display: flex; }
+  body.drummer #now, body.drummer #next, body.drummer .side, body.drummer #list, body.drummer #footR { display: none !important; }
+  .dhead { display: flex; gap: 10px; align-items: stretch; }
+  .dsec { flex: 1; min-width: 0; background: var(--panel); border-radius: 16px; padding: 10px 14px; border-left: 12px solid var(--sec); }
+  .dsec .k { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+  .dsec .v { font-size: clamp(30px, 9vw, 72px); font-weight: 900; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dsec .g { font-size: 15px; color: var(--dim); margin-top: 2px; }
+  .dcount { flex: none; width: clamp(110px, 30vw, 200px); background: var(--panel); border-radius: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+  .dcount .v { font-size: clamp(44px, 13vw, 100px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .dcount .v small { font-size: .45em; color: var(--dim); }
+  .dcount .k { font-size: 13px; color: var(--dim); }
+  .dbeats { display: flex; gap: 8px; }
+  .dbeats span { flex: 1; height: clamp(34px, 9vw, 60px); border-radius: 10px; background: var(--line); display: flex; align-items: center; justify-content: center; font-size: clamp(18px, 5vw, 30px); font-weight: 900; color: #0008; }
+  .dbeats span.on { background: var(--ink); color: #000; }
+  .dbeats span.one.on { background: var(--warn); }
+  .phrase { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .phrase div { height: 30px; border-radius: 6px; background: var(--line); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: var(--dim); border: 2px solid transparent; }
+  .phrase div.past { background: #39414d; color: #9aa3b0; }
+  .phrase div.here { background: var(--ink); color: #000; }
+  .phrase div.fill { border-color: var(--warn); color: var(--warn); }
+  .phrase div.here.fill { background: var(--warn); color: #000; }
+  .phrase div.rest { background: repeating-linear-gradient(45deg, #1b2027 0 6px, #262c35 6px 12px); color: var(--dim); }
+  .phrase div.crash::after { content: "✱"; margin-left: 2px; color: #7fd1ff; }
+  .dgrid { background: var(--panel); border-radius: 16px; padding: 10px 12px 12px; }
+  .dgrid .t { display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; margin-bottom: 6px; }
+  .dgrid .t span:last-child { color: var(--dim); font-weight: 500; }
+  .dgrid.isfill { box-shadow: inset 0 0 0 3px var(--warn); }
+  .dgrid.isfill .t span:first-child { color: var(--warn); }
+  .lanes { display: grid; grid-template-columns: 74px repeat(16, 1fr); row-gap: 4px; align-items: center; }
+  .lanes .lb { font-size: 13px; color: var(--dim); font-weight: 700; white-space: nowrap; }
+  .lanes .c { height: 26px; display: flex; align-items: center; justify-content: center; border-left: 1px solid #ffffff10; }
+  .lanes .c.b { border-left: 2px solid #ffffff30; }
+  .lanes .c.cur { background: #ffffff1c; }
+  .lanes .c i { width: 15px; height: 15px; border-radius: 50%; background: var(--ink); display: block; }
+  .lanes .c i.acc { width: 20px; height: 20px; }
+  .lanes .c.cur i { background: var(--warn); }
+  .lanes .c i.cy { background: #7fd1ff; transform: rotate(45deg); border-radius: 3px; }
+  .lanes .c i.bd { background: #ff7a7a; }
+  .lanes .c i.sd { background: #fff; }
+  .lanes .c i.tm { background: #c9a0ff; }
+  .lanes .hd { font-size: 11px; color: var(--dim); text-align: center; height: 16px; }
+  .devent { background: var(--panel); border-radius: 16px; padding: 10px 16px; border: 3px solid var(--line); }
+  .devent .v { font-size: clamp(26px, 7.5vw, 54px); font-weight: 900; line-height: 1.1; }
+  .devent .k { font-size: 15px; color: var(--dim); margin-top: 2px; }
+  .devent.soon { border-color: var(--warn); } .devent.soon .v { color: var(--warn); }
+  .devent.imm { background: var(--warn); border-color: var(--warn); color: #000; } .devent.imm .k { color: #000; }
+  .devent.stop { border-color: var(--hot); } .devent.stop .v { color: var(--hot); }
+  .dthen { font-size: 15px; color: var(--dim); padding: 0 6px; }
+  @media (orientation: landscape) and (min-width: 700px) {
+    body.drummer { grid-template-columns: 1fr 1.15fr; }
+    body.drummer #drum { grid-column: 1 / -1; grid-row: 2 / 4; display: grid; grid-template-columns: 1fr 1.15fr; grid-auto-rows: min-content; column-gap: 14px; }
+    body.drummer .dhead, body.drummer .dbeats, body.drummer .phrase, body.drummer .devent, body.drummer .dthen { grid-column: 1; }
+    body.drummer .dgrid { grid-column: 2; grid-row: 1 / span 5; align-self: start; }
+    .lanes .c { height: 34px; }
+  }
+
+  /* plan du morceau */
+  .map { margin-top: auto; display: flex; flex-direction: column; min-height: 0; flex: 1; justify-content: flex-end; }
+  .strip { position: relative; display: flex; height: 34px; border-radius: 8px; overflow: hidden; background: var(--line); }
+  .strip div { height: 100%; border-right: 2px solid var(--bg); font-size: 11px; color: #000; font-weight: 700; padding: 2px 3px; overflow: hidden; white-space: nowrap; opacity: .55; }
+  .strip div.cur { opacity: 1; }
+  .strip .head { position: absolute; top: -3px; bottom: -3px; width: 3px; background: #fff; border: none; padding: 0; opacity: 1; box-shadow: 0 0 6px #000; }
+  .list { display: none; order: -1; margin-bottom: 8px; flex: 1 1 0; min-height: 0; overflow-y: auto; font-size: 17px; }
+  .list.show { display: block; }
+  .list .row { display: flex; gap: 10px; padding: 6px 8px; border-radius: 8px; align-items: center; }
+  .list .row.cur { background: var(--panel); font-weight: 800; }
+  .list .row i { width: 10px; height: 22px; border-radius: 3px; flex: none; }
+  .list .row .b { margin-left: auto; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .foot { display: flex; justify-content: space-between; color: var(--dim); font-size: 13px; margin-top: 6px; }
+
+  /* choix du rôle */
+  .picker { position: fixed; inset: 0; background: rgba(5,6,8,.97); display: none; flex-direction: column; justify-content: center; padding: 24px; gap: 12px; z-index: 10; }
+  .picker.show { display: flex; }
+  .picker h1 { margin: 0 0 8px; font-size: 26px; }
+  .picker button { font-size: 24px; font-weight: 700; padding: 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); text-align: left; }
+  .picker button small { display: block; font-size: 14px; font-weight: 400; color: var(--dim); margin-top: 2px; }
+  .msg { position: fixed; left: 14px; right: 14px; bottom: 14px; background: var(--hot); color: #fff; padding: 10px 14px; border-radius: 12px; font-size: 15px; display: none; z-index: 5; }
+  .msg.show { display: block; }
+
+  @media (orientation: landscape) and (min-width: 700px) {
+    body { display: grid; grid-template-columns: 1.25fr 1fr; grid-template-rows: auto auto minmax(0, 1fr); column-gap: 14px; }
+    .top { grid-column: 1 / -1; }
+    .now { grid-column: 1; grid-row: 2; }
+    .next { grid-column: 1; grid-row: 3; align-self: start; }
+    .side { grid-column: 2; grid-row: 2; }
+    .map { grid-column: 2; grid-row: 3; margin-top: 0; padding-top: 4px; }
+    .strip { display: none; }
+    .foot { display: none; }
+  }
+
+</style>
+</head>
+<body>
+  <div class="top">
+    <button class="role" id="roleBtn">…</button>
+    <div class="title" id="title">ReaCue</div>
+    <button class="iconbtn" id="langBtn" title="Langue / Language">EN</button>
+    <button class="iconbtn" id="fsBtn" title="">⛶</button>
+    <div class="dot" id="dot" title=""></div>
+  </div>
+
+  <div class="now" id="now">
+    <div class="label"><span id="nowLabel"></span><span id="barNum"></span></div>
+    <div class="name" id="nowName">—</div>
+    <div class="progress"><i id="prog"></i></div>
+    <div class="beats" id="beats"></div>
+  </div>
+
+  <div class="next" id="next">
+    <div class="box" id="nextBox"><div class="k" id="nextK"></div><div class="v" id="nextName">—</div></div>
+    <div class="count"><div class="v" id="countV">–</div><div class="k" id="countK"></div></div>
+  </div>
+
+  <div class="side">
+    <div class="lyr" id="lyr">
+      <div class="prev" id="lyPrev"></div>
+      <div class="line" id="lyLine"></div>
+      <div class="sweep"><i id="lySweep"></i></div>
+      <div class="nextl" id="lyNext"></div>
+      <div class="when"><span id="lyWhen"></span><span id="lyNum"></span></div>
+    </div>
+    <div class="chords" id="chords">
+      <div class="head2"><div class="cur" id="chCur">–</div><div class="nx" id="chNx"></div></div>
+      <div class="grid4" id="chGrid"></div>
+    </div>
+    <div class="alerts" id="alerts"></div>
+  </div>
+
+  <div id="drum">
+    <div class="dhead">
+      <div class="dsec" id="dSec"><div class="k" id="dSecK"></div><div class="v" id="dSecV">—</div><div class="g" id="dSecG"></div></div>
+      <div class="dcount"><div class="v" id="dCntV">–</div><div class="k" id="dCntK"></div></div>
+    </div>
+    <div class="dbeats" id="dBeats"></div>
+    <div class="phrase" id="dPhrase"></div>
+    <div class="devent" id="dEvent"><div class="v" id="dEvV">—</div><div class="k" id="dEvK"></div></div>
+    <div class="dthen" id="dThen"></div>
+    <div class="dgrid" id="dGrid"><div class="t"><span id="dGridT">Groove</span><span id="dGridK"></span></div><div class="lanes" id="dLanes"></div></div>
+  </div>
+
+  <div class="map">
+    <div class="strip" id="strip"></div>
+    <div class="list show" id="list"></div>
+    <div class="foot"><span id="footL"></span><span id="footR"></span></div>
+  </div>
+
+  <div class="picker" id="picker">
+    <h1 id="pickT"></h1>
+    <button data-role="drums"></button>
+    <button data-role="bass"></button>
+    <button data-role="guitars"></button>
+    <button data-role="lead_guitar"></button>
+    <button data-role="vocals"></button>
+    <button data-role="all"></button>
+  </div>
+  <div class="msg" id="msg"></div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- langue (fr / en)
+const STR = {
+  fr: {
+    role: "Rôle", roles: { drums: "Batterie", bass: "Basse", guitars: "Guitare rythm.", lead_guitar: "Guitare solo", vocals: "Chant", all: "Général" },
+    instr: { drums: "batterie", bass: "basse", guitars: "guitare", lead_guitar: "guitare solo", vocals: "chant" },
+    pick: "Je suis…",
+    pickers: {
+      drums: ["Batterie", "groove, fills, crashs, carrures"], bass: ["Basse", "notes de basse, grille, entrées et sorties"],
+      guitars: ["Guitare rythmique", "accords, grille, entrées et sorties"], lead_guitar: ["Guitare solo", "solos, accords, entrées"],
+      vocals: ["Chant", "paroles défilantes, entrées de voix"], all: ["Vue générale", "structure et accords"] },
+    fullscreen: "Plein écran", link: "Liaison avec REAPER", next: "Ensuite", footR: "touche le plan : liste on/off",
+    noSong: "Pas de morceau préparé : lance « ReaCue - Préparer le morceau » dans REAPER.",
+    noReaper: "REAPER ne répond pas : vérifie le Wi-Fi et l'interface web de REAPER.",
+    bars: n => n > 1 ? `${n} mesures` : "1 mesure", barsWord: n => n > 1 ? "mesures" : "mesure",
+    inBars: n => n <= 1 ? "à la prochaine mesure" : `dans ${n} mesures`,
+    inBeats: n => `dans ${n} temps`, inBarsShort: n => `dans ${n} mes.`, beats: "temps",
+    footL: (n, b) => `${n} mesures · ${b}/4`,
+    firstChord: "1er accord", then: "ensuite",
+    lyThenIn: n => `ensuite dans ${n} mes.`, lyIn: (n, bar) => `dans ${n} mesures · mesure ${bar}`,
+    lyEnd: "fin des paroles", lyLine: n => `ligne ${n}`, lyCopy: " (reprise)", lyUnsure: " · position incertaine",
+    lanes: { CR: "Crash", RD: "Ride", HH: "Charley", SD: "Caisse cl.", T1: "Tom 1", T2: "Tom 2", FT: "Tom bas", BD: "Gr. caisse" },
+    tacet: "Batterie tacet", ride: "ride", hihat: "charley",
+    rest: n => `silence ${n} mes.`, back: "REPRISE", crash1: "crash sur le 1", withFill: "avec fill", fill: "FILL", end: "FIN",
+    nowK: "En cours", countIn: "Décompte", finished: "Terminé", ready: "Prêt", endName: "Fin",
+    barOfSec: "mesure de la section", beatsBefore1: "temps avant la 1", fillNow: "FILL maintenant",
+    thenAt: (x, b) => `puis ${x} (mes. ${b})`, at: (x, b) => `${x} (mes. ${b})`,
+    noDrums: "Pas de transcription batterie", silence: "Silence", freeBar: "Mesure libre",
+    barN: n => `mesure ${n}`, firstPlayed: " (1re jouée)", drumsSilent: "Batterie silencieuse dans cette mesure",
+    songDone: "Morceau terminé", beforeCount: "Avant le count-in", stopped: "À l'arrêt",
+    barOf: (b, n) => `Mesure ${b} / ${n}`, songEnd: "Fin du morceau",
+    backAt: (b, name) => `reprise mesure ${b} (${name})`, toEnd: "jusqu'à la fin",
+    stopIn: x => `STOP ${x}`, restOf: (x, back) => `silence de ${x} · ${back}`,
+    youPlay: "Tu joues", nextRest: b => `prochain silence : mesure ${b}`,
+    startOf: name => `début de ${name}`, barName: (b, name) => `mesure ${b}${name ? " (" + name + ")" : ""}`,
+    entryIn: n => `ENTRÉE${n != null ? " dans " + n : ""}`, entryBars: x => `Entrée ${x}`,
+    youStop: "Tu ne joues plus", toSongEnd: "jusqu'à la fin du morceau",
+    breakIn: x => `BREAK ${x}`, breakLen: x => `${x} de break`, breakNow: "BREAK en cours",
+    backTo: (name, x) => `reprise : ${name} ${x}`, endLower: "fin",
+    lastRound: "DERNIER TOUR", solo: "SOLO", soloEnds: x => `fin du solo ${x}`, soloIn: x => `SOLO ${x}`,
+    noVoiceStem: "Pas de stem voix : les entrées de chant ne sont pas connues.", endIn: x => `Fin ${x}`,
+    key: k => `Tonalité : ${k}`, noChords: " · pas de grille d'accords pour ce morceau",
+    noLyrics: "Pas de paroles : dépose paroles.txt à côté des stems puis relance « Republier le prompteur ».",
+    noStems: "Morceau sans stems : seule la structure est affichée.",
+  },
+  en: {
+    role: "Role", roles: { drums: "Drums", bass: "Bass", guitars: "Rhythm gtr", lead_guitar: "Lead gtr", vocals: "Vocals", all: "Overview" },
+    instr: { drums: "drums", bass: "bass", guitars: "guitar", lead_guitar: "lead guitar", vocals: "vocals" },
+    pick: "I play…",
+    pickers: {
+      drums: ["Drums", "groove, fills, crashes, phrasing"], bass: ["Bass", "bass notes, chart, entries and exits"],
+      guitars: ["Rhythm guitar", "chords, chart, entries and exits"], lead_guitar: ["Lead guitar", "solos, chords, entries"],
+      vocals: ["Vocals", "scrolling lyrics, vocal entries"], all: ["Overview", "structure and chords"] },
+    fullscreen: "Full screen", link: "Link to REAPER", next: "Next", footR: "tap the map: list on/off",
+    noSong: "No song prepared: run “ReaCue - Prepare the song” in REAPER.",
+    noReaper: "REAPER is not responding: check the Wi-Fi and REAPER's web interface.",
+    bars: n => n > 1 ? `${n} bars` : "1 bar", barsWord: n => n > 1 ? "bars" : "bar",
+    inBars: n => n <= 1 ? "next bar" : `in ${n} bars`,
+    inBeats: n => `in ${n} beat${n > 1 ? "s" : ""}`, inBarsShort: n => `in ${n} bars`, beats: "beats",
+    footL: (n, b) => `${n} bars · ${b}/4`,
+    firstChord: "first chord", then: "next",
+    lyThenIn: n => `next in ${n} bars`, lyIn: (n, bar) => `in ${n} bars · bar ${bar}`,
+    lyEnd: "end of lyrics", lyLine: n => `line ${n}`, lyCopy: " (repeat)", lyUnsure: " · position uncertain",
+    lanes: { CR: "Crash", RD: "Ride", HH: "Hi-hat", SD: "Snare", T1: "Tom 1", T2: "Tom 2", FT: "Floor tom", BD: "Kick" },
+    tacet: "Drums tacet", ride: "ride", hihat: "hi-hat",
+    rest: n => `${n}-bar rest`, back: "BACK IN", crash1: "crash on 1", withFill: "with fill", fill: "FILL", end: "END",
+    nowK: "Now", countIn: "Count-in", finished: "Finished", ready: "Ready", endName: "End",
+    barOfSec: "bar of section", beatsBefore1: "beats before 1", fillNow: "FILL now",
+    thenAt: (x, b) => `then ${x} (bar ${b})`, at: (x, b) => `${x} (bar ${b})`,
+    noDrums: "No drum transcription", silence: "Rest", freeBar: "Free bar",
+    barN: n => `bar ${n}`, firstPlayed: " (first played)", drumsSilent: "Drums silent in this bar",
+    songDone: "Song finished", beforeCount: "Before count-in", stopped: "Stopped",
+    barOf: (b, n) => `Bar ${b} / ${n}`, songEnd: "End of song",
+    backAt: (b, name) => `back in at bar ${b} (${name})`, toEnd: "until the end",
+    stopIn: x => `STOP ${x}`, restOf: (x, back) => `${x} rest · ${back}`,
+    youPlay: "You play", nextRest: b => `next rest: bar ${b}`,
+    startOf: name => `start of ${name}`, barName: (b, name) => `bar ${b}${name ? " (" + name + ")" : ""}`,
+    entryIn: n => `COME IN${n != null ? " in " + n : ""}`, entryBars: x => `Come in ${x}`,
+    youStop: "You're done", toSongEnd: "until the end of the song",
+    breakIn: x => `BREAK ${x}`, breakLen: x => `${x} break`, breakNow: "BREAK now",
+    backTo: (name, x) => `back in: ${name} ${x}`, endLower: "end",
+    lastRound: "LAST ROUND", solo: "SOLO", soloEnds: x => `solo ends ${x}`, soloIn: x => `SOLO ${x}`,
+    noVoiceStem: "No vocal stem: vocal entries are unknown.", endIn: x => `End ${x}`,
+    key: k => `Key: ${k}`, noChords: " · no chord chart for this song",
+    noLyrics: "No lyrics: put lyrics.txt next to the stems, then run “Republish the prompter”.",
+    noStems: "Song without stems: only the structure is shown.",
+  },
+};
+const params = new URLSearchParams(location.search);
+const DEMO = params.has("demo");
+const $ = id => document.getElementById(id);
+function store(k, v) { try { v === undefined ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+let LANG_FIXED = params.get("lang") || load("reacue_lang");          // choix explicite (paramètre ou bouton)
+let LANG = STR[LANG_FIXED] ? LANG_FIXED : ((navigator.language || "fr").toLowerCase().startsWith("fr") ? "fr" : "en");
+let S = STR[LANG];
+function setLang(l, remember) {
+  if (!STR[l]) return;
+  LANG = l; S = STR[l];
+  if (remember) { LANG_FIXED = l; store("reacue_lang", l); }
+  document.documentElement.lang = l;
+  applyStatic();
+  if (song) { gridKey = ""; dGridKey = ""; dPhraseKey = ""; prepSong(); }
+}
+function applyStatic() {
+  $("langBtn").textContent = LANG === "fr" ? "EN" : "FR";
+  $("fsBtn").title = S.fullscreen; $("dot").title = S.link;
+  $("nextK").textContent = S.next; $("footR").textContent = S.footR; $("pickT").textContent = S.pick;
+  document.querySelectorAll("#picker button").forEach(b => { const p = S.pickers[b.dataset.role];
+    b.innerHTML = `${esc(p[0])}<small>${esc(p[1])}</small>`; });
+  $("roleBtn").textContent = S.roles[role] || S.role;
+}
+
+// ---------------------------------------------------------------- état
+let song = null, role = null, lastSi = null;
+let st = { play: 0, pos: 0, at: performance.now(), rtt: 40, ok: false, lastOk: 0 };
+
+role = params.get("role") || load("reacue_role");
+if (!STR.fr.roles[role]) { role = null; $("picker").classList.add("show"); }
+document.querySelectorAll("#picker button").forEach(b => b.onclick = () => {
+  role = b.dataset.role; store("reacue_role", role); $("picker").classList.remove("show"); layoutBeats(); });
+$("roleBtn").onclick = () => $("picker").classList.add("show");
+$("langBtn").onclick = () => setLang(LANG === "fr" ? "en" : "fr", true);
+$("strip").onclick = () => { const l = $("list"); l.classList.toggle("show"); store("reacue_list", l.classList.contains("show") ? "1" : "0"); };
+if (load("reacue_list") === "0") $("list").classList.remove("show");
+$("fsBtn").onclick = () => {
+  const d = document.documentElement;
+  if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  else if (d.requestFullscreen) d.requestFullscreen().catch(() => {}); else if (d.webkitRequestFullscreen) d.webkitRequestFullscreen();
+  keepAwake();
+};
+let wake = null;
+async function keepAwake() { try { if ("wakeLock" in navigator && !wake) { wake = await navigator.wakeLock.request("screen"); wake.onrelease = () => wake = null; } } catch (e) {} }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+
+// ---------------------------------------------------------------- données du morceau
+async function loadSong() {
+  try {
+    const r = await fetch("reacue_song.json?t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const s = await r.json();
+    if (!song || s.id !== song.id) {
+      song = s; gridKey = ""; dGridKey = ""; dPhraseKey = "";
+      if (!STR[LANG_FIXED] && STR[song.language] && song.language !== LANG) setLang(song.language, false);
+      prepSong();
+    }
+  } catch (e) { if (!song) showMsg(S.noSong); }
+}
+function keyName(k) { return k ? (k[LANG] || k.fr || k.chord) : ""; }
+function prepSong() {
+  const k = song.key ? ` · ${esc(keyName(song.key))} (${esc(song.key.chord)})` : "";
+  $("title").innerHTML = `<b>${esc(song.title)}</b> · ${Math.round(song.bpm * 10) / 10} BPM${k}`;
+  $("footL").textContent = S.footL(song.n_bars, song.beats_per_bar);
+  // plan proportionnel
+  const strip = $("strip"); strip.innerHTML = "";
+  song.sections.forEach((s, i) => {
+    const d = document.createElement("div");
+    d.style.flex = `${barT(s.end_bar + 1) - barT(s.start_bar)}`; d.style.background = s.color;
+    d.textContent = short(s.name); d.dataset.i = i; strip.appendChild(d);
+  });
+  const h = document.createElement("div"); h.className = "head"; h.id = "head"; strip.appendChild(h);
+  $("list").innerHTML = song.sections.map((s, i) =>
+    `<div class="row" data-i="${i}"><i style="background:${s.color}"></i>${esc(s.name)}<span class="b">${s.start_bar}–${s.end_bar} (${s.end_bar - s.start_bar + 1})</span></div>`).join("");
+  lastSi = null;
+  layoutBeats(); hideMsg();
+}
+function layoutBeats() {
+  const n = song ? song.beats_per_bar : 4;
+  $("beats").innerHTML = Array.from({ length: n }, (_, i) => `<span class="${i ? "" : "one"}"></span>`).join("");
+  $("roleBtn").textContent = S.roles[role] || S.role;
+  document.body.classList.toggle("drummer", role === "drums");
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const SHORT = [["Pré-refrain", "Pré"], ["Pre-chorus", "Pre"], ["Couplet", "Cplt"], ["Refrain", "Ref"], ["Verse", "V"],
+  ["Chorus", "Ch"], ["Intro guitare", "Intro g."], ["Guitar intro", "Gtr intro"], ["Interlude", "Inter."]];
+const short = n => SHORT.reduce((x, [a, b]) => x.replace(a, b), String(n));
+
+// mesure b (1-based ; ≤ 0 = count-in) -> début sur la timeline
+function barT(b) { return song.bar_times[b - 1 + song.count_in_bars]; }
+
+// ---------------------------------------------------------------- position REAPER
+async function poll() {
+  if (DEMO) return;
+  const t = performance.now();
+  try {
+    const r = await fetch("/_/TRANSPORT", { cache: "no-store" });
+    const txt = await r.text();
+    const now = performance.now();
+    const f = txt.split("\n").find(l => l.startsWith("TRANSPORT"));
+    if (!f) throw new Error("bad answer");
+    const p = f.split("\t");
+    const play = parseInt(p[1], 10), pos = parseFloat(p[2]);
+    const rtt = now - t; st.rtt = st.rtt * 0.8 + rtt * 0.2;
+    const playing = play === 1 || play === 5;
+    const measured = pos + (playing ? st.rtt / 2000 : 0);
+    const predicted = st.play ? st.pos + (now - st.at) / 1000 : st.pos;
+    // lissage : petites corrections progressives, grands écarts = saut (déplacement du curseur)
+    const target = (playing && Math.abs(measured - predicted) < 0.06) ? predicted + (measured - predicted) * 0.25 : measured;
+    st = { ...st, play: playing ? 1 : 0, pos: target, at: now, ok: true, lastOk: now };
+  } catch (e) { st.ok = false; }
+}
+let demoT0 = performance.now();
+function demoPos() { return song ? barT(1) - 2 * 60 / song.bpm * song.beats_per_bar * 1 + (performance.now() - demoT0) / 1000 : 0; }
+function curPos() { if (DEMO) return demoPos(); return st.play ? st.pos + (performance.now() - st.at) / 1000 : st.pos; }
+
+// ---------------------------------------------------------------- calculs musicaux
+function locate(t) {
+  const bt = song.bar_times, ci = song.count_in_bars;
+  if (t < bt[0]) return { pre: true, bar: -ci + 1, frac: 0, beat: -1 };
+  let lo = 0, hi = bt.length - 1;
+  if (t >= bt[hi]) return { end: true, bar: song.n_bars + 1, frac: 0, beat: -1 };
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (bt[m] <= t) lo = m; else hi = m; }
+  const frac = (t - bt[lo]) / (bt[lo + 1] - bt[lo]);
+  return { bar: lo - ci + 1, frac, beat: Math.floor(frac * song.beats_per_bar) };
+}
+function sectionAt(bar) { return song.sections.findIndex(s => bar >= s.start_bar && bar <= s.end_bar); }
+function actOf(r, bar) { const a = song.activity[r]; return a && bar >= 1 && bar <= a.length ? a[bar - 1] : null; }
+function instrRole() {
+  if (role === "lead_guitar" && !song.activity.lead_guitar) return song.activity.guitars_2 ? "guitars_2" : "guitars";
+  return role;
+}
+// prochaine mesure (> bar) où l'activité vaut v ; null si aucune
+function nextAct(r, bar, v) { const a = song.activity[r]; if (!a) return null; for (let b = Math.max(1, bar + 1); b <= a.length; b++) if (a[b - 1] === v) return b; return null; }
+// longueur du silence qui commence à la mesure b
+function restLen(r, b) { const a = song.activity[r]; let n = 0; while (b + n <= a.length && a[b + n - 1] === 0) n++; return n; }
+const mes = n => S.bars(n);
+const inBars = n => S.inBars(n);
+
+// ---------------------------------------------------------------- accords
+const NOTE_FR = { C: "Do", D: "Ré", E: "Mi", F: "Fa", G: "Sol", A: "La", B: "Si" };
+const frNote = n => n ? NOTE_FR[n[0]] + (n[1] === "#" ? "♯" : n[1] === "b" ? "♭" : "") : "";
+const noteName = n => LANG === "fr" ? frNote(n) : "";
+const nice = c => String(c).replace(/#/g, "♯").replace(/(?<=[A-G])b/g, "♭");
+const rootOf = c => (String(c).match(/^[A-G][#b]?/) || [""])[0];
+function barChords(b) { const c = song.chords && song.chords[b - 1]; return c && c.bar === b ? c.chords : (song.chords || []).find(x => x.bar === b)?.chords; }
+// accord joué à (mesure, temps 0-based)
+function chordAt(b, beat) {
+  const cs = barChords(b); if (!cs || !cs.length) return null;
+  let cur = cs[0]; for (const c of cs) if (c.beat - 1 <= beat) cur = c; return cur;
+}
+// prochain changement d'accord après (b, beat) : {c, bar, beat, beats} (beats = temps restants)
+function nextChord(b, beat) {
+  const m = song.beats_per_bar, now = chordAt(b, Math.max(beat, 0));
+  for (let k = Math.max(b, 1); k <= song.n_bars; k++) {
+    for (const c of barChords(k) || []) {
+      const pos = (k - b) * m + (c.beat - 1) - beat;
+      if (pos <= 0) continue;
+      if (!now || c.chord !== now.chord || c.bass !== now.bass) return { c, bar: k, beats: pos };
+    }
+  }
+  return null;
+}
+const cellTxt = cs => (cs || []).map(c => nice(c.chord)).join(" · ") || "";
+let gridKey = "";
+function renderChords(L, sec) {
+  const box = $("chords");
+  const show = !!(song.chords && song.chords.length) && ["bass", "guitars", "lead_guitar", "all"].includes(role);
+  box.classList.toggle("show", show); if (!show) return;
+  const b = Math.max(L.bar, 1), beat = L.bar >= 1 ? Math.max(L.beat, 0) : 0;
+  const cur = L.bar >= 1 && !L.end ? chordAt(b, beat) : null;
+  const bassRole = role === "bass";
+  if (cur) {
+    const bn = cur.bass || rootOf(cur.chord);
+    const nn = noteName(bn);
+    $("chCur").innerHTML = bassRole ? `${nice(bn)}<small>${nn ? nn + " · " : ""}${nice(cur.chord)}</small>`
+      : `${nice(cur.chord)}<small>${noteName(rootOf(cur.chord))}</small>`;
+  } else {
+    const f = chordAt(1, 0), fl = f ? (bassRole ? (f.bass || rootOf(f.chord)) : f.chord) : "–";
+    $("chCur").innerHTML = L.end ? "–" : `${nice(fl)}<small>${S.firstChord}</small>`;
+  }
+  const nx = !L.end && L.bar >= 1 ? nextChord(b, beat) : null;
+  const nxEl = $("chNx");
+  if (nx && nx.c) {
+    const m = song.beats_per_bar, w = nx.beats <= m ? S.inBeats(nx.beats) : S.inBarsShort(Math.ceil(nx.beats / m));
+    const lbl = bassRole ? nice(nx.c.bass || rootOf(nx.c.chord)) : nice(nx.c.chord);
+    nxEl.innerHTML = `${S.then}<b>${lbl}</b>${w}`; nxEl.classList.toggle("soon", nx.beats <= m);
+  } else nxEl.innerHTML = "";
+  // grille de la section en cours (ou de la 1re section pendant le décompte)
+  const s = sec || song.sections[0];
+  const key = s.start_bar + ":" + s.end_bar;
+  if (key !== gridKey) {
+    gridKey = key;
+    const cells = [];
+    for (let k = s.start_bar; k <= s.end_bar; k++) {
+      const cs = barChords(k) || [], low = cs.some(c => (c.confidence ?? 1) < 0.5);
+      cells.push(`<div data-b="${k}" class="${low ? "doubt" : ""}"><i>${k}</i>${cellTxt(cs) || "N.C."}</div>`);
+    }
+    $("chGrid").innerHTML = cells.join("");
+  }
+  document.querySelectorAll("#chGrid div").forEach(d => { const k = +d.dataset.b; d.classList.toggle("here", k === L.bar); d.classList.toggle("past", k < L.bar); });
+}
+
+// ---------------------------------------------------------------- paroles
+function renderLyrics(t, L) {
+  const box = $("lyr"), ly = song.lyrics || [];
+  const show = ly.length > 0 && (role === "vocals" || role === "all");
+  box.classList.toggle("show", show); if (!show) return;
+  let k = -1; for (let i = 0; i < ly.length; i++) { if (ly[i].t <= t + 0.05) k = i; else break; }
+  const cur = k >= 0 ? ly[k] : null, nx = ly[k + 1] || null;
+  const singing = cur && t < cur.end + 0.15;
+  const beatLen = 60 / song.bpm;
+  const lineEl = $("lyLine");
+  if (singing) {
+    $("lyPrev").textContent = k > 0 ? ly[k - 1].text : "";
+    lineEl.textContent = cur.text; lineEl.className = "line";
+    $("lySweep").style.width = `${Math.min(100, 100 * (t - cur.t) / (cur.end - cur.t))}%`;
+    $("lyNext").textContent = nx ? nx.text : "";
+    const gap = nx ? (nx.t - t) / beatLen : null;
+    $("lyWhen").innerHTML = nx && gap > song.beats_per_bar ? esc(S.lyThenIn(Math.round(gap / song.beats_per_bar))) : "";
+  } else {
+    // silence : la prochaine ligne passe au centre, avec le compte à rebours
+    $("lyPrev").textContent = cur ? cur.text : "";
+    $("lySweep").style.width = "0";
+    if (nx) {
+      const beats = Math.max(0, Math.ceil((nx.t - t) / beatLen - 0.05));
+      const m = song.beats_per_bar, ready = beats <= m;
+      lineEl.textContent = nx.text; lineEl.className = "line " + (ready ? "ready" : "wait");
+      $("lyNext").textContent = ly[k + 2] ? ly[k + 2].text : "";
+      $("lyWhen").innerHTML = ready ? `<b>${esc(S.inBeats(beats))}</b>` : esc(S.lyIn(Math.ceil(beats / m), nx.bar));
+    } else { lineEl.textContent = "—"; lineEl.className = "line wait"; $("lyNext").textContent = ""; $("lyWhen").textContent = S.lyEnd; }
+  }
+  const shown = singing ? cur : nx;
+  $("lyNum").textContent = shown ? `${S.lyLine(shown.line)}${shown.copy ? S.lyCopy : ""}${(shown.confidence ?? 1) < 0.35 ? S.lyUnsure : ""}` : "";
+}
+
+// ---------------------------------------------------------------- vue batteur
+const LANE_KEYS = ["CR", "RD", "HH", "SD", "T1", "T2", "FT", "BD"];
+const dBar = b => { const d = song.drums; if (!d || !d.bars) return null; const e = d.bars[b - 1]; return e && e.bar === b ? e : d.bars.find(x => x.bar === b) || null; };
+function grooveName(sec) {
+  const d = song.drums; if (!d || !sec) return "";
+  const cnt = {};
+  for (let b = sec.start_bar; b <= sec.end_bar; b++) { const e = dBar(b); if (e && e.pattern) cnt[e.pattern] = (cnt[e.pattern] || 0) + 1; }
+  const best = Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x])[0];
+  if (!best) { const rest = [...Array(sec.end_bar - sec.start_bar + 1)].every((_, i) => (dBar(sec.start_bar + i) || {}).rest); return rest ? S.tacet : ""; }
+  const p = d.patterns[best] || {}, cym = p.hits && p.hits.RD ? S.ride : p.hits && p.hits.HH ? S.hihat : "";
+  return `Groove ${best}${cym ? " · " + cym : ""}`;
+}
+// événements à venir pour le batteur (après la mesure b)
+function drumEvents(b, maxN) {
+  const out = [];
+  for (let k = Math.max(b + 1, 1); k <= song.n_bars && out.length < maxN; k++) {
+    const e = dBar(k) || {}, prev = dBar(k - 1) || {}, s = song.sections.find(x => x.start_bar === k);
+    if (e.rest && !prev.rest && k > 1) out.push({ bar: k, kind: "stop", txt: "STOP", sub: S.rest(restRun(k)) + (s ? ` · ${s.name}` : "") });
+    else if (!e.rest && prev.rest && k > 1) out.push({ bar: k, kind: "in", txt: s ? `${S.back} · ${s.name}` : S.back, sub: e.crash ? S.crash1 : "" });
+    else if (s) out.push({ bar: k, kind: "sec", txt: `→ ${s.name}`, sub: [grooveName(s), e.crash ? S.crash1 : ""].filter(Boolean).join(" · ") });
+    if (e.fill && !e.rest) {
+      const last = out[out.length - 1];
+      if (last && last.bar === k) last.sub = [last.sub, S.withFill].filter(Boolean).join(" · ");
+      else out.push({ bar: k, kind: "fill", txt: S.fill, sub: "" });
+    }
+  }
+  if (out.length < maxN) out.push({ bar: song.n_bars + 1, kind: "end", txt: S.end, sub: "" });
+  return out.slice(0, maxN);
+}
+function restRun(k) { let n = 0; while (k + n <= song.n_bars && (dBar(k + n) || {}).rest) n++; return n; }
+let dGridKey = "", dPhraseKey = "";
+function renderDrums(t, L, si, sec) {
+  if (role !== "drums") return;
+  const m = song.beats_per_bar, b = L.bar, d = song.drums;
+  const counting = !L.pre && !L.end && b <= 0;
+  // section
+  $("dSec").style.borderLeftColor = sec ? sec.color : "#555";
+  $("dSecK").textContent = sec ? S.nowK : counting ? S.countIn : L.end ? S.finished : S.ready;
+  $("dSecV").textContent = sec ? sec.name : counting ? "Count-in" : L.end ? S.endName : (song.sections[0] || {}).name || "—";
+  $("dSecG").textContent = sec ? grooveName(sec) : "";
+  if (sec) { $("dCntV").innerHTML = `${b - sec.start_bar + 1}<small>/${sec.end_bar - sec.start_bar + 1}</small>`; $("dCntK").textContent = S.barOfSec; }
+  else if (counting) { $("dCntV").innerHTML = `${m * (1 - b) - Math.max(L.beat, 0)}`; $("dCntK").textContent = S.beatsBefore1; }
+  else { $("dCntV").textContent = "–"; $("dCntK").textContent = ""; }
+  // temps
+  if ($("dBeats").children.length !== m) $("dBeats").innerHTML = Array.from({ length: m }, (_, i) => `<span class="${i ? "" : "one"}">${i + 1}</span>`).join("");
+  [...$("dBeats").children].forEach((e, i) => e.classList.toggle("on", L.beat >= 0 && i === L.beat));
+  // carrures de la section (blocs de 4)
+  const ps = sec || null;
+  const pk = ps ? ps.start_bar + ":" + ps.end_bar : "";
+  if (pk !== dPhraseKey) {
+    dPhraseKey = pk;
+    $("dPhrase").innerHTML = ps ? Array.from({ length: ps.end_bar - ps.start_bar + 1 }, (_, i) => {
+      const k = ps.start_bar + i, e = dBar(k) || {};
+      return `<div data-b="${k}" class="${e.fill ? "fill" : ""} ${e.rest ? "rest" : ""} ${e.crash ? "crash" : ""}">${e.fill ? "F" : i + 1}</div>`; }).join("") : "";
+  }
+  [...$("dPhrase").children].forEach(x => { const k = +x.dataset.b; x.classList.toggle("here", k === b); x.classList.toggle("past", k < b); });
+  // prochain événement
+  const evs = L.end ? [] : drumEvents(Math.max(b, 0), 3), ev = $("dEvent");
+  const cur = dBar(b) || {};
+  let e0 = evs[0], cls = "";
+  if (cur.fill && !cur.rest && sec && b >= 1) { $("dEvV").textContent = S.fillNow; $("dEvK").textContent = e0 ? S.thenAt(e0.txt.replace("→ ", ""), e0.bar) : ""; cls = "imm"; }
+  else if (e0) {
+    const n = e0.bar - b, beats = n * m - Math.max(L.beat, 0);
+    $("dEvV").textContent = `${e0.txt}`;
+    $("dEvK").textContent = (n <= 1 ? S.inBeats(beats) : S.inBars(n)) + (e0.sub ? " · " + e0.sub : "");
+    cls = n <= 1 ? "imm" : n <= 2 ? "soon" : e0.kind === "stop" ? "stop" : "";
+  } else { $("dEvV").textContent = "—"; $("dEvK").textContent = ""; }
+  ev.className = "devent " + cls;
+  $("dThen").textContent = evs.slice(1).map(x => S.at(x.txt.replace("→ ", ""), x.bar)).join("  ·  ");
+  // grille du groove / fill de la mesure en cours (ou de la 1re mesure jouée)
+  let gb = b;
+  if (b < 1) { gb = 1; while (gb < song.n_bars && (dBar(gb) || {}).rest) gb++; }
+  const ge = dBar(gb) || {}, gk = gb + (d ? "" : "x") + LANG;
+  if (gk !== dGridKey) {
+    dGridKey = gk;
+    const grid = $("dGrid");
+    if (!d) { $("dGridT").textContent = S.noDrums; $("dGridK").textContent = ""; $("dLanes").innerHTML = ""; }
+    else {
+      const steps = d.steps || 16, pat = ge.pattern && d.patterns[ge.pattern];
+      const hits = (ge.fill || !pat ? ge.hits : pat.hits) || {}, acc = (pat && pat.accents) || {};
+      grid.classList.toggle("isfill", !!ge.fill);
+      $("dGridT").textContent = ge.rest ? S.silence : ge.fill ? S.fill : pat ? (pat.name || "Groove " + ge.pattern) : S.freeBar;
+      $("dGridK").textContent = S.barN(gb) + (b < 1 ? S.firstPlayed : "");
+      const lanes = (d.lanes || LANE_KEYS).filter(l => (hits[l] || []).length || (pat && (pat.hits[l] || []).length) || ["HH", "SD", "BD"].includes(l));
+      $("dLanes").style.gridTemplateColumns = `74px repeat(${steps}, 1fr)`;
+      let h = `<div></div>` + Array.from({ length: steps }, (_, i) => `<div class="hd">${i % (steps / m) === 0 ? i / (steps / m) + 1 : ""}</div>`).join("");
+      for (const l of lanes) {
+        const set = new Set(hits[l] || []), A = new Set(acc[l] || []);
+        const kind = ["CR", "RD", "HH"].includes(l) ? "cy" : l === "BD" ? "bd" : l === "SD" ? "sd" : "tm";
+        h += `<div class="lb">${S.lanes[l] || l}</div>` + Array.from({ length: steps }, (_, i) =>
+          `<div class="c${i % (steps / m) === 0 ? " b" : ""}" data-s="${i}">${set.has(i) ? `<i class="${kind}${A.has(i) ? " acc" : ""}"></i>` : ""}</div>`).join("");
+      }
+      $("dLanes").innerHTML = ge.rest ? `<div style="grid-column:1/-1;color:var(--dim);padding:10px 0">${S.drumsSilent}</div>` : h;
+    }
+  }
+  if (d) { const st = b >= 1 ? Math.floor(L.frac * (d.steps || 16)) : -1;
+    document.querySelectorAll("#dLanes .c").forEach(c => c.classList.toggle("cur", +c.dataset.s === st)); }
+}
+
+// ---------------------------------------------------------------- rendu
+function render() {
+  requestAnimationFrame(render);
+  const live = DEMO || (st.ok && performance.now() - st.lastOk < 1500);
+  $("dot").classList.toggle("on", live);
+  if (!song) return;
+  const t = curPos(), L = locate(t), m = song.beats_per_bar;
+  const si = L.pre ? -1 : L.end ? song.sections.length : sectionAt(L.bar);
+  const counting = !L.pre && !L.end && L.bar <= 0;
+  const sec = si >= 0 && si < song.sections.length ? song.sections[si] : null;
+  const nxt = counting || L.pre ? song.sections[0] : sec ? song.sections[si + 1] : null;
+
+  // section en cours
+  const nowEl = $("now");
+  if (sec) {
+    $("nowName").textContent = sec.name; nowEl.style.borderLeftColor = sec.color;
+    $("nowLabel").textContent = S.nowK;
+    const len = sec.end_bar - sec.start_bar + 1, done = L.bar - sec.start_bar + L.frac;
+    $("prog").style.width = `${100 * done / len}%`; $("prog").style.background = sec.color;
+  } else {
+    $("nowName").textContent = counting ? "Count-in" : L.end ? S.endName : S.ready;
+    $("nowLabel").textContent = counting ? S.countIn : L.end ? S.songDone : (st.play ? S.beforeCount : S.stopped);
+    nowEl.style.borderLeftColor = "#555"; $("prog").style.width = "0";
+  }
+  $("barNum").textContent = L.bar >= 1 && L.bar <= song.n_bars ? S.barOf(L.bar, song.n_bars) : "";
+  document.querySelectorAll("#beats span").forEach((e, i) => e.classList.toggle("on", L.beat >= 0 && i === L.beat));
+
+  // prochain changement
+  const endBar = counting ? 0 : sec ? sec.end_bar : null;
+  let left = endBar != null ? endBar - L.bar + 1 : null;   // mesures restantes, celle-ci comprise
+  const nextEl = $("next");
+  $("nextName").textContent = nxt ? "→ " + nxt.name : S.songEnd;
+  $("nextBox").style.borderLeftColor = nxt ? nxt.color : "#555";
+  const last = left === 1;
+  nextEl.classList.toggle("last", last);
+  if (left == null) { $("countV").textContent = "–"; $("countK").textContent = ""; }
+  else if (last) { $("countV").textContent = Math.max(1, m - L.beat); $("countK").textContent = S.beats; }
+  else { $("countV").textContent = left; $("countK").textContent = S.barsWord(left); }
+
+  renderChords(L, sec);
+  renderLyrics(t, L);
+  renderDrums(t, L, si, sec);
+
+  // alertes du rôle
+  $("alerts").innerHTML = alerts(L, si, sec, nxt, left).map(a =>
+    `<div class="alert ${a[0]}">${esc(a[1])}${a[2] ? `<small>${esc(a[2])}</small>` : ""}</div>`).join("");
+
+  // plan
+  const head = $("head");
+  if (head) {
+    const a = barT(1), b = barT(song.n_bars + 1);
+    head.style.left = `calc(${Math.min(100, Math.max(0, 100 * (t - a) / (b - a)))}% - 1px)`;
+  }
+  document.querySelectorAll("#strip div[data-i]").forEach(d => d.classList.toggle("cur", +d.dataset.i === si));
+  document.querySelectorAll("#list .row").forEach(d => d.classList.toggle("cur", +d.dataset.i === si));
+  if (si !== lastSi) { lastSi = si; const r = document.querySelector(`#list .row[data-i="${si}"]`); if (r) r.scrollIntoView({ block: "center", behavior: "smooth" }); }
+}
+
+function alerts(L, si, sec, nxt, left) {
+  const out = [];
+  if (!song || role === "all" || !role) return out;
+  const bar = L.bar, r = instrRole();
+  let stopping = false;
+  const has = !!song.activity[r];
+
+  // présence de l'instrument (stems)
+  if (has && !L.end) {
+    const on = bar >= 1 ? actOf(r, bar) : 0;
+    if (on) {
+      const off = nextAct(r, bar, 0);
+      const rest = off ? restLen(r, off) : 0;
+      if (off && rest >= 1 && off - bar <= 4) {
+        const back = off + rest <= song.n_bars ? S.backAt(off + rest, song.sections[sectionAt(off + rest)].name) : S.toEnd;
+        stopping = off - bar <= 1;
+        out.push([stopping ? "now" : "stop", S.stopIn(inBars(off - bar)), S.restOf(mes(rest), back)]);
+      } else out.push(["play", S.youPlay, off ? S.nextRest(off) : S.toEnd]);
+    } else {
+      const inn = nextAct(r, bar, 1);
+      if (inn) {
+        const n = inn - bar, target = song.sections[sectionAt(inn)];
+        const where = target && target.start_bar === inn ? S.startOf(target.name) : S.barName(inn, target ? target.name : "");
+        const cls = n <= 1 ? "imm" : n <= 2 ? "soon" : "rest";
+        const big = n <= 1 ? S.entryIn(L.beat >= 0 ? song.beats_per_bar - L.beat : null) : S.entryBars(inBars(n));
+        out.push([cls, big, `${S.instr[role] || ""} · ${where}`]);
+      } else out.push(["rest", S.youStop, S.toSongEnd]);
+    }
+  }
+
+  // spécifique au rôle
+  const nt = nxt ? nxt.type : null;
+  if (role === "drums") {
+    if (left === 1 && !stopping) out.push(["now", nxt ? `FILL → ${nxt.name}` : S.end, ""]);
+    else if (nt === "break" && left <= 4) out.push(["soon", S.breakIn(inBars(left)), S.breakLen(mes(nxt.end_bar - nxt.start_bar + 1))]);
+    if (sec && sec.type === "break") out.push(["stop", S.breakNow, S.backTo(nxt ? nxt.name : S.endLower, inBars(left))]);
+  }
+  if (role === "lead_guitar") {
+    if (sec && sec.type === "solo") out.push([left <= 2 ? "now" : left <= 4 ? "soon" : "play", left <= 4 ? S.lastRound : S.solo, S.soloEnds(inBars(left))]);
+    else { const s = song.sections.find(x => x.type === "solo" && x.start_bar > bar);
+      if (s && s.start_bar - bar <= 8) out.push([s.start_bar - bar <= 2 ? "now" : "soon", S.soloIn(inBars(s.start_bar - bar)), mes(s.end_bar - s.start_bar + 1)]); }
+  }
+  if (role === "vocals" && !has) out.push(["info", S.noVoiceStem, ""]);
+  if (!nxt && sec && left != null && left <= 4 && left > 1) out.push(["soon", S.endIn(inBars(left)), ""]);
+
+  // infos de fond
+  if ((role === "bass" || role === "guitars" || role === "lead_guitar") && song.key)
+    out.push(["info", S.key(`${keyName(song.key)} (${song.key.chord})`) + (song.chords ? "" : S.noChords), ""]);
+  if (role === "vocals" && !(song.lyrics && song.lyrics.length)) out.push(["info", S.noLyrics, ""]);
+  if (!has && role !== "vocals" && role !== "all" && Object.keys(song.activity).length === 0)
+    out.push(["info", S.noStems, ""]);
+  return out;
+}
+
+function showMsg(t) { $("msg").textContent = t; $("msg").classList.add("show"); }
+function hideMsg() { $("msg").classList.remove("show"); }
+
+// ---------------------------------------------------------------- boucles
+document.documentElement.lang = LANG;
+applyStatic();
+loadSong(); setInterval(loadSong, 2000);
+(async function loop() { await poll(); setTimeout(loop, 80); })();
+setInterval(() => { if (!DEMO && !st.ok && song) showMsg(S.noReaper); else if (song) hideMsg(); }, 1000);
+layoutBeats(); requestAnimationFrame(render);
+</script>
+</body>
+</html>

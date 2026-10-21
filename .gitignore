@@ -1,0 +1,51 @@
+# Environnements Python / Python environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Caches et journaux / Caches and logs
+.cache/
+*.log
+*.npy
+*.pkl
+*.bak-reacue
+*.reacue-tmp
+
+# Audio (jamais dans le dépôt / never in the repository)
+*.wav
+*.mp3
+*.aif
+*.aiff
+*.flac
+*.ogg
+*.m4a
+
+# Paroles et ancres (fournies par l'utilisateur, jamais versionnées) / User lyrics and timing files
+paroles*.txt
+paroles*.rtf
+parole*.txt
+parole*.rtf
+lyrics*.txt
+lyrics*.rtf
+paroles_calage.json
+lyrics_timing.json
+
+# Réglages et données locales / Local settings and data
+reacue_settings.json
+reacue_install.txt
+last_session.json
+prompter_*.json
+cli_status.json
+reacue_song.json
+tools/struct_eval_songs.json
+models/
+
+# Système / OS
+.DS_Store
+Thumbs.db
+desktop.ini

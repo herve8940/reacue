@@ -1,0 +1,5 @@
+# Tests et outils de développement (facultatif)
+-r requirements.txt
+pytest>=8
+lupa>=2.0          # exécute les scripts Lua de REAPER dans les tests
+playwright>=1.40   # captures et test de la page du prompteur (playwright install chromium)

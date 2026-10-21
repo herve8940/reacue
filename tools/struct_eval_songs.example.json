@@ -1,0 +1,15 @@
+{
+  "_comment": "Exemple fictif : copier en struct_eval_songs.json (non versionné) et remplacer par vos propres morceaux.",
+  "demo": {
+    "kind": "stems",
+    "path": "/chemin/vers/Demo Song-A minor-112bpm",
+    "bpm": 112.0,
+    "bar1": 0.5,
+    "n_bars": 120,
+    "truth": [[1, "Intro"], [9, "Verse"], [25, "Pre-chorus"], [29, "Chorus"], [45, "Verse"],
+              [61, "Pre-chorus"], [65, "Chorus"], [81, "Bridge"], [89, "Solo"], [97, "Chorus"], [113, "Outro"]]
+  },
+  "demo_mix": {"kind": "mixof", "base": "demo"},
+  "demo_novox": {"kind": "stems", "base": "demo", "drop": ["vocals"]},
+  "other_mp3": {"kind": "mp3", "path": "/chemin/vers/autre.mp3", "bpm": null, "truth": null}
+}
