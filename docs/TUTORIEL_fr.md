@@ -34,9 +34,10 @@ Durée : 30 à 45 minutes la première fois (installation comprise), puis 5 à 1
 13. [Ouvrir le prompteur sur les téléphones](#13-ouvrir-le-prompteur-sur-les-téléphones)
 14. [Régler le click, les annonces et les in-ears](#14-régler-le-click-les-annonces-et-les-in-ears)
 15. [Relier Claude Desktop (facultatif)](#15-relier-claude-desktop-facultatif)
-16. [En répétition](#16-en-répétition)
-17. [Dépannage](#17-dépannage)
-18. [Pense-bête : un nouveau morceau](#18-pense-bête--un-nouveau-morceau)
+16. [Mode concert : plusieurs morceaux dans un projet](#16-mode-concert--plusieurs-morceaux-dans-un-projet)
+17. [En répétition](#17-en-répétition)
+18. [Dépannage](#18-dépannage)
+19. [Pense-bête : un nouveau morceau, un concert](#19-pense-bête--un-nouveau-morceau-un-concert)
 
 ---
 
@@ -135,11 +136,13 @@ Appuie sur Entrée pour fermer la fenêtre.
 2. Menu **Actions → Show action list…**
 3. Dans le champ **Filter** en haut, tape `ReaCue`.
 
-**Tu dois voir** trois actions :
+**Tu dois voir** six actions :
 
 - `Custom: ReaCue - Préparer le morceau`
 - `Custom: ReaCue - Republier le prompteur`
 - `Custom: ReaCue - Séparer les stems`
+- `Custom: ReaCue - Concert` (mode concert, étape 16)
+- `Custom: ReaCue - Morceau suivant` et `Custom: ReaCue - Morceau précédent`
 
 **Astuce : des boutons dans la barre d'outils.** Clic droit sur la barre d'outils principale (en haut à
 gauche) → **Customize toolbar…** → **Add…** → filtre `ReaCue` → choisis l'action → **Select/close**. Recommence
@@ -150,8 +153,8 @@ pour les autres actions, puis **Save**.
 1. Dans la liste des actions, clique sur **New action… → Load ReaScript…**
 2. Va dans le dossier des scripts : menu *Options → Show REAPER resource path in explorer/finder*, puis
    `Scripts` → `ReaCue`.
-3. Choisis `ReaCue_Preparer.lua` → **Ouvrir**. Recommence avec `ReaCue_Republier_prompteur.lua` et
-   `ReaCue_Separer_stems.lua`.
+3. Choisis `ReaCue_Preparer.lua` → **Ouvrir**. Recommence avec `ReaCue_Republier_prompteur.lua`,
+   `ReaCue_Separer_stems.lua`, `ReaCue_Concert.lua`, `ReaCue_Morceau_suivant.lua` et `ReaCue_Morceau_precedent.lua`.
 
 ---
 
@@ -254,7 +257,7 @@ l'action sur le même MP3, l'import est immédiat (pas de nouvelle séparation).
 | Message | Solution |
 |---|---|
 | « Sélectionne l'item audio du morceau » | Clique sur l'item du MP3, puis relance l'action |
-| « Fichier audio introuvable… OFFLINE » | Le fichier n'est pas lisible : voir [Dépannage](#17-dépannage) |
+| « Fichier audio introuvable… OFFLINE » | Le fichier n'est pas lisible : voir [Dépannage](#18-dépannage) |
 | « La séparation de stems n'est pas installée » | Double-clic sur `Install ReaCue Stems.command` / `.bat` dans le dossier ReaCue |
 | « La séparation a échoué » | Lis la fin du journal affichée ; le journal complet est `…-stems/demucs.log` |
 | La fenêtre reste longtemps à 0 % | Normal pendant la première minute (chargement du modèle) |
@@ -474,7 +477,113 @@ relancer.
 
 ---
 
-## 16. En répétition
+## 16. Mode concert : plusieurs morceaux dans un projet
+
+Pour un concert (ou une répétition générale), ReaCue enchaîne tes morceaux **déjà préparés** dans un seul
+projet REAPER. Chaque morceau garde tout ce que tu as validé : stems, tempo, structure, annonces, click.
+
+**Avant de commencer :** chaque morceau doit avoir été préparé (étape 10) **et son projet enregistré**
+(**Cmd+S** / **Ctrl+S**). Un projet enregistré avant la préparation entre dans le concert sans sections.
+
+### 16.1 Construire le concert
+
+**Avec Claude Desktop** (étape 15) : écris par exemple
+
+> Construis un concert « Samedi 15 » avec : Demo Song, Second Demo, Third Demo
+
+Claude trouve les projets par leur nom dans `Documents/REAPER Media` (réglage `projects_dir`) et répond avec
+le tableau du concert : début, tempo, mesures et sections de chaque morceau. Les avertissements (morceau sans
+régions…) s'affichent dans sa réponse.
+
+**Sans Claude** (ligne de commande, depuis le dossier `ReaCue`) :
+
+- Mac : `.venv/bin/python -m reacue_mcp.cli concert --name "Samedi 15" --songs "Demo Song" "Second Demo"`
+- Windows : `.venv\Scripts\python reacue_cli.py concert --name "Samedi 15" --songs "Demo Song" "Second Demo"`
+
+**Tu dois voir** dans `Documents/REAPER Media/Concerts/` (réglage `concert_dir`) : `Samedi 15.RPP`,
+`Samedi 15.setlist.json`, `Samedi 15.concert.lua` et `Samedi 15.prompteur.json`. Ne les modifie pas à la main.
+
+La construction prend quelques secondes ; les accords, paroles et batterie du prompteur sont ensuite calculés
+en arrière-plan (quelques minutes la première fois, puis c'est gardé).
+
+### 16.2 Ouvrir le concert
+
+1. Dans REAPER, lance **ReaCue - Concert** (liste des actions, filtre `ReaCue`).
+2. Une fenêtre **« Aucun concert dans ce projet »** liste les concerts : clique sur **Samedi 15 · N morceaux**.
+3. Le concert s'ouvre dans un **nouvel onglet** (ton projet en cours reste ouvert dans le sien).
+
+**Tu dois voir** une piste par instrument pour tout le concert (Chant, Batterie, Basse, Guitares…), une couleur
+par morceau, les pistes CLICK / VOIX / CUES en bas, des régions « Demo Song · Refrain 1 », et en haut une
+ligne **Morceaux** avec « 1 · Demo Song », « 2 · Second Demo »… La fenêtre Concert affiche **1 / 3 · Demo Song**.
+
+> Astuce : **clic droit dans la fenêtre Concert** pour l'ancrer en bas de REAPER (elle tient alors sur une ligne)
+> ou la détacher.
+
+### 16.3 Jouer
+
+1. Appuie sur **Espace** (ou sur le gros bouton vert **Lecture** de la fenêtre) : décompte, puis le morceau.
+2. À la fin du morceau, la lecture **s'arrête toute seule** et le curseur se place sur le décompte du suivant.
+   La fenêtre affiche **2 / 3 · Second Demo**.
+3. Quand le groupe est prêt : **Espace**.
+
+La fenêtre Concert montre la section en cours, « mesure x / N », le temps restant du morceau et du concert, et
+le morceau suivant. Ses boutons :
+
+| Bouton | Effet |
+|---|---|
+| **Précédent** | début du morceau en cours ; au début, morceau précédent |
+| **Début** | revient au décompte du morceau en cours |
+| **Lecture / Pause** | lance ou met en pause |
+| **Stop** | arrête |
+| **Suivant** | va au décompte du morceau suivant |
+| Pastilles des **sections** | va au début de la section (la lecture continue) |
+| **Setlist** | liste des morceaux : un clic = aller au morceau ; **Reconstruire le concert** |
+
+Pendant la lecture, **Stop**, **Précédent**, **Suivant** et le changement de morceau demandent un **double
+appui** : le premier appui affiche « encore ? » en orange, le second (dans les 2 secondes) exécute.
+
+Pour une pédale ou un raccourci clavier : les actions **ReaCue - Morceau suivant** et **ReaCue - Morceau
+précédent** (*Actions → Show action list* → sélectionne l'action → **Add…** dans *Shortcuts for selected action*).
+
+> ⚠️ L'arrêt automatique et la télécommande ne marchent que si la fenêtre **ReaCue - Concert** est ouverte
+> (même ancrée). Ne la ferme pas pendant le concert.
+
+### 16.4 QR code pour les musiciens
+
+1. Dans la fenêtre Concert, clique sur **QR**.
+2. Le QR code s'affiche en grand avec l'adresse en clair dessous (ex. `http://192.168.1.20:8080/prompteur.html`)
+   et le code PIN de la Régie.
+3. Chaque musicien, sur le **même Wi-Fi**, ouvre l'appareil photo de son téléphone, vise le QR code et touche
+   le lien : le prompteur s'ouvre ; il choisit son rôle.
+4. Clique sur **Fermer** (ou sur le QR, ou Échap) pour revenir.
+
+L'adresse est recalculée à chaque clic : si l'ordinateur a changé d'adresse, le QR est quand même juste.
+Si « Adresse IP de l'ordinateur introuvable » s'affiche : l'ordinateur n'est connecté à aucun réseau.
+
+### 16.5 Piloter depuis un téléphone (Régie)
+
+1. Sur le téléphone de la personne qui pilote : ouvre le prompteur (QR code), touche **Rôle** puis **Régie**.
+2. Touche un bouton (par ex. **Lecture**) : le téléphone demande le **code PIN**. Il est affiché dans la
+   fenêtre Concert (bouton **PIN 1234**, et sous le QR code). Tape-le, **OK**.
+3. Le bouton s'entoure de vert quand REAPER a exécuté la commande.
+
+La Régie offre Lecture/Pause, Stop, Précédent, Début, Suivant, la setlist et les sections, avec le même double
+appui pendant la lecture. Le PIN est mémorisé sur le téléphone ; **Changer de code** pour le retaper.
+Pour changer le PIN : bouton **PIN** de la fenêtre Concert (4 chiffres).
+
+> ⚠️ Le PIN évite les fausses manipulations, **pas les attaques** : toute personne sur le même réseau peut
+> piloter REAPER par son interface web. En concert, utilise un Wi-Fi réservé au groupe.
+
+### 16.6 Modifier un morceau du concert
+
+1. Ouvre **le projet du morceau** (pas le concert), corrige (structure, réglages…), **Préparer**, enregistre.
+2. Reviens dans le concert, fenêtre Concert → **Setlist** → **Reconstruire le concert** → **OK**.
+
+Les modifications faites directement dans le projet concert sont **écrasées** par la reconstruction.
+
+---
+
+## 17. En répétition
 
 - Ouvre le projet du morceau, place le curseur au tout début (**Home**), appuie sur **Espace**.
 - Les musiciens entendent (ou voient sur le prompteur) le décompte, puis les annonces avant chaque section.
@@ -485,7 +594,7 @@ relancer.
 
 ---
 
-## 17. Dépannage
+## 18. Dépannage
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
@@ -496,11 +605,16 @@ relancer.
 | Pas d'annonces vocales | Voix absente | Mac : *Réglages Système → Accessibilité → Contenu énoncé* ; Windows : *Paramètres → Heure et langue → Voix* |
 | Séparation de stems très lente | Processeur occupé | Ferme les autres applications ; compte 1,5 à 2 fois la durée du morceau |
 | Structure fausse | Détection automatique imparfaite | Étape 11 : corrige les régions dans REAPER puis *Préparer*, ou demande à Claude ; tempo faux : tempo dans le nom des fichiers |
-| Journaux | — | Préparation : `ReaCueMCP/cli.log` (dossier des ressources REAPER) ; séparation : `…-stems/demucs.log` à côté du morceau |
+| Fenêtre Concert : « Aucun concert dans ce projet » | L'onglet en cours n'est pas un concert | Clique sur un concert de la liste (fenêtre détachée : clic droit pour la détacher) |
+| Un morceau du concert n'a pas de sections | Son projet a été enregistré avant la préparation | Ouvre son projet, *Préparer*, enregistre, puis *Setlist → Reconstruire le concert* |
+| Téléphone (Régie) : « Ouvre la fenêtre ReaCue - Concert… » | Fenêtre Concert fermée | Lance l'action **ReaCue - Concert** sur l'ordinateur |
+| Régie : « Code PIN incorrect » | Mauvais code | Tape le code affiché par le bouton **PIN** de la fenêtre Concert |
+| La lecture ne s'arrête plus entre les morceaux | Fenêtre Concert fermée | Rouvre **ReaCue - Concert** (même ancrée en bas) |
+| Journaux | — | Préparation et concert : `ReaCueMCP/cli.log` (dossier des ressources REAPER) ; séparation : `…-stems/demucs.log` à côté du morceau |
 
 ---
 
-## 18. Pense-bête : un nouveau morceau
+## 19. Pense-bête : un nouveau morceau, un concert
 
 1. Dossier du morceau dans `Documents/REAPER Media/`, fichiers audio copiés dedans.
 2. REAPER : *File → New project*, puis *File → Save project as…* dans ce dossier.
@@ -511,3 +625,11 @@ relancer.
 7. Facultatif : `paroles.txt` à côté des fichiers → **ReaCue - Republier le prompteur**.
 8. Enregistrer le projet (**Cmd+S** / **Ctrl+S**).
 9. Téléphones : `http://<IP>:8080/prompteur.html`, choisir son rôle.
+
+**Un concert :**
+
+1. Chaque morceau préparé **et enregistré** dans son projet.
+2. Claude : « Construis un concert “Samedi” avec : … » (ou la ligne de commande, étape 16.1).
+3. REAPER : **ReaCue - Concert** → clic sur le concert (nouvel onglet).
+4. **QR** → les musiciens scannent ; la personne qui pilote choisit **Régie** et tape le PIN.
+5. **Espace** à chaque morceau ; la lecture s'arrête toute seule à la fin de chacun.

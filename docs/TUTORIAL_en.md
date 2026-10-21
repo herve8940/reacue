@@ -34,9 +34,10 @@ Time needed: 30 to 45 minutes the first time (installation included), then 5 to 
 13. [Open the prompter on the phones](#13-open-the-prompter-on-the-phones)
 14. [Set up the click, the spoken cues and the in-ears](#14-set-up-the-click-the-spoken-cues-and-the-in-ears)
 15. [Link Claude Desktop (optional)](#15-link-claude-desktop-optional)
-16. [At rehearsal](#16-at-rehearsal)
-17. [Troubleshooting](#17-troubleshooting)
-18. [Cheat sheet: a new song](#18-cheat-sheet-a-new-song)
+16. [Concert mode: several songs in one project](#16-concert-mode-several-songs-in-one-project)
+17. [At rehearsal](#17-at-rehearsal)
+18. [Troubleshooting](#18-troubleshooting)
+19. [Cheat sheet: a new song, a concert](#19-cheat-sheet-a-new-song-a-concert)
 
 ---
 
@@ -133,11 +134,13 @@ Press Enter to close the window.
 2. Menu **Actions → Show action list…**
 3. In the **Filter** box at the top, type `ReaCue`.
 
-**You should see** three actions:
+**You should see** six actions:
 
 - `Custom: ReaCue - Prepare the song`
 - `Custom: ReaCue - Republish the prompter`
 - `Custom: ReaCue - Separate stems`
+- `Custom: ReaCue - Concert` (concert mode, step 16)
+- `Custom: ReaCue - Next song` and `Custom: ReaCue - Previous song`
 
 **Tip: toolbar buttons.** Right-click the main toolbar (top left) → **Customize toolbar…** → **Add…** →
 filter `ReaCue` → pick the action → **Select/close**. Repeat for the other actions, then **Save**.
@@ -147,8 +150,8 @@ filter `ReaCue` → pick the action → **Select/close**. Repeat for the other a
 1. In the action list, click **New action… → Load ReaScript…**
 2. Go to the scripts folder: menu *Options → Show REAPER resource path in explorer/finder*, then
    `Scripts` → `ReaCue`.
-3. Pick `ReaCue_Preparer.lua` → **Open**. Do the same with `ReaCue_Republier_prompteur.lua` and
-   `ReaCue_Separer_stems.lua`.
+3. Pick `ReaCue_Preparer.lua` → **Open**. Do the same with `ReaCue_Republier_prompteur.lua`,
+   `ReaCue_Separer_stems.lua`, `ReaCue_Concert.lua`, `ReaCue_Morceau_suivant.lua` and `ReaCue_Morceau_precedent.lua`.
 
 ---
 
@@ -249,7 +252,7 @@ on the same MP3, the import is immediate (no new separation).
 | Message | Solution |
 |---|---|
 | “Select the song's audio item” | Click the MP3 item, then run the action again |
-| “Audio file not found… OFFLINE” | The file cannot be read: see [Troubleshooting](#17-troubleshooting) |
+| “Audio file not found… OFFLINE” | The file cannot be read: see [Troubleshooting](#18-troubleshooting) |
 | “Stem separation is not installed” | Double-click `Install ReaCue Stems.command` / `.bat` in the ReaCue folder |
 | “The separation failed” | Read the end of the log shown; the full log is `…-stems/demucs.log` |
 | The window stays at 0 % for a while | Normal during the first minute (model loading) |
@@ -460,7 +463,113 @@ in REAPER and the phones' prompter (which reloads its data every 2 seconds). Not
 
 ---
 
-## 16. At rehearsal
+## 16. Concert mode: several songs in one project
+
+For a gig (or a full run-through), ReaCue chains your **already prepared** songs in one REAPER project. Each
+song keeps everything you validated: stems, tempo, structure, spoken cues, click.
+
+**Before you start:** each song must have been prepared (step 10) **and its project saved** (**Cmd+S** /
+**Ctrl+S**). A project saved before the preparation goes into the concert without sections.
+
+### 16.1 Build the concert
+
+**With Claude Desktop** (step 15): type for example
+
+> Build a concert “Saturday 15” with: Demo Song, Second Demo, Third Demo
+
+Claude finds the projects by name in `Documents/REAPER Media` (setting `projects_dir`) and answers with the
+concert table: start, tempo, bars and sections of each song. Warnings (song without regions…) show in its
+answer.
+
+**Without Claude** (command line, from the `ReaCue` folder):
+
+- Mac: `.venv/bin/python -m reacue_mcp.cli concert --name "Saturday 15" --songs "Demo Song" "Second Demo"`
+- Windows: `.venv\Scripts\python reacue_cli.py concert --name "Saturday 15" --songs "Demo Song" "Second Demo"`
+
+**You should see** in `Documents/REAPER Media/Concerts/` (setting `concert_dir`): `Saturday 15.RPP`,
+`Saturday 15.setlist.json`, `Saturday 15.concert.lua` and `Saturday 15.prompteur.json`. Don't edit them by hand.
+
+Building takes a few seconds; the prompter's chords, lyrics and drums are then computed in the background
+(a few minutes the first time, then kept).
+
+### 16.2 Open the concert
+
+1. In REAPER, run **ReaCue - Concert** (action list, filter `ReaCue`).
+2. A **“No concert in this project”** window lists the concerts: click **Saturday 15 · N songs**.
+3. The concert opens in a **new project tab** (your current project stays open in its own tab).
+
+**You should see** one track per instrument for the whole concert (Vocals, Drums, Bass, Guitars…), one colour
+per song, the CLICK / VOICE / CUES tracks at the bottom, regions “Demo Song · Chorus 1”, and at the top a
+**Songs** lane with “1 · Demo Song”, “2 · Second Demo”… The Concert window shows **1 / 3 · Demo Song**.
+
+> Tip: **right-click in the Concert window** to dock it at the bottom of REAPER (it then fits on one line) or
+> to undock it.
+
+### 16.3 Play
+
+1. Press **Space** (or the big green **Play** button of the window): count-in, then the song.
+2. At the end of the song, playback **stops by itself** and the cursor goes to the next song's count-in. The
+   window shows **2 / 3 · Second Demo**.
+3. When the band is ready: **Space**.
+
+The Concert window shows the current section, “bar x / N”, the time left in the song and the concert, and the
+next song. Its buttons:
+
+| Button | Effect |
+|---|---|
+| **Previous** | start of the current song; at the start, previous song |
+| **Start** | back to the current song's count-in |
+| **Play / Pause** | plays or pauses |
+| **Stop** | stops |
+| **Next** | goes to the next song's count-in |
+| **Section** pills | go to the start of the section (playback continues) |
+| **Setlist** | list of songs: one click = go to the song; **Rebuild the concert** |
+
+During playback, **Stop**, **Previous**, **Next** and changing song need a **double tap**: the first tap shows
+“again?” in orange, the second one (within 2 seconds) runs it.
+
+For a pedal or a keyboard shortcut: the actions **ReaCue - Next song** and **ReaCue - Previous song**
+(*Actions → Show action list* → select the action → **Add…** under *Shortcuts for selected action*).
+
+> ⚠️ The automatic stop and the phone remote only work while the **ReaCue - Concert** window is open (even
+> docked). Don't close it during the gig.
+
+### 16.4 QR code for the musicians
+
+1. In the Concert window, click **QR**.
+2. The QR code shows large with the address underneath (e.g. `http://192.168.1.20:8080/prompteur.html`) and
+   the Stage control PIN code.
+3. Each musician, on the **same Wi-Fi**, opens the phone's camera, points it at the QR code and taps the link:
+   the prompter opens; they choose their role.
+4. Click **Close** (or the QR, or Escape) to go back.
+
+The address is computed at each click: if the computer's address changed, the QR is still right. If
+“Computer IP address not found” shows: the computer is not connected to any network.
+
+### 16.5 Drive the concert from a phone (Stage control)
+
+1. On the phone of the person in charge: open the prompter (QR code), tap **Role** then **Stage control**.
+2. Tap a button (e.g. **Play**): the phone asks for the **PIN code**. It is shown in the Concert window (button
+   **PIN 1234**, and under the QR code). Type it, **OK**.
+3. The button gets a green outline when REAPER has run the command.
+
+Stage control offers Play/Pause, Stop, Previous, Start, Next, the setlist and the sections, with the same
+double tap during playback. The PIN is remembered on the phone; **Change code** to type it again. To change
+the PIN: **PIN** button of the Concert window (4 digits).
+
+> ⚠️ The PIN prevents mistakes, **not attacks**: anyone on the same network can drive REAPER through its web
+> interface. At gigs, use a Wi-Fi reserved for the band.
+
+### 16.6 Change a song of the concert
+
+1. Open **the song's project** (not the concert), fix it (structure, settings…), **Prepare**, save.
+2. Back in the concert: Concert window → **Setlist** → **Rebuild the concert** → **OK**.
+
+Changes made directly in the concert project are **overwritten** by the rebuild.
+
+---
+
+## 17. At rehearsal
 
 - Open the song's project, put the cursor at the very beginning (**Home**), press **Space**.
 - The musicians hear (or see on the prompter) the count-in, then the cues before each section.
@@ -472,7 +581,7 @@ in REAPER and the phones' prompter (which reloads its data every 2 seconds). Not
 
 ---
 
-## 17. Troubleshooting
+## 18. Troubleshooting
 
 | Symptom | Likely cause | Solution |
 |---|---|---|
@@ -483,11 +592,16 @@ in REAPER and the phones' prompter (which reloads its data every 2 seconds). Not
 | No spoken cues | Voice missing | Mac: *System Settings → Accessibility → Spoken Content*; Windows: *Settings → Time & language → Speech* |
 | Stem separation very slow | Busy processor | Close other applications; count 1.5 to 2 times the song length |
 | Wrong structure | Automatic detection is not perfect | Step 11: edit the regions in REAPER then *Prepare*, or ask Claude; wrong tempo: tempo in the file names |
+| Concert window: “No concert in this project” | The current tab is not a concert | Click a concert in the list (undock the window with a right-click to see it) |
+| A song of the concert has no sections | Its project was saved before the preparation | Open its project, *Prepare*, save, then *Setlist → Rebuild the concert* |
+| Phone (Stage control): “Open the ReaCue - Concert window…” | Concert window closed | Run the **ReaCue - Concert** action on the computer |
+| Stage control: “Wrong PIN code” | Wrong code | Type the code shown by the **PIN** button of the Concert window |
+| Playback no longer stops between songs | Concert window closed | Open **ReaCue - Concert** again (even docked) |
 | Logs | — | Preparation: `ReaCueMCP/cli.log` (REAPER resource folder); separation: `…-stems/demucs.log` next to the song |
 
 ---
 
-## 18. Cheat sheet: a new song
+## 19. Cheat sheet: a new song, a concert
 
 1. Song folder in `Documents/REAPER Media/`, audio files copied into it.
 2. REAPER: *File → New project*, then *File → Save project as…* in that folder.
@@ -498,3 +612,11 @@ in REAPER and the phones' prompter (which reloads its data every 2 seconds). Not
 7. Optional: `lyrics.txt` next to the files → **ReaCue - Republish the prompter**.
 8. Save the project (**Cmd+S** / **Ctrl+S**).
 9. Phones: `http://<IP>:8080/prompteur.html`, pick your role.
+
+**A concert:**
+
+1. Each song prepared **and saved** in its own project.
+2. Claude: “Build a concert “Saturday” with: …” (or the command line, step 16.1).
+3. REAPER: **ReaCue - Concert** → click the concert (new tab).
+4. **QR** → the musicians scan it; the person in charge picks **Stage control** and types the PIN.
+5. **Space** for each song; playback stops by itself at the end of each one.

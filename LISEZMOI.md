@@ -17,7 +17,7 @@ langage naturel avec Claude (serveur MCP).
 > **Nouveau sur ReaCue ? Suis le tutoriel pas à pas : [docs/TUTORIEL_fr.md](docs/TUTORIEL_fr.md)**
 > (anglais : [docs/TUTORIAL_en.md](docs/TUTORIAL_en.md)).
 
-> **État : 0.10.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
+> **État : 0.11.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
 
 | Batterie | Basse | Chant | Guitare |
@@ -37,6 +37,7 @@ langage naturel avec Claude (serveur MCP).
 - [Activer l'interface web de REAPER (prompteur)](#activer-linterface-web-de-reaper-prompteur)
 - [Séparation de stems (facultatif)](#séparation-de-stems-facultatif)
 - [Utilisation](#utilisation)
+- [Mode concert](#mode-concert)
 - [Paroles](#paroles)
 - [Réglages](#réglages)
 - [Facultatif : piloter ReaCue avec Claude (MCP)](#facultatif--piloter-reacue-avec-claude-mcp)
@@ -63,6 +64,9 @@ Dans REAPER, à partir de l'audio déjà présent dans le projet :
 - **Séparation de stems** (facultatif) : transforme un seul MP3/WAV en 6 stems (voix, batterie, basse,
   guitare, piano, autres) avec [Demucs](https://github.com/facebookresearch/demucs), sur ton ordinateur, sans
   abonnement ni envoi en ligne — puis ReaCue prépare le morceau à partir des stems.
+- **Mode concert** : plusieurs morceaux préparés enchaînés dans un seul projet, arrêt automatique à la fin
+  de chaque morceau, une fenêtre *ReaCue - Concert* pour piloter le concert, un **QR code** pour les
+  musiciens et une télécommande **Régie** sur téléphone (code PIN).
 
 Sur les téléphones et tablettes des musiciens (prompteur web) :
 
@@ -72,7 +76,8 @@ Sur les téléphones et tablettes des musiciens (prompteur web) :
 - **Batterie** : groove de la section, grille 16 pas de la mesure en cours, fills, crashs, arrêts et reprises ;
 - entrées et silences de chaque instrument détectés sur les stems (« STOP à la prochaine mesure »,
   « Entrée dans 2 mesures ») ;
-- français / anglais ; suit le curseur de lecture de REAPER (sur scène, seul REAPER doit tourner).
+- français / anglais ; suit le curseur de lecture de REAPER (sur scène, seul REAPER doit tourner) ;
+- en mode concert : morceau x/N et morceau suivant ; rôle **Régie** pour piloter le concert depuis un téléphone.
 
 ## Principe
 
@@ -247,6 +252,57 @@ Deux méthodes, qu'on peut mélanger :
 *Republier le prompteur* ne reprend **pas** les régions modifiées (le prompteur doit rester d'accord avec les
 annonces et le click déjà dans REAPER) : un avertissement demande de lancer *Préparer*.
 
+## Mode concert
+
+Enchaîne plusieurs morceaux **déjà préparés** (chacun dans son projet) dans un seul projet REAPER, et pilote
+tout le concert depuis une fenêtre ou depuis un téléphone.
+
+1. **Construire le concert** — avec Claude : *« concert “Samedi” : Demo Song, Second Demo, Third Demo »*
+   (outil `build_concert`), ou en ligne de commande :
+   `python -m reacue_mcp.cli concert --name "Samedi" --songs "Demo Song" "Second Demo"`
+   (macOS/Linux, depuis le dossier de ReaCue avec `.venv/bin/python` ; Windows : `.venv\Scripts\python reacue_cli.py concert …`).
+   Les morceaux sont cherchés par nom de projet dans le dossier des projets (réglage `projects_dir`, défaut
+   `<Documents>/REAPER Media`) ou donnés par leur chemin `.RPP`. Rien n'est réanalysé : chaque morceau garde
+   ses stems, sa carte de tempo (fixe ou un tempo par mesure), sa structure validée, ses annonces et son click.
+2. **L'ouvrir** — action REAPER **ReaCue - Concert** : sans concert ouvert, la fenêtre liste les concerts
+   (dossier : réglage `concert_dir`, défaut `<dossier des projets>/Concerts`) ; un clic l'ouvre dans un
+   **nouvel onglet** (ton projet en cours reste ouvert).
+3. **Jouer** — un seul projet : une piste par instrument commune à tous les morceaux (Chant, Batterie,
+   Basse, Guitares…, une couleur par morceau), CLICK / VOIX / CUES en bas, régions « Morceau · Refrain 1 »,
+   une ligne de règle « Morceaux » avec les marqueurs « 1 · Demo Song ». La lecture **s'arrête toute seule
+   à la fin de chaque morceau** et le curseur attend sur le décompte du suivant : Espace quand le groupe est prêt.
+
+Fichiers écrits côte à côte : `<nom>.RPP` (le concert), `<nom>.setlist.json` (l'ordre, réutilisable),
+`<nom>.concert.lua` (temps des morceaux, lus par la fenêtre), `<nom>.prompteur.json` (prompteur de tout le
+concert). Corrige un morceau **dans son propre projet**, puis *Reconstruire le concert* (bouton Setlist) :
+les modifications faites directement dans le projet concert sont écrasées.
+
+**La fenêtre ReaCue - Concert** (ancrable : clic droit) affiche « 2 / 6 · Morceau », tempo, tonalité,
+section, « mesure x / N », une pastille Lecture / Pause / Arrêt, la progression et le temps restant du
+morceau, le temps du concert et le morceau suivant ; de gros boutons **Précédent / Début / Lecture-Pause /
+Stop / Suivant** (pendant la lecture, Stop, Précédent et Suivant demandent un **double appui** en 2 s, pour
+éviter les accidents) ; les **sections** du morceau en pastilles de couleur (clic = y aller, la lecture
+continue) ; les boutons **Setlist**, **PIN** et **QR**. Ancrée en bas, elle tient sur une ligne (état +
+transport + QR). Actions en plus *ReaCue - Morceau suivant* / *Morceau précédent* pour une pédale ou un
+raccourci. L'arrêt automatique et la télécommande ne marchent que si cette fenêtre est ouverte (même ancrée).
+
+**QR code pour les musiciens** — le bouton QR affiche en grand l'adresse du prompteur
+`http://<IP de cet ordinateur>:<port>/prompteur.html` : l'IP est calculée au moment du clic (macOS
+`ipconfig`, Windows `ipconfig`, Linux `hostname -I`) et le port lu dans les réglages de l'interface web de
+REAPER (`reaper.ini`). Les musiciens le scannent avec l'appareil photo du téléphone (même Wi-Fi).
+Encodeur QR : [luaqrcode](https://github.com/speedata/luaqrcode) (licence BSD).
+
+**Régie (télécommande sur téléphone)** — dans le prompteur, choisis le rôle **Régie** : Lecture/Pause, Stop,
+Précédent / Suivant, Début du morceau, setlist et sections cliquables, avec un ✓ quand REAPER a exécuté la
+commande. Le **code PIN à 4 chiffres** affiché dans la fenêtre Concert est demandé une fois (généré au
+premier lancement, modifiable avec le bouton PIN, mémorisé sur le téléphone). Les commandes passent par
+l'interface web de REAPER (`/_/SET/EXTSTATE/ReaCue/remote/…`) et sont vérifiées par la fenêtre Concert (PIN,
+protection contre le rejeu). ⚠️ Le PIN évite les fausses manipulations, **pas les attaques** : toute personne
+sur le même réseau peut joindre directement l'interface web de REAPER (`/_/…`). En concert, utilise un Wi-Fi
+réservé au groupe.
+
+Pas à pas : [tutoriel, chapitre concert](docs/TUTORIEL_fr.md#16-mode-concert--plusieurs-morceaux-dans-un-projet).
+
 ## Paroles
 
 ReaCue **ne télécharge jamais de paroles** : tu fournis ton propre fichier texte, à côté des stems (même dossier) :
@@ -301,6 +357,8 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `click_hw_output` | `null` | sortie physique (0 = sorties 1/2, 2 = 3/4…) |
 | `tempo_mode` | `"auto"` | `auto`, `constant` (un seul tempo) ou `beatmap` (un tempo par mesure) |
 | `stems_model` | `"htdemucs_6s"` | modèle de séparation de stems : `"htdemucs_6s"` (6 stems) ou `"htdemucs"` (4 stems) |
+| `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
+| `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
 
 Voix : sous Windows, on ajoute des voix (par exemple françaises) dans *Paramètres → Heure et langue →
 Voix*. Seules les voix visibles par SAPI (voix « Desktop ») sont utilisées. Sans aucune voix, tout fonctionne
@@ -358,6 +416,10 @@ nouvelle conversation.
 - **Windows : bêta, pas encore testé sur une vraie machine.** À vérifier en particulier : le lancement en
   arrière-plan depuis REAPER, les voix SAPI et les chemins avec accents. Merci de signaler les problèmes.
 - Linux : pas d'installateur (le code tourne ; les annonces demandent `espeak-ng`).
+- **Mode concert** : l'arrêt automatique et la télécommande demandent la fenêtre *ReaCue - Concert* ouverte ;
+  Précédent / Suivant / Début arrêtent la lecture et placent le curseur (relance avec Lecture) ;
+  *Reconstruire* écrase les modifications faites directement dans le projet concert. Le PIN de la Régie
+  n'est pas une barrière de sécurité.
 
 ## Dépannage / FAQ
 
@@ -403,7 +465,16 @@ dans le dossier de ReaCue (internet nécessaire une fois).
 (chargement du modèle). Compte 1,5 à 2 fois la durée du morceau sur un Mac Intel. Ferme les autres
 applications gourmandes. Le journal est `<nom du morceau>-stems/demucs.log`, à côté du fichier d'origine.
 
-**Où sont les journaux ?** `<ressources REAPER>/ReaCueMCP/cli.log` (préparation) et
+**Concert : « Aucun concert dans ce projet ».** L'onglet en cours n'est pas un concert. Détache la fenêtre
+Concert (clic droit) pour voir la liste des concerts, ou ouvre `<dossier des concerts>/<nom>.RPP` avec
+*File → Open project*. Un morceau n'a pas de sections dans le concert : son projet a été enregistré avant
+la préparation — prépare-le, enregistre-le (Cmd/Ctrl+S), puis *Reconstruire le concert*.
+
+**Régie : « Ouvre la fenêtre ReaCue - Concert… ».** Le téléphone passe par cette fenêtre : lance l'action
+*ReaCue - Concert* sur l'ordinateur. « Code PIN incorrect » : tape le code affiché par le bouton PIN de la
+fenêtre. Le QR n'affiche pas d'adresse : l'ordinateur n'est pas connecté à un réseau.
+
+**Où sont les journaux ?** `<ressources REAPER>/ReaCueMCP/cli.log` (préparation, concert) et
 `<nom du morceau>-stems/demucs.log` (séparation de stems).
 
 ## Désinstallation
@@ -430,11 +501,11 @@ Organisation :
 |---|---|
 | `reacue_mcp/` | Paquet Python : analyse, planification, client du pont, prompteur, accords, paroles, batterie, voix, i18n, réglages, CLI, serveur MCP |
 | `reacue_mcp/web/prompteur.html` | La page du prompteur (un seul fichier) |
-| `reaper/` | Scripts REAPER : le pont et les actions (`ReaCue_stems.lua` : séparation de stems) |
+| `reaper/` | Scripts REAPER : le pont et les actions (`ReaCue_stems.lua` : séparation de stems ; `ReaCue_Concert.lua`, `ReaCue_concert_lib.lua` : fenêtre Concert et Régie ; `ReaCue_qrcode.lua` : encodeur QR, luaqrcode, BSD) |
 | `reacue_stems.py`, `requirements-stems.txt` | Lanceur de la séparation de stems (tourne dans `.venv-demucs`) et ses dépendances figées |
 | `install/` | Installateurs (macOS, Windows) et `reacue_setup.py` commun |
 | `tests/` | Tests pytest (faux pont REAPER, Lua exécuté via `lupa`, installateur, page du prompteur) |
-| `tools/` | **Outils de développement uniquement** (non utilisés par ReaCue) : `struct_eval.py` (banc d'essai de la détection de structure sur tes propres morceaux, configuré par un fichier JSON privé), `asr_anchor.py` (fichier d'ancres de paroles par reconnaissance vocale, modèles lourds, Linux), `make_screenshots.py` |
+| `tools/` | **Outils de développement uniquement** (non utilisés par ReaCue) : `concert_demo.py` (projets de démonstration fictifs pour les tests du mode concert), `struct_eval.py` (banc d'essai de la détection de structure sur tes propres morceaux, configuré par un fichier JSON privé), `asr_anchor.py` (fichier d'ancres de paroles par reconnaissance vocale, modèles lourds, Linux), `make_screenshots.py` |
 
 Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : voir
 [docs/MIGRATION_fr.md](docs/MIGRATION_fr.md).
@@ -445,6 +516,9 @@ ReaCue par Hervé Naessens. Licence MIT, voir [LICENSE](LICENSE).
 
 Séparation de stems par [Demucs](https://github.com/facebookresearch/demucs) (Alexandre Défossez, Meta AI,
 licence MIT) sur [PyTorch](https://pytorch.org/).
+
+QR codes par [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach et contributeurs,
+licence BSD 3 clauses ; l'en-tête de licence est conservé dans `reaper/ReaCue_qrcode.lua`).
 
 S'appuie sur [librosa](https://librosa.org/), [NumPy](https://numpy.org/), [SciPy](https://scipy.org/),
 [soundfile](https://github.com/bastibe/python-soundfile), le SDK Python du
