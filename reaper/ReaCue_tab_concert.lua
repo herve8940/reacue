@@ -186,6 +186,15 @@ return function(ctx)
   function M.project_changed() concerts, setlists = nil, nil end
 
   -- dessin -----------------------------------------------------------------------------------
+  -- « + Nouveau morceau » sous la liste (un MP3 ou un dossier de stems) ; clic sur un nom = l'ouvrir
+  local function draw_new(x, y, w)
+    local NS = ctx.newsong
+    if not NS then return y end
+    local nw = math.min(w, U.text_w(NS.t("button"), 12) + 22)
+    if U.button("cnewsong", NS.t("button"), x, y + 2, nw, 24, nil, 12) and not ctx.job then NS.start() end
+    return y + 32
+  end
+
   local function draw_projects(x, y, w, maxrows)
     local dir = L.projects_dir()
     U.heading(U.fit(string.format(t("songs"), dir:match("([^/\\]+)$") or dir), w - 80, 12), x, y)
@@ -194,7 +203,7 @@ return function(ctx)
     y = y + 20
     if #projects == 0 then
       U.para(string.format(t("none_found"), dir), x, y, w, 12, U.MUTED, 3)
-      return y + 40
+      return draw_new(x, y + 40, w)
     end
     local ROWH = 26
     local n = #projects
@@ -210,14 +219,25 @@ return function(ctx)
       local mark = p.prepared and t("prepared") or t("to_prepare")
       local right = (p.bpm and string.format("%.0f", p.bpm) or "") .. "  " .. mark
       local rwid = U.text_w(right, 11)
-      U.text(U.fit(p.name, w - rwid - 44, 13), x + 6, yy + 4, 13, p.prepared and U.INK or U.WARN)
+      local nover = U.over(x, yy, w - rwid - 44, ROWH - 3)
+      U.text(U.fit(p.name, w - rwid - 44, 13), x + 6, yy + 4, 13, nover and U.BLUE or (p.prepared and U.INK or U.WARN))
+      if nover and U.clicked then                      -- clic sur le nom : ouvrir le morceau (nouvel onglet)
+        if (ctx.proj_file or ""):lower() ~= p.path:lower() then
+          reaper.Main_OnCommand(40859, 0)
+          reaper.Main_openProject(p.path)
+        end
+        ctx.refresh(true)
+        ctx.goto_tab("song")
+        return y
+      end
       U.text(right, x + w - 30 - rwid - 6, yy + 6, 11, p.prepared and U.ACCENT or U.WARN)
       if U.ibutton("addp" .. k, "plus", x + w - 28, yy + 1, 26, ROWH - 5) then
         ed.songs[#ed.songs + 1] = { project = p.path, title = p.name }
       end
     end
     if n > vis then U.text(string.format("%d–%d / %d", scroll + 1, scroll + vis, n), x, y + vis * ROWH + 2, 11, U.MUTED) end
-    return y + vis * ROWH + (n > vis and 18 or 4)
+    y = y + vis * ROWH + (n > vis and 18 or 4)
+    return draw_new(x, y, w)
   end
 
   local function draw_setlist(x, y, w)
@@ -287,7 +307,7 @@ return function(ctx)
   end
 
   function M.draw(x, y, w)
-    if not projects then M.scan() end
+    if not projects or M.rescan then M.rescan = nil; M.scan() end
     if ctx.job then y = y + ctx.draw_job(x, y, w) end
     local two = w >= 500
     local y_end

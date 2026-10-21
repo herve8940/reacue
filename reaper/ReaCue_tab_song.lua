@@ -7,7 +7,9 @@ return function(ctx)
   local L, U, T, R, SEP = ctx.L, ctx.U, ctx.T, ctx.R, ctx.SEP
   local TXT = {
     fr = {
-      no_song = "Ouvre le projet d'un morceau (ou glisse son MP3 / ses stems dans un nouveau projet).",
+      no_song = "Ouvre le projet d'un morceau, ou crée-en un avec « + Nouveau morceau » (un MP3 ou un dossier de stems).",
+      saved = "enregistré ✓", unsaved = "non enregistré", next_split = "Étape suivante : « Séparer stems » (un seul fichier), puis « Préparer ».",
+      next_prepare = "Étape suivante : « Préparer ».",
       prepared = "préparé", not_prepared = "pas encore préparé", bars = "%d mesures",
       step1 = "1. Préparer", step2 = "2. Structure — clic sur un nom : écouter", step3 = "3. Compléments",
       separate = "Séparer stems", prepare = "Préparer", reanalyse = "Réanalyser", publish = "Republier",
@@ -30,7 +32,9 @@ return function(ctx)
       after_stems = "\n\nÉtape suivante : « Préparer ».",
     },
     en = {
-      no_song = "Open a song's project (or drop its MP3 / stems into a new project).",
+      no_song = "Open a song's project, or create one with “+ New song” (an MP3 or a folder of stems).",
+      saved = "saved ✓", unsaved = "not saved", next_split = "Next step: “Split stems” (a single file), then “Prepare”.",
+      next_prepare = "Next step: “Prepare”.",
       prepared = "prepared", not_prepared = "not prepared yet", bars = "%d bars",
       step1 = "1. Prepare", step2 = "2. Structure — click a name: listen", step3 = "3. Extras",
       separate = "Split stems", prepare = "Prepare", reanalyse = "Re-analyse", publish = "Republish",
@@ -177,9 +181,12 @@ return function(ctx)
       r.bar = measure_of(r.start) - m0 + 1
       r.len = measure_of(r.stop - 0.001) - measure_of(r.start) + 1
     end
+    local roles = 0
+    for _, n in ipairs(names) do if ctx.newsong and ctx.newsong.role_of(n) then roles = roles + 1 end end
     info = {
       regions = regs, bpm = bpm, bars = bars, key = key_from(names), prepared = (#regs > 0 and has_click),
       dirs = dirs, titles = titles, has_audio = #names > 0, m0 = m0,
+      single_mix = (#names == 1 and roles == 0),        -- un MP3 / WAV seul : séparer d'abord
     }
     info.lyrics = read_lyrics(dirs)
     info.pub = published(titles)
@@ -339,12 +346,25 @@ return function(ctx)
   end
 
   -- lancement des traitements ---------------------------------------------------------------
+  -- après une préparation / séparation réussie lancée depuis la fenêtre : le projet du morceau est
+  -- enregistré (sinon le concert ne retrouve ni sections ni tempo) ; jamais un projet concert
+  local saved_t = nil
+  function M.autosave(key)
+    if ctx.is_concert or key ~= ctx.proj_key or (ctx.proj_file or "") == "" then return false end
+    if not reaper.Main_SaveProject then return false end
+    reaper.Main_SaveProject(0, false)
+    saved_t = reaper.time_precise()
+    return true
+  end
+
   local function done_cb(after)
+    local key = ctx.proj_key
     return function(state, msg)
       info = nil
       if ctx.tabs.stage.invalidate then ctx.tabs.stage.invalidate() end
       if state == "done" then
         dirty = false
+        M.autosave(key)
         ctx.show_result(T("done_title"), (msg or "") .. (after or ""), true)
       else
         ctx.show_result(T("error_title"), msg, false)
@@ -370,19 +390,38 @@ return function(ctx)
     if ctx.job then y = y + ctx.draw_job(x, y, w) end
     -- état
     local title = ctx.proj_name ~= "" and ctx.proj_name or "?"
-    U.text(U.fit(title, w, 18, true), x, y, 18, U.INK, true)
+    local NS = ctx.newsong
+    local nw = NS and (U.text_w(NS.t("button"), 13) + 22) or 0
+    U.text(U.fit(title, w - nw - 10, 18, true), x, y, 18, U.INK, true)
+    if NS and U.button("newsong", NS.t("button"), x + w - nw, y - 3, nw, 26, (not i.has_audio) and "primary" or nil, 13)
+      and not ctx.job then NS.start() return y end
     y = y + 24
+    if ctx.flash and reaper.time_precise() - ctx.flash.t < 3 then
+      y = y + (U.para(ctx.flash.txt, x, y, w, 12, ctx.flash.bad and U.WARN or U.ACCENT, 3) or 0) + 6
+    end
     if not i.has_audio then
       U.para(t("no_song"), x, y, w, 13, U.MUTED)
       return y + 40
     end
     local parts = { i.prepared and t("prepared") or t("not_prepared") }
-    parts[#parts + 1] = fmt_bpm(i.bpm)
+    if i.prepared then parts[#parts + 1] = fmt_bpm(i.bpm) end
     if i.bars > 0 then parts[#parts + 1] = string.format(t("bars"), i.bars) end
     if i.key then parts[#parts + 1] = i.key end
+    local dirty_p = reaper.IsProjectDirty and reaper.IsProjectDirty(0) == 1
+    local st_txt, st_col
+    if (ctx.proj_file or "") == "" or dirty_p then st_txt, st_col = t("unsaved"), U.WARN
+    elseif saved_t and reaper.time_precise() - saved_t < 600 then st_txt, st_col = t("saved"), U.ACCENT end
     U.set(i.prepared and U.ACCENT or U.WARN); gfx.circle(x + 5, y + 8, 4, 1, 1)
-    U.text(U.fit(table.concat(parts, " · "), w - 16, 13), x + 16, y, 13, U.MUTED)
-    y = y + 26
+    local line = table.concat(parts, " · ")
+    local sw = st_txt and (U.text_w(st_txt, 12) + 10) or 0
+    U.text(U.fit(line, w - 16 - sw, 13), x + 16, y, 13, U.MUTED)
+    if st_txt then U.text(st_txt, x + w - sw + 10, y + 1, 12, st_col) end
+    y = y + 22
+    if not i.prepared then
+      U.text(U.fit(i.single_mix and t("next_split") or t("next_prepare"), w, 12), x, y, 12, U.WARN)
+      y = y + 18
+    end
+    y = y + 4
 
     -- 1. Préparer
     U.heading(t("step1"), x, y)
@@ -390,8 +429,9 @@ return function(ctx)
     local gap = 6
     local bw = (w - 3 * gap) / 4
     local busy = ctx.job ~= nil
-    if U.button("sep", t("separate"), x, y, bw, 34, nil, 13) and not busy then M.separate() end
-    if U.button("prep", t("prepare"), x + (bw + gap), y, bw, 34, "primary", 13) and not busy then M.prepare() end
+    local split_first = i.single_mix and not i.prepared
+    if U.button("sep", t("separate"), x, y, bw, 34, split_first and "primary" or nil, 13) and not busy then M.separate() end
+    if U.button("prep", t("prepare"), x + (bw + gap), y, bw, 34, (not split_first) and "primary" or nil, 13) and not busy then M.prepare() end
     if U.button("rean", t("reanalyse"), x + 2 * (bw + gap), y, bw, 34, nil, 13) and not busy then M.reanalyse() end
     if U.button("pub", t("publish"), x + 3 * (bw + gap), y, bw, 34, nil, 13) and not busy then M.publish() end
     y = y + 46

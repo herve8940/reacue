@@ -600,6 +600,26 @@ async def set_live_profile(concert: str, live: list[str] | None = None, exceptio
         return {"error": str(e)}
 
 
+@mcp.tool()
+async def new_song(files: list[str], title: str | None = None) -> dict:
+    """Nouveau morceau : copie un fichier audio (MP3, WAV…), plusieurs stems ou un dossier de stems dans
+    <dossier des projets>/<Titre>/ et crée le projet REAPER <Titre>.RPP (une piste par fichier, à 0 s).
+
+    files : chemins sur l'ordinateur (un fichier, des stems, ou un dossier de stems).
+    title : titre du morceau ; par défaut, déduit du nom (sans « -Bass- », tonalité, BPM, « Official Video »).
+    Un projet existant n'est jamais écrasé. Ensuite : ouvrir le projet dans REAPER (fenêtre ReaCue, onglet
+    Concert : clic sur le nom du morceau), puis « Séparer stems » (un seul fichier) et « Préparer ».
+    """
+    use_settings_lang()
+    from . import newsong as ns
+    try:
+        out = await asyncio.to_thread(ns.new_song, files, title)
+    except (FileNotFoundError, ValueError, OSError) as e:
+        return {"error": str(e)}
+    out["open"] = t("new_song_open_hint")
+    return out
+
+
 def main():
     mcp.run()
 

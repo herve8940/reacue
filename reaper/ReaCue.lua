@@ -76,6 +76,7 @@ for _, k in ipairs(TAB_ORDER) do
   tabs[k] = dofile(script_dir .. "ReaCue_tab_" .. k .. ".lua")(ctx)
 end
 ctx.tabs = tabs
+ctx.newsong = dofile(script_dir .. "ReaCue_newsong.lua")(ctx)      -- « + Nouveau morceau »
 
 function ctx.goto_tab(t)
   if not tabs[t] then return end
@@ -152,6 +153,17 @@ local function poll_job()
   local j = ctx.job
   if not j then return end
   local now = reaper.time_precise()
+  if j.kind == "task" then                       -- tâche Lua par étapes (copie d'un nouveau morceau)
+    local st, v, lab = j.step(0.04)
+    if st == "running" then
+      j.pct = v or 0
+      if lab then j.label = lab end
+      return
+    end
+    ctx.job = nil
+    if j.on_done then j.on_done(st == "done" and "done" or "error", v) end
+    return
+  end
   if j.kind == "stems" then
     local st, v = S.poll(R, j.sj)
     if st == "running" then

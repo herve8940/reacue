@@ -276,6 +276,10 @@ MSG = {
                                "structure published; chords, lyrics and drums being computed (background)"),
     "concert_extras_not_spawned": ("Calcul des accords/paroles/batterie non lancé : {e}",
                                    "Chords/lyrics/drums computation not started: {e}"),
+    "new_song_open_hint": ("Dans REAPER : fenêtre ReaCue, onglet Concert → clic sur le nom du morceau (nouvel onglet), "
+                           "puis « Séparer stems » (un seul fichier) et « Préparer ».",
+                           "In REAPER: ReaCue window, Concert tab → click the song's name (new tab), then "
+                           "“Split stems” (single file) and “Prepare”."),
     "concert_open_hint": ("Dans REAPER : action « ReaCue - Concert » → choisir le concert (nouvel onglet).",
                           "In REAPER: “ReaCue - Concert” action → choose the concert (new tab)."),
     "cli_running": ("Analyse et préparation en cours…", "Analysis and preparation in progress…"),
