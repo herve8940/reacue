@@ -9,6 +9,10 @@
 --   · arrêt automatique à la fin de chaque morceau, curseur placé au début du suivant : Espace relance
 --   · télécommande « Régie » : les téléphones (rôle Régie du prompteur) pilotent le concert via cette fenêtre
 --   · sans concert ouvert : liste des concerts à ouvrir (nouvel onglet, le projet en cours reste ouvert)
+--   · « Vérifier » : contrôle avant concert (fichiers, concert à jour, pont, interface web, IP, carte son,
+--     sorties du click, prompteur, téléphones Régie), avec « Corriger » quand c'est possible
+--   · « Répétition » : arrêt auto coupé, boucle sur une section (ou une plage : 2e section) avec 1 mesure de
+--     décompte (click et annonces seuls) avant chaque reprise, ralenti 100 / 90 / 80 / 70 %
 -- La fenêtre peut être ancrée (clic droit dans la fenêtre). Fermer la fenêtre arrête l'arrêt automatique
 -- et la télécommande.
 
@@ -35,6 +39,8 @@ local armed = nil              -- double appui : {id, t}
 local flash = nil              -- retour visuel d'une commande distante : {txt, t}
 local last_alive = 0
 local layout_h = nil           -- hauteur voulue (fenêtre détachée)
+local chk = nil                -- vue « Vérifier » : {list, dock, recheck_at}
+local loop_last = nil          -- position précédente pour la boucle de répétition
 
 -- couleurs ---------------------------------------------------------------------
 local function rgb(r, g, b, a) gfx.set(r / 255, g / 255, b / 255, a or 1) end
@@ -67,8 +73,8 @@ end
 local function fit(s, w, size, bold)
   if text_w(s, size, bold) <= w then return s end
   while #s > 1 and text_w(s .. "…", size, bold) > w do
-    s = s:sub(1, -2)
-    while #s > 1 and (s:byte(-1) & 0xC0) == 0x80 do s = s:sub(1, -2) end
+    local cut = utf8.offset(s, -1) or #s          -- retire un caractère entier (UTF-8)
+    s = s:sub(1, math.max(1, cut - 1))
   end
   return s .. "…"
 end
@@ -299,6 +305,60 @@ local function draw_qr()
   end
 end
 
+-- contrôle avant concert (« Vérifier ») ---------------------------------------------
+local CHK_W = 600
+local CK_COL = { ok = ACCENT, warn = WARN, bad = { 226, 75, 74 }, info = GREY }
+
+local function run_checks()
+  chk.list = L.run_checks(concert)
+  chk.recheck_at = nil
+end
+
+local function open_check()
+  chk = { dock = gfx.dock(-1) }
+  if chk.dock > 0 then gfx.dock(0) end
+  gfx.init("", CHK_W, 560)
+  run_checks()
+end
+
+local function close_check()
+  local d = chk and chk.dock or 0
+  chk = nil
+  if d > 0 then gfx.dock(d) else gfx.init("", 540, gfx.h) end
+end
+
+local function draw_check()
+  local w = gfx.w
+  text(T("check_title"), 18, 14, 18, INK, true)
+  if button("ckclose", T("close"), w - 104, 12, 90, 30) then close_check() return end
+  if button("ckagain", T("recheck"), w - 104 - 8 - 120, 12, 120, 30) then run_checks() end
+  if chk.recheck_at and reaper.time_precise() >= chk.recheck_at then run_checks() end
+  local bad, warn = L.check_summary(chk.list)
+  local y = 52
+  local sum, col
+  if bad > 0 then sum, col = string.format(T("n_problems"), bad), CK_COL.bad
+  elseif warn > 0 then sum, col = string.format(T("n_warnings"), warn), CK_COL.warn
+  else sum, col = T("all_ready") .. "  ✓", CK_COL.ok end
+  set(col, 0.22); gfx.rect(14, y, w - 28, 34, 1)
+  set(col); gfx.roundrect(14, y, w - 29, 33, 6, 1)
+  text(sum, 26, y + 8, 16, INK, true)
+  y = y + 46
+  for k, x in ipairs(chk.list) do
+    local c = CK_COL[x.status] or GREY
+    local fx = x.fix and (x.fix ~= "rebuild" or concert) and x.status ~= "ok"
+    local tw = w - 40 - (fx and 100 or 14)
+    set(c); gfx.circle(24, y + 10, 6, 1, 1)
+    text(fit(x.label, tw, 14, true), 38, y + 2, 14, INK, true)
+    text(fit(x.detail, tw, 12), 38, y + 21, 12, x.status == "bad" and INK or MUTED)
+    if fx and button("fix" .. k, T("fix"), w - 92, y + 6, 78, 26) then
+      if x.fix == "rebuild" then close_check(); start_rebuild() return
+      else L.apply_fix(concert, x.fix); chk.recheck_at = reaper.time_precise() + 0.6 end
+    end
+    y = y + 42
+  end
+  layout_h = y + 10
+end
+
 -- état du morceau en cours ---------------------------------------------------------------
 local function song_state(c)
   local t = L.pos()
@@ -365,6 +425,7 @@ local function draw_compact(c, S)
   text(fit(head, left_w - 16, 17, true), 32, h / 2 - (h >= 58 and 17 or 9), 17, INK, true)
   if h >= 58 then
     local sub = (S.si and S.secs[S.si].name or STATE_TXT[S.st]) .. " · " .. string.format(T("rest"), L.fmt_time(S.rest))
+    if L.reh.on then sub = T("reh_on") .. " · " .. sub end
     text(fit(sub, left_w - 16, 12), 32, h / 2 + 6, 12, MUTED)
   end
 end
@@ -406,8 +467,32 @@ local function draw_concert()
   if tbutton("stop", "stop", T("stop"), 14 + 3 * (bw + gap), y, bw, bh, armed_style("stop")) then do_stop() end
   if tbutton("next", "next", T("next"), 14 + 4 * (bw + gap), y, bw, bh, armed_style("next")) then do_next(c) end
 
-  -- sections du morceau en cours (clic = y aller)
+  -- mode répétition : bandeau, boucle, vitesse
   y = y + bh + 12
+  local RH = L.reh
+  if RH.on then
+    local lp = RH.loop
+    set(WARN, 0.2); gfx.rect(14, y, w - 28, 26, 1)
+    set(WARN); gfx.rect(14, y, 5, 26, 1)
+    local msg = lp and (lp.a == lp.b and string.format(T("reh_loop"), lp.a) or string.format(T("reh_loop_range"), lp.a, lp.b))
+      or T("reh_noloop")
+    text(fit(T("reh_on") .. "  ·  " .. msg, w - 60, 13, true), 26, y + 6, 13, INK, true)
+    y = y + 32
+    local bx = 14
+    local lw = text_w(T("loop_off"), 13) + 22
+    if button("loopoff", T("loop_off"), bx, y, lw, 26) then L.loop_off() end
+    bx = bx + lw + 10
+    for _, r in ipairs({ 1.0, 0.9, 0.8, 0.7 }) do
+      local lab = string.format(T("rate"), math.floor(r * 100 + 0.5))
+      if button("rate" .. r, lab, bx, y, 54, 26, math.abs(RH.rate - r) < 0.001) then L.set_rate(r) end
+      bx = bx + 58
+    end
+    local qw = text_w(T("reh_exit"), 13) + 20
+    if button("rehexit", T("reh_exit"), w - 14 - qw, y, qw, 26) then L.set_rehearsal(false) end
+    y = y + 36
+  end
+
+  -- sections du morceau en cours (clic = y aller ; en répétition : boucle)
   text(T("sections"), 14, y, 12, MUTED)
   y = y + 18
   local x = 14
@@ -420,9 +505,15 @@ local function draw_concert()
     local over = over_rect(x, y, pw2, ph)
     set(col, (k == S.si) and 1 or (over and 0.9 or 0.72)); gfx.rect(x, y, pw2, ph, 1)
     if k == S.si then set(INK); gfx.roundrect(x - 2, y - 2, pw2 + 3, ph + 3, 5, 1); gfx.roundrect(x - 1, y - 1, pw2 + 1, ph + 1, 5, 1) end
+    local lp = RH.loop
+    if lp and sec.start >= lp.start - 0.01 and sec.stop <= lp.stop + 0.01 then
+      set(WARN); gfx.rect(x, y + ph - 4, pw2, 4, 1)
+    end
     text(lab, x + 8, y + 5, 12, { 16, 16, 18 }, k == S.si)
     if over then hover = "sec" .. k end
-    if over and clicked then L.seek(c, sec.start) end
+    if over and clicked then
+      if RH.on then L.loop_tap(c, sec.start); loop_last = nil else L.seek(c, sec.start) end
+    end
     x = x + pw2 + 6
   end
   if #S.secs == 0 then text(T("no_regions"), 14, y + 4, 12, MUTED) end
@@ -434,23 +525,33 @@ local function draw_concert()
     or T("last_song")
   text(fit(nxt, w - 28, 13), 14, y, 13, INK)
   y = y + 22
-  local lab = rebuild and string.format(T("rebuilding"), math.floor(reaper.time_precise() - rebuild.t0)) or T("auto_stop")
-  set(rebuild and WARN or ACCENT); gfx.circle(20, y + 12, 4, 1, 1)
-  text(lab, 30, y + 5, 12, MUTED)
+  local lab = rebuild and string.format(T("rebuilding"), math.floor(reaper.time_precise() - rebuild.t0))
+    or (RH.on and T("auto_off") or T("auto_stop"))
+  set((rebuild or RH.on) and WARN or ACCENT); gfx.circle(20, y + 7, 4, 1, 1)
+  text(lab, 30, y, 12, MUTED)
+  if flash and reaper.time_precise() - flash.t < 2.5 then
+    text(flash.txt, 30 + text_w(lab, 12) + 14, y, 12, flash.bad and WARN or ACCENT, true)
+  end
+  y = y + 20
   local tb = 26
   local bx = w - 14
-  bx = bx - 56; if button("qr", "QR", bx, y, 56, tb) then open_qr() end
+  bx = bx - 50; if button("qr", "QR", bx, y, 50, tb) then open_qr() end
   local pinlab = string.format(T("pin_btn"), L.remote_pin())
-  local pinw = text_w(pinlab, 13) + 20
-  bx = bx - 8 - pinw; if button("pin", pinlab, bx, y, pinw, tb) then change_pin() end
-  bx = bx - 8 - 104
-  if button("list", T("setlist") .. (songs_open and "  −" or "  +"), bx, y, 104, tb) then
+  local pinw = text_w(pinlab, 13) + 18
+  bx = bx - 6 - pinw; if button("pin", pinlab, bx, y, pinw, tb) then change_pin() end
+  local slab = T("setlist") .. (songs_open and "  −" or "  +")
+  local sw = text_w(slab, 13) + 20
+  bx = bx - 6 - sw
+  if button("list", slab, bx, y, sw, tb) then
     songs_open = not songs_open
     reaper.SetExtState("ReaCue", "concert_list", songs_open and "1" or "0", true)
   end
-  if flash and reaper.time_precise() - flash.t < 2.5 then
-    text(flash.txt, 30 + text_w(lab, 12) + 14, y + 5, 12, flash.bad and WARN or ACCENT, true)
-  end
+  local rw = text_w(T("reh"), 13) + 20
+  bx = bx - 6 - rw
+  if button("reh", T("reh"), bx, y, rw, tb, RH.on) then L.set_rehearsal(not RH.on); loop_last = nil end
+  local cw = text_w(T("check"), 13) + 20
+  bx = bx - 6 - cw
+  if button("check", T("check"), bx, y, cw, tb) then open_check() return end
   y = y + tb + 10
 
   -- setlist
@@ -482,6 +583,8 @@ local function draw_empty()
   if not available then available, to_build = L.list_concerts(), L.list_setlists() end
   text(T("none"), 18, 14, 18, INK, true)
   if button("qr", "QR", W - 70, 10, 56, 28) then open_qr() return end
+  local cw = text_w(T("check"), 13) + 20
+  if button("check", T("check"), W - 70 - 8 - cw, 10, cw, 28) then open_check() return end
   if rebuild then
     text(string.format(T("building"), math.floor(reaper.time_precise() - rebuild.t0)), 18, 42, 13, MUTED)
     layout_h = 110
@@ -521,6 +624,7 @@ local CMD_TXT = T("cmd")
 local function poll_remote()
   local now = reaper.time_precise()
   if now - last_alive > 0.4 then L.remote_alive(now); last_alive = now end
+  L.poll_seen(now)
   local cmd, res = L.remote_poll(concert)
   if res and res ~= "dup" then
     if res == "ok" then
@@ -537,24 +641,31 @@ local dock = tonumber(reaper.GetExtState("ReaCue", "concert_dock")) or 0
 gfx.init(TITLE, W, 300, dock)
 L.remote_pin()
 pcall(L.publish_page)
+L.publish_reh()
 
 local function loop()
   local ch = gfx.getchar()
   if ch < 0 then return end
   if ch == 27 then
-    if qr then close_qr() else gfx.quit() return end
+    if qr then close_qr() elseif chk then close_check() else gfx.quit() return end
   end
   refresh(false)
   poll_rebuild()
   poll_remote()
 
-  -- arrêt automatique en fin de morceau
+  -- arrêt automatique en fin de morceau (coupé en répétition) ; boucle de répétition
   if concert and L.playing() then
     local p = reaper.GetPlayPosition()
-    local k = L.crossed_stop(concert, last_pos, p)
-    if k then L.after_stop(concert, k); last_pos = nil else last_pos = p end
+    if L.reh.on then
+      if L.loop_tick(loop_last, p) == "restart" then loop_last = nil else loop_last = p end
+      last_pos = nil
+    else
+      local k = L.crossed_stop(concert, last_pos, p)
+      if k then L.after_stop(concert, k); last_pos = nil else last_pos = p end
+    end
   else
-    last_pos = nil
+    if L.reh.on then L.loop_tick(nil, L.pos()) end
+    last_pos, loop_last = nil, nil
   end
 
   -- souris (clic à l'appui, plus réactif)
@@ -572,6 +683,7 @@ local function loop()
   W = gfx.w > 0 and gfx.w or W
   set(BG); gfx.rect(0, 0, gfx.w, gfx.h, 1)
   if qr then draw_qr()
+  elseif chk then draw_check()
   elseif concert then draw_concert() else draw_empty() end
   local h = qr and QR_H or layout_h
   if h and not qr and gfx.dock(-1) == 0 and math.abs(gfx.h - h) > 2 then gfx.init("", W, h) end
@@ -581,6 +693,8 @@ end
 
 reaper.atexit(function()
   if reaper.set_action_options then reaper.set_action_options(8) end
+  if L.reh.on then pcall(L.set_rehearsal, false) end
+  reaper.SetExtState("ReaCue", "rehearsal", "", false)
   L.remote_off()
   local d = gfx.dock(-1)
   reaper.SetExtState("ReaCue", "concert_dock", tostring(d), true)

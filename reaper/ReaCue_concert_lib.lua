@@ -34,12 +34,39 @@ local TXT = {
     qr_missing = "ReaCue_qrcode.lua introuvable",
     phone = "téléphone : %s ✓", phone_badpin = "téléphone : code PIN incorrect",
     cmd = { toggle = "Lecture/Pause", play = "Lecture", pause = "Pause", stop = "Stop", prev = "Précédent",
-      next = "Suivant", home = "Début", song = "Morceau", seek = "Section" },
+      next = "Suivant", home = "Début", song = "Morceau", seek = "Section", reh = "Répétition", loop = "Boucle",
+      loopoff = "Boucle off", rate = "Vitesse" },
     concert_n = "Concert %s / %s",
     none = "Aucun concert dans ce projet", building = "Construction du concert… %d s",
     open_one = "Ouvrir un concert (nouvel onglet) :", none_in = "Aucun concert dans %s",
     ask_claude = "Demande à Claude : « concert : morceau 1, morceau 2… »",
     n_songs = "%s  ·  %d morceaux", to_build = "Setlists à construire :", build = "Construire  %s",
+    -- contrôle avant concert
+    check = "Vérifier", recheck = "Revérifier", fix = "Corriger", check_title = "Contrôle avant concert",
+    all_ready = "Tout est prêt", n_problems = "%d problème(s)", n_warnings = "%d point(s) à surveiller",
+    ck = {
+      media = "Fichiers audio", media_ok = "%d fichiers lisibles", media_bad = "%d illisible(s) ou hors ligne : %s",
+      voice = "Annonces vocales", voice_ok = "%d annonces présentes", voice_bad = "%d annonce(s) manquante(s)", voice_none = "aucune piste d'annonces",
+      fresh = "Concert à jour", fresh_ok = "construit le %s, aucun morceau modifié depuis",
+      fresh_bad = "modifié(s) depuis la construction : %s", fresh_unknown = "concert construit avec une ancienne version : reconstruis-le une fois",
+      fresh_missing = "projet introuvable : %s",
+      songs = "Morceaux préparés", songs_ok = "%d morceaux avec structure et tempo",
+      songs_bad = "à préparer puis enregistrer : %s",
+      bridge = "Pont ReaCue", bridge_ok = "actif", bridge_bad = "ne répond pas : redémarre REAPER",
+      web = "Interface web (prompteur)", web_ok = "active, port %d", web_bad = "introuvable : Préférences › Control/OSC/web",
+      ip = "Adresse réseau", ip_ok = "%s", ip_bad = "aucune : connecte l'ordinateur au Wi-Fi du groupe",
+      audio = "Carte son", audio_ok = "active · %s · %d sorties", audio_bad = "arrêtée : Préférences › Audio › Device",
+      outs = "Sorties click et annonces", outs_ok = "%s", outs_bad = "%s", outs_master = "vers la sortie principale",
+      outs_hw = "%s → sorties %d/%d", outs_missing = "%s → sortie %d absente (la carte en a %d)",
+      outs_nowhere = "%s n'est envoyée nulle part", outs_muted = "%s est coupée (mute)", outs_none = "pas de piste CLICK",
+      prompter = "Prompteur des téléphones", prompter_ok = "page et concert publiés", prompter_bad = "pas à jour : republier",
+      regie = "Téléphones Régie", regie_ok = "vu il y a %d s", regie_none = "aucun téléphone en Régie pour l'instant",
+    },
+    -- mode répétition
+    reh = "Répétition", reh_on = "RÉPÉTITION", reh_loop = "boucle : %s", reh_loop_range = "boucle : %s → %s",
+    reh_noloop = "touche une section pour la faire boucler (2e section = plage)",
+    loop_off = "Boucle off", reh_exit = "Quitter", rate = "%d %%",
+    auto_off = "arrêt auto coupé (répétition)",
   },
   en = {
     title = "ReaCue - Concert",
@@ -64,12 +91,37 @@ local TXT = {
     qr_missing = "ReaCue_qrcode.lua not found",
     phone = "phone: %s ✓", phone_badpin = "phone: wrong PIN code",
     cmd = { toggle = "Play/Pause", play = "Play", pause = "Pause", stop = "Stop", prev = "Previous",
-      next = "Next", home = "Start", song = "Song", seek = "Section" },
+      next = "Next", home = "Start", song = "Song", seek = "Section", reh = "Rehearsal", loop = "Loop",
+      loopoff = "Loop off", rate = "Speed" },
     concert_n = "Concert %s / %s",
     none = "No concert in this project", building = "Building the concert… %d s",
     open_one = "Open a concert (new tab):", none_in = "No concert in %s",
     ask_claude = "Ask Claude: “concert: song 1, song 2…”",
     n_songs = "%s  ·  %d songs", to_build = "Setlists to build:", build = "Build  %s",
+    check = "Check", recheck = "Check again", fix = "Fix", check_title = "Pre-show check",
+    all_ready = "All set", n_problems = "%d problem(s)", n_warnings = "%d thing(s) to watch",
+    ck = {
+      media = "Audio files", media_ok = "%d files readable", media_bad = "%d unreadable or offline: %s",
+      voice = "Spoken cues", voice_ok = "%d cues present", voice_bad = "%d cue(s) missing", voice_none = "no spoken cue track",
+      fresh = "Concert up to date", fresh_ok = "built on %s, no song changed since",
+      fresh_bad = "changed since the build: %s", fresh_unknown = "concert built with an older version: rebuild it once",
+      fresh_missing = "project not found: %s",
+      songs = "Prepared songs", songs_ok = "%d songs with structure and tempo",
+      songs_bad = "prepare then save: %s",
+      bridge = "ReaCue bridge", bridge_ok = "running", bridge_bad = "not answering: restart REAPER",
+      web = "Web interface (prompter)", web_ok = "on, port %d", web_bad = "not found: Preferences › Control/OSC/web",
+      ip = "Network address", ip_ok = "%s", ip_bad = "none: connect the computer to the band's Wi-Fi",
+      audio = "Audio device", audio_ok = "running · %s · %d outputs", audio_bad = "stopped: Preferences › Audio › Device",
+      outs = "Click and cue outputs", outs_ok = "%s", outs_bad = "%s", outs_master = "to the main output",
+      outs_hw = "%s → outputs %d/%d", outs_missing = "%s → output %d missing (the device has %d)",
+      outs_nowhere = "%s is not routed anywhere", outs_muted = "%s is muted", outs_none = "no CLICK track",
+      prompter = "Phones' prompter", prompter_ok = "page and concert published", prompter_bad = "out of date: republish",
+      regie = "Stage control phones", regie_ok = "seen %d s ago", regie_none = "no Stage control phone yet",
+    },
+    reh = "Rehearsal", reh_on = "REHEARSAL", reh_loop = "loop: %s", reh_loop_range = "loop: %s → %s",
+    reh_noloop = "tap a section to loop it (2nd section = range)",
+    loop_off = "Loop off", reh_exit = "Exit", rate = "%d %%",
+    auto_off = "auto stop off (rehearsal)",
   },
 }
 function L.lang() return R.lang() end
@@ -446,6 +498,370 @@ function L.song_keys(c)
   return out
 end
 
+-- ---------------------------------------------------------------------------------------
+-- Contrôle avant concert (« Vérifier ») : liste de {id, status = ok|warn|bad|info, label, detail, fix}
+-- ---------------------------------------------------------------------------------------
+local GEN_TRACKS = { CLICK = true, VOIX = true, VOICE = true, CUES = true }
+local VOICE_TRACKS = { VOIX = true, VOICE = true }
+
+-- Adler-32 (même valeur que zlib.adler32 côté Python) : empreinte du projet d'un morceau
+function L.adler32(s)
+  local a, b = 1, 0
+  local n = #s
+  for i = 1, n, 4096 do
+    local t = { s:byte(i, math.min(n, i + 4095)) }
+    for k = 1, #t do a = (a + t[k]) % 65521; b = (b + a) % 65521 end
+  end
+  return (b << 16) | a
+end
+
+local function track_name(tr)
+  local _, name = reaper.GetTrackName(tr)
+  return name or ""
+end
+
+local function short_name(p) return (tostring(p):match("([^/\\]+)$") or tostring(p)) end
+
+local function join_names(list, max)
+  max = max or 3
+  local out = {}
+  for k = 1, math.min(#list, max) do out[k] = list[k] end
+  local s = table.concat(out, ", ")
+  if #list > max then s = s .. " (+" .. (#list - max) .. ")" end
+  return s
+end
+
+-- fichiers audio des items : lisibles et en ligne ? (voix d'annonces comptées à part)
+function L.scan_media()
+  local r = { n = 0, bad = {}, voice_n = 0, voice_bad = 0, has_voice = false }
+  local seen = {}
+  if not reaper.CountMediaItems then return r end
+  for i = 0, reaper.CountMediaItems(0) - 1 do
+    local it = reaper.GetMediaItem(0, i)
+    local tk = it and reaper.GetActiveTake(it)
+    if tk and not (reaper.TakeIsMIDI and reaper.TakeIsMIDI(tk)) then
+      local src = reaper.GetMediaItemTake_Source(tk)
+      local parent = src and reaper.GetMediaSourceParent and reaper.GetMediaSourceParent(src)
+      while parent do src = parent; parent = reaper.GetMediaSourceParent(src) end
+      local fn = src and reaper.GetMediaSourceFileName(src, "") or ""
+      if fn ~= "" then
+        local tname = track_name(reaper.GetMediaItem_Track(it))
+        local ok = L.exists(fn)
+        if ok and reaper.GetMediaSourceSampleRate and reaper.GetMediaSourceSampleRate(src) == 0 then ok = false end
+        if VOICE_TRACKS[tname] then
+          r.has_voice = true
+          r.voice_n = r.voice_n + 1
+          if not ok then r.voice_bad = r.voice_bad + 1 end
+        elseif not seen[fn] then
+          seen[fn] = true
+          r.n = r.n + 1
+          if not ok then r.bad[#r.bad + 1] = short_name(fn) end
+        end
+      end
+    end
+  end
+  return r
+end
+
+-- sorties du click et des annonces : envois matériels existants, pas de piste muette ou isolée
+function L.scan_outputs()
+  local nout = reaper.GetNumAudioOutputs and reaper.GetNumAudioOutputs() or 0
+  local ok_l, bad_l, found = {}, {}, false
+  local ck = L.tr("ck")
+  for i = 0, (reaper.CountTracks and reaper.CountTracks(0) or 0) - 1 do
+    local tr = reaper.GetTrack(0, i)
+    local name = track_name(tr)
+    if name == "CLICK" or VOICE_TRACKS[name] then
+      if name == "CLICK" then found = true end
+      if reaper.GetMediaTrackInfo_Value(tr, "B_MUTE") > 0 then bad_l[#bad_l + 1] = string.format(ck.outs_muted, name) end
+      local main = reaper.GetMediaTrackInfo_Value(tr, "B_MAINSEND") > 0
+      local nsend = reaper.GetTrackNumSends and reaper.GetTrackNumSends(tr, 1) or 0
+      if main then ok_l[#ok_l + 1] = name .. " " .. ck.outs_master end
+      for k = 0, nsend - 1 do
+        local dst = math.floor(reaper.GetTrackSendInfo_Value(tr, 1, k, "I_DSTCHAN"))
+        local ch = dst & 1023
+        local mono = (dst & 1024) ~= 0
+        local need = ch + (mono and 1 or 2)
+        if nout > 0 and need > nout then
+          bad_l[#bad_l + 1] = string.format(ck.outs_missing, name, need, nout)
+        else
+          ok_l[#ok_l + 1] = string.format(ck.outs_hw, name, ch + 1, ch + (mono and 1 or 2))
+        end
+      end
+      if not main and nsend == 0 then bad_l[#bad_l + 1] = string.format(ck.outs_nowhere, name) end
+    end
+  end
+  return found, ok_l, bad_l
+end
+
+local function fmt_date(t)
+  if not t then return "?" end
+  return os.date(L.lang() == "en" and "%Y-%m-%d %H:%M" or "%d/%m/%Y %H:%M", t)
+end
+
+-- état « vu » des téléphones Régie : renseigné par la fenêtre (L.regie_seen = time_precise de la dernière vue)
+L.regie_seen = nil
+
+-- liste complète ; opts.c = concert (ou nil), opts.ips (sinon calculées), opts.now
+function L.run_checks(c, opts)
+  opts = opts or {}
+  local ck = L.tr("ck")
+  local out = {}
+  local function add(id, status, label, detail, fix) out[#out + 1] = { id = id, status = status, label = label, detail = detail or "", fix = fix } end
+  if c then
+    -- médias
+    local m = L.scan_media()
+    if #m.bad == 0 then add("media", "ok", ck.media, string.format(ck.media_ok, m.n))
+    else add("media", "bad", ck.media, string.format(ck.media_bad, #m.bad, join_names(m.bad)), "media") end
+    if not m.has_voice then add("voice", "info", ck.voice, ck.voice_none)
+    elseif m.voice_bad == 0 then add("voice", "ok", ck.voice, string.format(ck.voice_ok, m.voice_n))
+    else add("voice", "bad", ck.voice, string.format(ck.voice_bad, m.voice_bad), "rebuild") end
+    -- morceaux préparés (structure + tempo)
+    local unprep = {}
+    for _, s in ipairs(c.songs) do
+      if (tonumber(s.sections) or 0) < 1 or (tonumber(s.bars) or 0) < 1 then unprep[#unprep + 1] = s.title end
+    end
+    if #unprep == 0 then add("songs", "ok", ck.songs, string.format(ck.songs_ok, #c.songs))
+    else add("songs", "bad", ck.songs, string.format(ck.songs_bad, join_names(unprep))) end
+    -- concert à jour : empreinte du projet de chaque morceau
+    local changed, missing, unknown = {}, {}, false
+    for _, s in ipairs(c.songs) do
+      local src = s.project and L.read(s.project)
+      if not src then missing[#missing + 1] = s.title
+      elseif not s.project_sum then unknown = true
+      elseif #src ~= s.project_size or L.adler32(src) ~= s.project_sum then changed[#changed + 1] = s.title end
+    end
+    if #missing > 0 then add("fresh", "bad", ck.fresh, string.format(ck.fresh_missing, join_names(missing)))
+    elseif #changed > 0 then add("fresh", "warn", ck.fresh, string.format(ck.fresh_bad, join_names(changed)), "rebuild")
+    elseif unknown then add("fresh", "warn", ck.fresh, ck.fresh_unknown, "rebuild")
+    else add("fresh", "ok", ck.fresh, string.format(ck.fresh_ok, fmt_date(c.built))) end
+  end
+  -- pont, interface web, adresse IP
+  if L.R.bridge_alive and L.R.bridge_alive() then add("bridge", "ok", ck.bridge, ck.bridge_ok)
+  else add("bridge", "bad", ck.bridge, ck.bridge_bad) end
+  local port, found = L.web_port()
+  if found then add("web", "ok", ck.web, string.format(ck.web_ok, port)) else add("web", "bad", ck.web, ck.web_bad) end
+  local ips = opts.ips or L.local_ips()
+  if #ips > 0 then add("ip", "ok", ck.ip, string.format(ck.ip_ok, L.prompter_url(ips[1], port)))
+  else add("ip", "bad", ck.ip, ck.ip_bad) end
+  -- carte son et sorties
+  local running = reaper.Audio_IsRunning and reaper.Audio_IsRunning() or 0
+  local nout = reaper.GetNumAudioOutputs and reaper.GetNumAudioOutputs() or 0
+  if running ~= 0 and running ~= false then
+    local dev = ""
+    if reaper.GetAudioDeviceInfo then local _, d = reaper.GetAudioDeviceInfo("IDENT_OUT", ""); dev = d or "" end
+    add("audio", "ok", ck.audio, string.format(ck.audio_ok, dev ~= "" and dev or "?", nout))
+  else
+    add("audio", "bad", ck.audio, ck.audio_bad)
+  end
+  if c then
+    local found_click, okl, badl = L.scan_outputs()
+    if not found_click then add("outs", "warn", ck.outs, ck.outs_none)
+    elseif #badl > 0 then add("outs", "bad", ck.outs, string.format(ck.outs_bad, table.concat(badl, " · ")))
+    else add("outs", "ok", ck.outs, string.format(ck.outs_ok, table.concat(okl, " · "))) end
+    -- prompteur publié et à jour
+    local www = reaper.GetResourcePath() .. SEP .. "reaper_www_root" .. SEP
+    local page = L.read(L.install_dir() .. SEP .. "reacue_mcp" .. SEP .. "web" .. SEP .. "prompteur.html")
+    local pub_ok = (not page or L.read(www .. "prompteur.html") == page)
+      and (not c.prompter or not L.read(c.prompter) or L.read(www .. "reacue_song.json") == L.read(c.prompter))
+    if pub_ok then add("prompter", "ok", ck.prompter, ck.prompter_ok)
+    else add("prompter", "warn", ck.prompter, ck.prompter_bad, "publish") end
+  end
+  -- téléphones Régie (information)
+  local now = opts.now or reaper.time_precise()
+  if L.regie_seen and now - L.regie_seen < 600 then
+    add("regie", "info", ck.regie, string.format(ck.regie_ok, math.floor(now - L.regie_seen)))
+  else
+    add("regie", "info", ck.regie, ck.regie_none)
+  end
+  return out
+end
+
+-- résumé : nombre de problèmes (bad) et de points à surveiller (warn)
+function L.check_summary(list)
+  local bad, warn = 0, 0
+  for _, x in ipairs(list) do
+    if x.status == "bad" then bad = bad + 1 elseif x.status == "warn" then warn = warn + 1 end
+  end
+  return bad, warn
+end
+
+-- corrections simples (la reconstruction est lancée par la fenêtre)
+function L.apply_fix(c, fix)
+  if fix == "media" then reaper.Main_OnCommand(40101, 0); return true      -- Item: Set all media online
+  elseif fix == "publish" then
+    local a = c and L.publish_prompter(c)
+    local b = L.publish_page()
+    return (a ~= false) and b
+  end
+  return false
+end
+
+-- ---------------------------------------------------------------------------------------
+-- Mode répétition : arrêt auto coupé, boucle sur une section ou une plage avec 1 mesure de décompte
+-- (click et annonces seuls, les autres pistes coupées) avant chaque reprise, ralenti 100/90/80/70 %.
+-- ---------------------------------------------------------------------------------------
+local PRESERVE_PITCH = 40671     -- Options: Toggle preserve pitch in audio items when changing master playrate
+L.reh = { on = false, loop = nil, anchor = nil, rate = 1.0, saved = nil, prebar = false, muted = nil }
+
+function L.bar_len_before(t, bpm)
+  if reaper.TimeMap2_timeToBeats and reaper.TimeMap2_beatsToTime then
+    local _, m = reaper.TimeMap2_timeToBeats(0, t + 0.001)
+    if m and m >= 1 then
+      local t0 = reaper.TimeMap2_beatsToTime(0, 0, m - 1)
+      if t0 and t0 < t - 0.01 then return t - t0 end
+    end
+  end
+  return 240 / (bpm and bpm > 0 and bpm or 120)
+end
+
+local function music_tracks()
+  local out = {}
+  for i = 0, (reaper.CountTracks and reaper.CountTracks(0) or 0) - 1 do
+    local tr = reaper.GetTrack(0, i)
+    if not GEN_TRACKS[track_name(tr)] then out[#out + 1] = tr end
+  end
+  return out
+end
+
+local function mute_music(on)
+  local R_ = L.reh
+  if on then
+    if R_.muted then return end
+    R_.muted = {}
+    for _, tr in ipairs(music_tracks()) do
+      R_.muted[#R_.muted + 1] = { tr, reaper.GetMediaTrackInfo_Value(tr, "B_MUTE") }
+      reaper.SetMediaTrackInfo_Value(tr, "B_MUTE", 1)
+    end
+  elseif R_.muted then
+    for _, x in ipairs(R_.muted) do reaper.SetMediaTrackInfo_Value(x[1], "B_MUTE", x[2]) end
+    R_.muted = nil
+  end
+end
+
+function L.publish_reh()
+  local R_ = L.reh
+  local lp = R_.loop
+  reaper.SetExtState("ReaCue", "rehearsal", string.format("%d|%.2f|%s|%s|%s", R_.on and 1 or 0, R_.rate,
+    lp and string.format("%.3f", lp.start) or "", lp and string.format("%.3f", lp.stop) or "",
+    lp and (lp.names or "") or ""), false)
+end
+
+function L.set_rate(r)
+  r = tonumber(r)
+  if not r or r < 0.5 or r > 1.0 then return false end
+  if r < 0.999 and reaper.GetToggleCommandState and reaper.GetToggleCommandState(PRESERVE_PITCH) == 0 then
+    reaper.Main_OnCommand(PRESERVE_PITCH, 0)
+    L.reh.pitch_switched = true
+  end
+  if reaper.CSurf_OnPlayRateChange then reaper.CSurf_OnPlayRateChange(r) end
+  L.reh.rate = r
+  L.publish_reh()
+  return true
+end
+
+function L.loop_off()
+  local R_ = L.reh
+  mute_music(false)
+  R_.loop, R_.anchor, R_.prebar = nil, nil, false
+  if reaper.GetSet_LoopTimeRange then reaper.GetSet_LoopTimeRange(true, true, 0, 0, false) end
+  L.publish_reh()
+end
+
+function L.set_rehearsal(on)
+  local R_ = L.reh
+  if on and not R_.on then
+    local s0, s1 = 0, 0
+    if reaper.GetSet_LoopTimeRange then s0, s1 = reaper.GetSet_LoopTimeRange(false, true, 0, 0, false) end
+    R_.saved = { rep = reaper.GetSetRepeat and reaper.GetSetRepeat(-1) or 0, sel = { s0 or 0, s1 or 0 },
+                 rate = reaper.Master_GetPlayRate and reaper.Master_GetPlayRate(0) or 1 }
+    R_.on = true
+    R_.pitch_switched = false
+    if reaper.GetSetRepeat then reaper.GetSetRepeat(0) end          -- la boucle est pilotée par la fenêtre
+  elseif not on and R_.on then
+    L.loop_off()
+    if reaper.CSurf_OnPlayRateChange then reaper.CSurf_OnPlayRateChange(1.0) end
+    if R_.pitch_switched and reaper.GetToggleCommandState and reaper.GetToggleCommandState(PRESERVE_PITCH) == 1 then
+      reaper.Main_OnCommand(PRESERVE_PITCH, 0)
+    end
+    local sv = R_.saved or {}
+    if reaper.GetSetRepeat and sv.rep then reaper.GetSetRepeat(sv.rep) end
+    if reaper.GetSet_LoopTimeRange and sv.sel then reaper.GetSet_LoopTimeRange(true, true, sv.sel[1], sv.sel[2], false) end
+    R_.on, R_.rate, R_.saved, R_.pitch_switched = false, 1.0, nil, false
+  end
+  L.publish_reh()
+  return true
+end
+
+-- (re)lance la boucle : 1 mesure avant son début, pistes musicales coupées pendant cette mesure
+function L.loop_restart()
+  local lp = L.reh.loop
+  if not lp then return end
+  mute_music(true)
+  L.reh.prebar = true
+  reaper.SetEditCurPos(lp.start - lp.pre, true, true)
+  if not L.playing() then reaper.OnPlayButton() end
+end
+
+function L.loop_set(c, a, b)
+  local R_ = L.reh
+  if not R_.on then L.set_rehearsal(true) end
+  local i = L.song_index(c, a.start + 0.01)
+  local lp = { start = a.start, stop = b.stop, song = i, names = (a == b) and a.name or (a.name .. " → " .. b.name),
+               a = a.name, b = b.name }
+  lp.pre = L.bar_len_before(a.start, c.songs[i] and c.songs[i].bpm)
+  mute_music(false)
+  R_.loop = lp
+  if reaper.GetSet_LoopTimeRange then reaper.GetSet_LoopTimeRange(true, true, lp.start, lp.stop, false) end
+  L.publish_reh()
+  L.loop_restart()
+  return lp
+end
+
+-- appui sur la section commençant au temps t : 1er appui = boucle sur cette section,
+-- 2e appui sur une autre section du même morceau = boucle de l'une à l'autre (plage)
+function L.loop_tap(c, t)
+  t = tonumber(t)
+  if not t then return false end
+  local i = L.song_index(c, t + 0.01)
+  local secs = L.song_sections(c, i)
+  local k = nil
+  for n, x in ipairs(secs) do if math.abs(x.start - t) < 0.05 then k = n end end
+  if not k then k = L.section_at(secs, t) end
+  if not k then return false end
+  local R_ = L.reh
+  local an = R_.anchor
+  if an and an.song == i and an.k ~= k and R_.loop then
+    local lo, hi = math.min(an.k, k), math.max(an.k, k)
+    L.loop_set(c, secs[lo], secs[hi])
+    R_.anchor = nil
+  else
+    L.loop_set(c, secs[k], secs[k])
+    R_.anchor = { song = i, k = k }
+  end
+  return true
+end
+
+-- à appeler à chaque tour de boucle de la fenêtre (position de lecture précédente / actuelle)
+function L.loop_tick(last, now)
+  local R_ = L.reh
+  local lp = R_.loop
+  if not lp then return nil end
+  if not L.playing() then
+    if R_.prebar then mute_music(false); R_.prebar = false end      -- arrêt pendant la mesure de décompte
+    return nil
+  end
+  if R_.prebar and (now >= lp.start - 0.03 or now < lp.start - lp.pre - 0.5) then
+    mute_music(false); R_.prebar = false                             -- début de la boucle (ou saut ailleurs)
+    return "start"
+  end
+  if last and now >= last and now - last < 1.5 and last < lp.stop and now >= lp.stop then
+    L.loop_restart()
+    return "restart"
+  end
+  return nil
+end
+
 -- télécommande ---------------------------------------------------------------------------
 -- Le téléphone écrit, via l'interface web de REAPER :
 --   /_/SET/EXTSTATE/ReaCue/remote/<cmd>|<arg>|<pin>|<nonce>      (valeur urlencodée)
@@ -492,6 +908,15 @@ function L.remote_exec(c, cmd, arg)
     L.goto_song(c, k)
   elseif cmd == "seek" then
     if not L.seek(c, tonumber(arg)) then return false end
+  elseif cmd == "reh" then
+    L.set_rehearsal(arg == "1")
+  elseif cmd == "loop" then
+    if not L.loop_tap(c, arg) then return false end
+  elseif cmd == "loopoff" then
+    L.loop_off()
+  elseif cmd == "rate" then
+    if not L.reh.on then L.set_rehearsal(true) end
+    if not L.set_rate(arg) then return false end
   else
     return false
   end
@@ -518,6 +943,16 @@ function L.remote_poll(c)
   return cmd, res
 end
 
-function L._reset_remote() seen, seen_list = {}, {} end
+-- téléphones Régie : la page écrit ReaCue/remote_seen (valeur qui change) toutes les quelques secondes
+local last_seen_v = nil
+function L.poll_seen(now)
+  local v = reaper.GetExtState(REMOTE, "remote_seen")
+  if v ~= "" and v ~= last_seen_v then
+    if last_seen_v ~= nil then L.regie_seen = now or reaper.time_precise() end
+    last_seen_v = v
+  end
+end
+
+function L._reset_remote() seen, seen_list = {}, {}; last_seen_v = nil; L.regie_seen = nil end
 
 return L

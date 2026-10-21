@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
+import zlib
 import os
 import re
 import unicodedata
@@ -594,6 +596,16 @@ class ConcertResult:
                 "warnings": self.warnings}
 
 
+def _fingerprint(path) -> dict:
+    """Empreinte du projet d'un morceau au moment de la construction (taille + Adler-32 du fichier), relue
+    par le contrôle « Vérifier » de la fenêtre Concert pour savoir si le morceau a changé depuis."""
+    try:
+        data = Path(path).read_bytes()
+    except OSError:
+        return {}
+    return {"project_size": len(data), "project_sum": zlib.adler32(data) & 0xFFFFFFFF}
+
+
 def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | None = None,
                   publish: bool = True) -> ConcertResult:
     """Écrit le projet concert (et ses fichiers compagnons) ; phase rapide, sans analyse audio."""
@@ -686,6 +698,7 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
             "bpm": round(s.bpm, 2), "beatmap": bool(s.beatmap),
             "sig": f"{s.beats_per_bar}/{s.denominator}", "bars": s.n_bars,
             "sections": len(s.sections), "color": list(col),
+            **_fingerprint(s.path),
         })
         pos = shift + s.next_start
 
@@ -735,8 +748,8 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
     os.replace(tmp, rpp)
     setlist.write_text(json.dumps({"name": name, "gap_s": gap_s, "songs": entries}, ensure_ascii=False, indent=2),
                        encoding="utf-8")
-    side = {"version": 1, "name": name, "rpp": str(rpp), "setlist": str(setlist), "prompter": str(prompter_file),
-            "songs": sidecar_songs}
+    side = {"version": 2, "name": name, "rpp": str(rpp), "setlist": str(setlist), "prompter": str(prompter_file),
+            "built": int(time.time()), "songs": sidecar_songs}
     sidecar.write_text("-- ReaCue : données du concert (lues par ReaCue_Concert.lua) / concert data\nreturn " + to_lua(side) + "\n",
                        encoding="utf-8")
     res = ConcertResult(name, rpp, setlist, sidecar, prompter_file, sidecar_songs, warnings, srcs)

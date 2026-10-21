@@ -183,6 +183,8 @@ local function bridge_alive()
   return t == nil
 end
 
+M.bridge_alive = bridge_alive
+
 function M.run(cmd, label, script_dir)
   label = (label and label ~= "") and label or M.tr(cmd)
   local windows = is_windows()

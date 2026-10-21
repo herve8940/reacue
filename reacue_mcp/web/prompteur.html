@@ -198,6 +198,16 @@
   .rbtns button.armed { background: var(--warn); border-color: var(--warn); color: #000; }
   .rbtns button.sent { opacity: .65; }
   .rbtns button.done { box-shadow: 0 0 0 3px var(--ok) inset; }
+  .rreh { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .rreh button { font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px;
+    padding: 8px 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .rreh button.on { background: var(--warn); border-color: var(--warn); color: #000; }
+  .rreh button.sent { opacity: .65; }
+  .rreh button.done { box-shadow: 0 0 0 3px var(--ok) inset; }
+  .rreh .rate { min-width: 56px; }
+  .rrehb { border-radius: 12px; padding: 8px 12px; font-size: 15px; font-weight: 800; background: var(--warn); color: #000; display: none; }
+  .rrehb.show { display: block; }
+  .rsecs button.inloop { box-shadow: inset 0 -5px 0 var(--warn); }
   .rtitle { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
   .rsecs { display: flex; flex-wrap: wrap; gap: 6px; }
   .rsecs button { font: inherit; font-size: 15px; font-weight: 700; color: #111; border: 3px solid transparent; border-radius: 10px; padding: 8px 10px; cursor: pointer; opacity: .8; }
@@ -302,6 +312,13 @@
       <button id="rHome" data-cmd="home"><span class="ic">↺</span><span data-t="home"></span></button>
       <button id="rNext" data-cmd="next" data-confirm="1"><span class="ic">⏭</span><span data-t="next"></span></button>
     </div>
+    <div class="rrehb" id="rRehB"></div>
+    <div class="rreh" id="rReh">
+      <button id="rRehBtn"></button>
+      <button id="rLoopOff" class="rx"></button>
+      <button class="rate rx" data-rate="1"></button><button class="rate rx" data-rate="0.9"></button>
+      <button class="rate rx" data-rate="0.8"></button><button class="rate rx" data-rate="0.7"></button>
+    </div>
     <div class="rtitle" id="rSecsT"></div>
     <div class="rsecs" id="rSecs"></div>
     <div class="rtitle" id="rListT"></div>
@@ -394,6 +411,9 @@ const STR = {
     rNoAnswer: "Pas de réponse : ouvre la fenêtre ReaCue - Concert sur l'ordinateur.",
     rOpenWin: "Ouvre la fenêtre ReaCue - Concert sur l'ordinateur pour piloter depuis ce téléphone.",
     rNoConcertHint: "Pas de concert : la Régie pilote un concert ouvert dans REAPER.",
+    rReh: "Répétition", rRehOn: "Répétition ✓", rLoopOff: "Boucle off", rRate: r => `${Math.round(r * 100)} %`,
+    rRehBanner: (loop, r) => `Répétition · ${loop ? "boucle : " + loop : "touche une section pour la faire boucler"}${r < 0.999 ? " · " + Math.round(r * 100) + " %" : ""}`,
+    rSecsReh: "Sections — toucher = boucler (2e section = plage)",
   },
   en: {
     role: "Role", roles: { drums: "Drums", bass: "Bass", guitars: "Rhythm gtr", lead_guitar: "Lead gtr", vocals: "Vocals", all: "Overview", regie: "Stage control" },
@@ -451,6 +471,9 @@ const STR = {
     rNoAnswer: "No answer: open the ReaCue - Concert window on the computer.",
     rOpenWin: "Open the ReaCue - Concert window on the computer to control it from this phone.",
     rNoConcertHint: "No concert: Stage control drives a concert open in REAPER.",
+    rReh: "Rehearsal", rRehOn: "Rehearsal ✓", rLoopOff: "Loop off", rRate: r => `${Math.round(r * 100)} %`,
+    rRehBanner: (loop, r) => `Rehearsal · ${loop ? "loop: " + loop : "tap a section to loop it"}${r < 0.999 ? " · " + Math.round(r * 100) + " %" : ""}`,
+    rSecsReh: "Sections — tap = loop (2nd section = range)",
   },
 };
 const params = new URLSearchParams(location.search);
@@ -579,7 +602,11 @@ async function poll() {
   if (DEMO) return;
   const t = performance.now();
   try {
-    const q = role === "regie" ? "/_/TRANSPORT;GET/EXTSTATE/ReaCue/remote_alive;GET/EXTSTATE/ReaCue/remote_ack" : "/_/TRANSPORT";
+    let q = "/_/TRANSPORT";
+    if (role === "regie") {
+      q += ";GET/EXTSTATE/ReaCue/remote_alive;GET/EXTSTATE/ReaCue/remote_ack;GET/EXTSTATE/ReaCue/rehearsal";
+      if (t - rg.seenAt > 3000) { rg.seenAt = t; q += ";SET/EXTSTATE/ReaCue/remote_seen/" + rg.sid + "-" + (++rg.seenN); }
+    }
     const r = await fetch(q, { cache: "no-store" });
     const txt = await r.text();
     const now = performance.now();
@@ -939,7 +966,8 @@ function alerts(L, si, sec, nxt, left) {
 // Commandes envoyées par l'interface web de REAPER : SET/EXTSTATE/ReaCue/remote/<cmd>|<arg>|<pin>|<nonce>
 // La fenêtre « ReaCue - Concert » (sur l'ordinateur) exécute et répond dans ReaCue/remote_ack = <nonce>|ok|badpin|bad|noconcert ;
 // elle publie ReaCue/remote_alive (compteur qui avance) tant qu'elle est ouverte.
-const rg = { alive: "", aliveAt: 0, pending: {}, armed: null, lastAck: "", queued: null };
+const rg = { alive: "", aliveAt: 0, pending: {}, armed: null, lastAck: "", queued: null,
+  sid: Math.random().toString(36).slice(2, 8), seenN: 0, seenAt: -1e9, reh: { on: false, rate: 1, a: null, b: null, names: "" } };
 let rKeySecs = "", rKeyList = "";
 const pinGet = () => { const p = load("reacue_pin"); return p && /^\d{4}$/.test(p) ? p : null; };
 function extVal(txt, key) {
@@ -947,6 +975,11 @@ function extVal(txt, key) {
   return l == null ? null : (l.split("\t")[3] || "");
 }
 function regieReply(txt, now) {
+  const rh = extVal(txt, "rehearsal");
+  if (rh != null) {
+    const [on, rate, a0, b0, names] = rh.split("|");
+    rg.reh = { on: on === "1", rate: parseFloat(rate) || 1, a: a0 ? parseFloat(a0) : null, b: b0 ? parseFloat(b0) : null, names: names || "" };
+  }
   const a = extVal(txt, "remote_alive");
   if (a != null && a !== rg.alive) { rg.alive = a; rg.aliveAt = now; }
   const ack = extVal(txt, "remote_ack");
@@ -1004,6 +1037,9 @@ document.querySelectorAll(".rbtns button").forEach(b => b.onclick = () => {
   if (b.dataset.confirm && !confirmTap(b.id, b)) return;
   sendCmd(b.dataset.cmd, "", b);
 });
+$("rRehBtn").onclick = () => sendCmd("reh", rg.reh.on ? "0" : "1", $("rRehBtn"));
+$("rLoopOff").onclick = () => sendCmd("loopoff", "", $("rLoopOff"));
+document.querySelectorAll("#rReh button.rate").forEach(b => b.onclick = () => sendCmd("rate", b.dataset.rate, b));
 const mmss = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 function renderRegie(t, L, si, sec) {
   if (role !== "regie") return;
@@ -1037,10 +1073,26 @@ function renderRegie(t, L, si, sec) {
     $("rSecs").innerHTML = song.sections.map((s, i) => `<button data-i="${i}" style="background:${s.color}">${esc(s.name)}</button>`).join("");
     $("rSecs").querySelectorAll("button").forEach(b => b.onclick = () => {
       const s = song.sections[+b.dataset.i];
-      sendCmd("seek", barT(s.start_bar).toFixed(3), b);
+      sendCmd(rg.reh.on ? "loop" : "seek", barT(s.start_bar).toFixed(3), b);
     });
   }
-  $("rSecs").querySelectorAll("button").forEach(b => b.classList.toggle("cur", +b.dataset.i === si));
+  const rh = rg.reh, inLoop = s => rh.on && rh.a != null && barT(s.start_bar) >= rh.a - 0.05 &&
+    (s.end_bar != null ? barT(s.end_bar + 1) : barT(s.start_bar)) <= rh.b + 0.05;
+  $("rSecs").querySelectorAll("button").forEach(b => {
+    b.classList.toggle("cur", +b.dataset.i === si);
+    b.classList.toggle("inloop", !!inLoop(song.sections[+b.dataset.i]));
+  });
+  // répétition
+  $("rRehBtn").textContent = rh.on ? S.rRehOn : S.rReh;
+  $("rRehBtn").classList.toggle("on", rh.on);
+  document.querySelectorAll("#rReh .rx").forEach(b => { b.style.display = rh.on ? "" : "none"; });
+  $("rLoopOff").textContent = S.rLoopOff;
+  document.querySelectorAll("#rReh button.rate").forEach(b => {
+    b.textContent = S.rRate(+b.dataset.rate); b.classList.toggle("on", rh.on && Math.abs(rh.rate - b.dataset.rate) < 0.001);
+  });
+  $("rRehB").textContent = rh.on ? S.rRehBanner(rh.names, rh.rate) : "";
+  $("rRehB").classList.toggle("show", rh.on);
+  $("rSecsT").textContent = rh.on ? S.rSecsReh : S.rSecs;
   // setlist
   const kl = concert ? concert.id : "";
   if (kl !== rKeyList) {
