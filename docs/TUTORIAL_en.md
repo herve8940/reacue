@@ -13,6 +13,10 @@ At the end, for each song, you will have in REAPER:
   counts “one two three four”;
 - a **prompter** on every musician's phone: structure, chords, lyrics, drums.
 
+Everything is done from **one window, “ReaCue”**, with four tabs: **Song** (prepare a song), **Concert**
+(put a concert together and build it), **Stage** (play: transport, instruments, rehearsal, Stage control)
+and **Settings**.
+
 Time needed: 30 to 45 minutes the first time (installation included), then 5 to 10 minutes per song.
 
 ---
@@ -134,23 +138,32 @@ Press Enter to close the window.
 2. Menu **Actions → Show action list…**
 3. In the **Filter** box at the top, type `ReaCue`.
 
-**You should see** six actions:
+**You should see** seven actions:
 
+- `Custom: ReaCue` — **the main window**, the one you will use all the time
 - `Custom: ReaCue - Prepare the song`
 - `Custom: ReaCue - Republish the prompter`
 - `Custom: ReaCue - Separate stems`
-- `Custom: ReaCue - Concert` (concert mode, step 16)
+- `Custom: ReaCue - Concert` (the same window, opened on the Stage tab)
 - `Custom: ReaCue - Next song` and `Custom: ReaCue - Previous song`
 
-**Tip: toolbar buttons.** Right-click the main toolbar (top left) → **Customize toolbar…** → **Add…** →
-filter `ReaCue` → pick the action → **Select/close**. Repeat for the other actions, then **Save**.
+**Put the “ReaCue” action on the toolbar.** Right-click the main toolbar (top left) → **Customize
+toolbar…** → **Add…** → filter `ReaCue` → pick **`ReaCue`** → **Select/close** → **Save**. One click on that
+button opens the ReaCue window (a 2nd click closes it).
+
+**The ReaCue window** opens on the right tab by itself: **Stage** if the project is a concert, **Song** if it
+is a song, otherwise the last one used. Right-click in the window: dock it in REAPER or undock it (docked at
+the bottom, it becomes a compact transport bar). Top right, two dots: **bridge** (ReaCue answers in REAPER)
+and **web** (prompter available) — green when all is well.
+
+<img src="images/window_song_en.png" width="420">
 
 **If the actions are missing** (REAPER was open during installation):
 
 1. In the action list, click **New action… → Load ReaScript…**
 2. Go to the scripts folder: menu *Options → Show REAPER resource path in explorer/finder*, then
    `Scripts` → `ReaCue`.
-3. Pick `ReaCue_Preparer.lua` → **Open**. Do the same with `ReaCue_Republier_prompteur.lua`,
+3. Pick `ReaCue.lua` → **Open**. Do the same with `ReaCue_Preparer.lua`, `ReaCue_Republier_prompteur.lua`,
    `ReaCue_Separer_stems.lua`, `ReaCue_Concert.lua`, `ReaCue_Morceau_suivant.lua` and `ReaCue_Morceau_precedent.lua`.
 
 ---
@@ -228,11 +241,11 @@ entries/rests, less reliable chords and sections). **Better: split it into stems
 *Needs stem separation installed (answer `y` in step 4, or `Install ReaCue Stems`).*
 
 1. **Click the MP3 item** in REAPER to select it (it becomes lighter).
-2. Run **ReaCue - Separate stems** (toolbar button, or *Actions → Show action list…* → filter `ReaCue` →
-   select the action → **Run**).
-3. A **“Separating stems: N %”** window appears with a progress bar.
+2. In the **ReaCue** window, **Song** tab, click **Split stems** (or run the action **ReaCue - Separate
+   stems**).
+3. The tab shows **“Separating stems: N %”** with a progress bar.
    - Count **5 to 8 minutes for a 4-minute song** on an Intel Mac, less on a recent Mac.
-   - You can close this window and keep working: the import happens by itself at the end.
+   - You can switch tabs and keep working: the import happens by itself at the end.
    - Do not quit REAPER during the separation.
 4. At the end, a **“Stems imported”** message appears.
 
@@ -255,16 +268,18 @@ on the same MP3, the import is immediate (no new separation).
 | “Audio file not found… OFFLINE” | The file cannot be read: see [Troubleshooting](#18-troubleshooting) |
 | “Stem separation is not installed” | Double-click `Install ReaCue Stems.command` / `.bat` in the ReaCue folder |
 | “The separation failed” | Read the end of the log shown; the full log is `…-stems/demucs.log` |
-| The window stays at 0 % for a while | Normal during the first minute (model loading) |
+| The progress stays at 0 % for a while | Normal during the first minute (model loading) |
 
 ---
 
 ## 10. Prepare the song
 
-1. Run **ReaCue - Prepare the song**. (No need to select anything.)
-2. A **“Preparing the song”** window spins for about 20 seconds to 1 minute.
-3. A result window appears: tempo, number of bars, **structure** (bars and length of each section), what
-   was published for the prompter (chords, lyrics, drums).
+1. **ReaCue** window, **Song** tab, part **1. Prepare**: click **Prepare** (or run the action **ReaCue -
+   Prepare the song**). No need to select anything.
+2. The tab shows **“Preparing the song…”** for about 20 seconds to 1 minute.
+3. The result appears: tempo, number of bars, **structure** (bars and length of each section), what was
+   published for the prompter (chords, lyrics, drums). **OK** goes back to the tab, which now says
+   **prepared · 120 BPM · 21 bars · Am** with the list of sections.
 
 **You should see** in the project:
 
@@ -290,19 +305,34 @@ Press **Space**: you hear 2 bars of click with “one two three four”, then th
 
 ## 11. Check the structure
 
-Read the structure in the result window and at the top of the project. Things to look at:
+Read the structure in the **Song** tab (part **2. Structure**: each section with its first bar and its
+length) and at the top of the project. Things to look at:
 
-- **unusual lengths**: a section that is not 4, 8 or 16 bars long is often a mistake (two sections glued
+- **unusual lengths** (in **orange** in the tab): a section that is not 4, 8 or 16 bars long is often a mistake (two sections glued
   together, or one section cut in two);
 - **the names**: verse and chorus can be swapped, a pre-chorus can be glued to the chorus;
 - the ending: a long “Outro” may contain a last chorus or a solo.
 
-Listen to the section starts: **click in the ruler** (the timeline at the top) at the beginning of a region to
-put the cursor there, then **Space**.
+Listen to the section starts: **click the name of a section** in the tab (the cursor goes there), then
+**Space**. Or click in the ruler (the timeline at the top) at the beginning of a region.
 
-**To fix it, two ways (you can mix them):**
+**To fix it, three ways (you can mix them):**
 
-**Way 1 — by hand in REAPER, then “Prepare”** (no Claude needed)
+**Way 1 — in the Song tab** (the easiest)
+
+On the line of each section:
+
+| Button | Effect |
+|---|---|
+| **Name** | rename (“Pre-chorus”, “Solo”…) |
+| **◀** / **▶** | move the start one **bar** earlier / later (the end of the previous section follows) |
+| **✕** | delete (the previous section extends to the next one) |
+| **+ Section at cursor** (above the list) | add a section starting at the cursor's bar (first put the cursor inside the section to split) |
+
+A **“Structure changed”** banner appears: click **Apply** (= *Prepare*). Click, cues, colours and prompter
+follow. Each change can be undone with **Cmd+Z** / **Ctrl+Z**.
+
+**Way 2 — by hand in REAPER, then “Prepare”**
 
 1. Fix the regions in the region lane (top of the window):
    - **rename** or **change the start**: double-click the region → change *Name* or *Start* → **OK**;
@@ -325,7 +355,7 @@ Good to know:
 - if you changed nothing, *Prepare* keeps the saved structure, as before;
 - *Republish the prompter* does not take edited regions: it shows a warning asking you to run *Prepare*.
 
-**Way 2 — with Claude Desktop** (optional, see [step 15](#15-link-claude-desktop-optional))
+**Way 3 — with Claude Desktop** (optional, see [step 15](#15-link-claude-desktop-optional))
 
 Just say “chorus 1 starts at bar 37” or “rename section 6 to Solo”: everything is rebuilt (regions, click,
 cues, prompter). What you tell Claude replaces regions edited by hand.
@@ -343,9 +373,10 @@ ReaCue never downloads lyrics: **you provide the text**.
    chorus…). Lines like `[Chorus]` or `Verse 2:` are ignored. `(x2)` at the end of a line repeats it.
 3. Save the file as **`lyrics.txt`** (**UTF-8** encoding), **in the stems folder**. For an MP3 split by
    ReaCue, you can put it **next to the original MP3** (or in the `…-stems/htdemucs_6s/` folder).
-4. In REAPER, run **ReaCue - Republish the prompter** (nothing in the project is changed).
+4. **Song** tab: part **3. Extras** shows **Lyrics: N lines (lyrics.txt)** (**Open folder** shows where).
+   Click **Republish** (or the action **ReaCue - Republish the prompter**): nothing in the project is changed.
 
-**You should see** in the final window: `Prompter published: … N lyric lines`. On the phone, in the
+**You should see** in the result: `Prompter published: … N lyric lines`. On the phone, in the
 **Vocals** view, the lines scroll with the song.
 
 The lines are aligned automatically on the vocal stem. If a line is off, you can place it by hand with a
@@ -384,26 +415,27 @@ Tips:
 
 ## 14. Set up the click, the spoken cues and the in-ears
 
-The settings are in the file **`reacue_settings.json`**, in REAPER's resource folder: menu *Options → Show
-REAPER resource path in explorer/finder* → folder **`ReaCueMCP`**.
+**ReaCue** window, **Settings** tab. Each change is saved at once (“saved” shows) and **applies at the
+next preparation**: click **Prepare** again in the Song tab (the validated structure is kept), or **Rebuild
+the concert**.
 
-1. Open `reacue_settings.json` with TextEdit (Mac) or Notepad (Windows).
-2. Change the values you want **keeping the syntax**: quotes around text, `true` / `false` / `null` without
-   quotes, a comma after each line except the last one.
-3. Save, then run **ReaCue - Prepare the song** again (the validated structure is kept).
+<img src="images/window_settings_en.png" width="420">
 
 Common examples:
 
-| I want… | Setting |
-|---|---|
-| A single bar of count-in | `"count_in_bars": 1` |
-| The count in French | `"count_lang": "fr"` |
-| No spoken cues, only the click | `"voice_cues": false` |
-| A louder click | `"click_volume": 0.8` |
-| Click and voice only in the in-ears (outputs 3/4 of the audio interface), not front of house | `"click_hw_output": 2` and `"click_to_master": false` |
-| 4 stems instead of 6 | `"stems_model": "htdemucs"` |
+| I want… | In the Settings tab | Key in the file |
+|---|---|---|
+| A single bar of count-in | *Count-in before the song*: ◀ down to **1** | `"count_in_bars": 1` |
+| The count in French | *Count*: **un deux trois quatre** | `"count_lang": "fr"` |
+| No spoken cues, only the click | *Spoken cues*: **no** | `"voice_cues": false` |
+| A louder click | *Click volume*: ▶ | `"click_volume": 0.8` |
+| Click and voice only in the in-ears (outputs 3/4), not front of house | *Click + voice output*: **outputs 3/4**, *Also to front of house*: **no** | `"click_hw_output": 2` and `"click_to_master": false` |
+| 4 stems instead of 6 | *Stem separation*: **4 stems** | `"stems_model": "htdemucs"` |
 
-For `click_hw_output`: `0` = outputs 1/2, `2` = outputs 3/4, `4` = outputs 5/6, and so on.
+The tab also shows the **installed version**. The settings live in the file **`reacue_settings.json`**
+(REAPER's resource folder, menu *Options → Show REAPER resource path in explorer/finder* → folder
+**`ReaCueMCP`**): you can also edit it with TextEdit or Notepad, keeping the JSON syntax. For
+`click_hw_output`: `0` = outputs 1/2, `2` = outputs 3/4, `4` = outputs 5/6, and so on.
 
 For the cue voices (`announce_voice`), see the *Settings* section of the README.
 
@@ -473,6 +505,24 @@ song keeps everything you validated: stems, tempo, structure, spoken cues, click
 
 ### 16.1 Build the concert
 
+**In the ReaCue window, Concert tab:**
+
+<img src="images/window_concert_en.png" width="420">
+
+1. On the left, **Songs**: the projects found in `Documents/REAPER Media` (setting *Projects folder*), with
+   their tempo; **✓** = prepared, *to prepare* in orange otherwise. **Refresh** reads the folder again.
+2. Click **+** on each song, in the concert's order: they are added on the right, in the **Setlist**.
+   **▲ ▼** change the order, **✕** removes a song.
+3. **Rename**: give the concert a name (e.g. “Saturday 15”).
+4. **Build**. A song that is not prepared is reported first (you can build anyway). Building takes a few
+   seconds; the concert **opens by itself in a new REAPER project tab**.
+
+From the **Song** tab, the **Add to a concert** button adds the open song to a setlist (new or existing)
+without leaving the song.
+
+At the bottom of the Concert tab, **Existing concerts**: **Edit** loads its setlist into the editor, **Open**
+opens it in a new tab. After a change, the button becomes **Rebuild**.
+
 **With Claude Desktop** (step 15): type for example
 
 > Build a concert “Saturday 15” with: Demo Song, Second Demo, Third Demo
@@ -494,16 +544,19 @@ Building takes a few seconds; the prompter's chords, lyrics and drums are then c
 
 ### 16.2 Open the concert
 
-1. In REAPER, run **ReaCue - Concert** (action list, filter `ReaCue`).
-2. A **“No concert in this project”** window lists the concerts: click **Saturday 15 · N songs**.
-3. The concert opens in a **new project tab** (your current project stays open in its own tab).
+1. **ReaCue** window, **Concert** tab → **Existing concerts** → **Open** next to **Saturday 15** (right after
+   building, it is already open).
+2. The concert opens in a **new project tab** (your current project stays open in its own tab), and the
+   window switches to the **Stage** tab by itself.
 
 **You should see** one track per instrument for the whole concert (Vocals, Drums, Bass, Guitars…), one colour
 per song, the CLICK / VOICE / CUES tracks at the bottom, regions “Demo Song · Chorus 1”, and at the top a
-**Songs** lane with “1 · Demo Song”, “2 · Second Demo”… The Concert window shows **1 / 3 · Demo Song**.
+**Songs** lane with “1 · Demo Song”, “2 · Second Demo”… The Stage tab shows **1 / 3 · Demo Song**.
 
-> Tip: **right-click in the Concert window** to dock it at the bottom of REAPER (it then fits on one line) or
-> to undock it.
+<img src="images/window_stage_en.png" width="420">
+
+> Tip: **right-click in the window** to dock it at the bottom of REAPER (it becomes a compact transport bar)
+> or to undock it.
 
 ### 16.3 Play
 
@@ -512,7 +565,7 @@ per song, the CLICK / VOICE / CUES tracks at the bottom, regions “Demo Song ·
    window shows **2 / 3 · Second Demo**.
 3. When the band is ready: **Space**.
 
-The Concert window shows the current section, “bar x / N”, the time left in the song and the concert, and the
+The Stage tab shows the current section, “bar x / N”, the time left in the song and the concert, and the
 next song. Its buttons:
 
 | Button | Effect |
@@ -531,12 +584,12 @@ During playback, **Stop**, **Previous**, **Next** and changing song need a **dou
 For a pedal or a keyboard shortcut: the actions **ReaCue - Next song** and **ReaCue - Previous song**
 (*Actions → Show action list* → select the action → **Add…** under *Shortcuts for selected action*).
 
-> ⚠️ The automatic stop and the phone remote only work while the **ReaCue - Concert** window is open (even
-> docked). Don't close it during the gig.
+> ⚠️ The automatic stop, the phone remote and the instrument profile only work while the **ReaCue** window
+> is open (any tab, even docked). Don't close it during the gig.
 
 ### 16.4 QR code for the musicians
 
-1. In the Concert window, click **QR**.
+1. In the Stage tab, click **QR**.
 2. The QR code shows large with the address underneath (e.g. `http://192.168.1.20:8080/prompteur.html`) and
    the Stage control PIN code.
 3. Each musician, on the **same Wi-Fi**, opens the phone's camera, points it at the QR code and taps the link:
@@ -549,13 +602,13 @@ The address is computed at each click: if the computer's address changed, the QR
 ### 16.5 Drive the concert from a phone (Stage control)
 
 1. On the phone of the person in charge: open the prompter (QR code), tap **Role** then **Stage control**.
-2. Tap a button (e.g. **Play**): the phone asks for the **PIN code**. It is shown in the Concert window (button
-   **PIN 1234**, and under the QR code). Type it, **OK**.
+2. Tap a button (e.g. **Play**): the phone asks for the **PIN code**. It is shown in the Stage tab (button
+   **PIN 1234**, and under the QR code) and in the Settings tab. Type it, **OK**.
 3. The button gets a green outline when REAPER has run the command.
 
-Stage control offers Play/Pause, Stop, Previous, Start, Next, the setlist and the sections, with the same
-double tap during playback. The PIN is remembered on the phone; **Change code** to type it again. To change
-the PIN: **PIN** button of the Concert window (4 digits).
+Stage control offers Play/Pause, Stop, Previous, Start, Next, the setlist, the sections and the
+**instruments** (16.8), with the same double tap during playback. The PIN is remembered on the phone; **Change code** to type it again. To change
+the PIN: **PIN** button of the Stage tab (4 digits).
 
 > ⚠️ The PIN prevents mistakes, **not attacks**: anyone on the same network can drive REAPER through its web
 > interface. At gigs, use a Wi-Fi reserved for the band.
@@ -563,13 +616,14 @@ the PIN: **PIN** button of the Concert window (4 digits).
 ### 16.6 Change a song of the concert
 
 1. Open **the song's project** (not the concert), fix it (structure, settings…), **Prepare**, save.
-2. Back in the concert: Concert window → **Setlist** → **Rebuild the concert** → **OK**.
+2. Back in the concert: Stage tab → **Rebuild the concert** → **OK** (or Concert tab → **Edit** →
+   **Rebuild**).
 
 Changes made directly in the concert project are **overwritten** by the rebuild.
 
 ### 16.7 Check before playing
 
-Before the soundcheck or the show, click **Check** in the Concert window.
+Before the soundcheck or the show, click **Check** in the Stage tab.
 
 1. A list appears, with a summary at the top: **All set ✓** (green), **N thing(s) to watch** (orange) or
    **N problem(s)** (red).
@@ -588,11 +642,46 @@ Before the soundcheck or the show, click **Check** in the Concert window.
 | Click and cue outputs | the outputs chosen for CLICK / VOICE exist, tracks not muted | plug the right audio device or change `click_hw_output` (step 14) |
 | Phones' prompter | the page and the concert are published | **Fix** republishes them |
 | Stage control phones | a Stage control phone was seen recently | (information only) |
+| Muted stems | the instruments muted (“played live” profile or by hand) | (information only) |
 
-3. **Check again** runs the list again; **Close** (or Esc) goes back to the Concert window.
+3. **Check again** runs the list again; **Close** (or Esc) goes back to the Stage tab.
 
 > With no concert open, **Check** only covers the system part (bridge, web interface, address, audio
 > device).
+
+### 16.8 Instruments: muting a stem, “played live”
+
+Below the sections, the Stage tab has an **Instruments (stems)** row: one button per instrument track of the
+concert (Vocals, Drums, Bass, Guitars, Lead guitar, Keys, Other, Mix — never CLICK, VOICE or CUES). Under
+each name: **playing** or **muted**.
+
+| Gesture | Effect |
+|---|---|
+| **Click** | mute / unmute that stem (during playback outside rehearsal: **double tap**) |
+| **Long press** | **solo**: only that one is heard (another long press = back) |
+| **Hear everything** | unmutes all stems (again = back to the profile) |
+
+These manual choices last until the next song.
+
+**“Played live”: the concert's profile.** If the band really plays drums and bass, their stems must be muted
+for the whole concert. Click **Played live…**:
+
+1. Tick what the band plays for real (e.g. **Drums**, **Bass**): those stems are muted at the start of every
+   song.
+2. **Per-song exceptions**: click a cell to turn it from **·** (profile) to **stem** (keep the stem on that
+   song) then **live** (mute it on that song only). Example: the bass player switches to keys on one song →
+   Bass cell of that song = **stem**.
+3. **Close**.
+
+The profile is saved with the concert (in `Saturday 15.setlist.json`) and **kept when you rebuild**. It is
+also reachable from the Concert tab (**Played live…**). The rehearsal count-in bar does not overwrite your
+choices.
+
+On the phones, each musician sees at the top **“your stem is muted”** (orange) or **“your stem is playing”**
+(green). In **Stage control**, the same buttons: tap = mute / unmute, long press = solo, **Hear everything**.
+
+With Claude: “in the Saturday 15 concert, drums and bass are played live, except the bass on Second Demo”
+(tool `set_live_profile`, no rebuild).
 
 ---
 
@@ -600,7 +689,7 @@ Before the soundcheck or the show, click **Check** in the Concert window.
 
 ### 17.1 The concert's rehearsal mode (loop and slow-down)
 
-In an open concert, with the **ReaCue - Concert** window:
+In an open concert, with the **ReaCue** window (**Stage** tab):
 
 1. Click **Rehearsal** (or, on the Stage control phone, tap **Rehearsal**). An orange **REHEARSAL** banner
    appears; the automatic stop between songs is off.
@@ -620,14 +709,18 @@ In an open concert, with the **ReaCue - Concert** window:
 
 ### 17.2 Rehearsing a single song (no concert)
 
-- Open the song's project, put the cursor at the very beginning (**Home**), press **Space**.
-- The musicians hear (or see on the prompter) the count-in, then the cues before each section.
-- To restart at a section: **click in the ruler** at the start of its region, then **Space**. The prompter
-  follows.
-- To loop a part: click the region (region lane at the top) to select it, then turn repeat on (**R**, or
-  the loop button of the transport). (The count-in bar before each repeat only exists in the concert's
-  rehearsal mode, 17.1: a one-song concert is enough.)
-- Only REAPER needs to run during rehearsal: ReaCue and Claude are not needed.
+Open the song's project; in the ReaCue window, **Stage** tab (“Single song”):
+
+- **Start**, **Play**, **Stop**; the musicians hear (or see on the prompter) the count-in, then the cues
+  before each section;
+- the **section** pills: one click = go there;
+- the **instruments** (mute, solo, hear everything), as in 16.8;
+- **Rehearsal**: loop a section or a range, with the count-in bar before each repeat and the slow-down,
+  exactly as in 17.1;
+- **Stage control** on a phone works too.
+
+There is no automatic stop and no setlist (a single song). Only REAPER (and the ReaCue window for the loop)
+needs to run during rehearsal: Claude is not needed.
 
 ---
 
@@ -642,11 +735,12 @@ In an open concert, with the **ReaCue - Concert** window:
 | No spoken cues | Voice missing | Mac: *System Settings → Accessibility → Spoken Content*; Windows: *Settings → Time & language → Speech* |
 | Stem separation very slow | Busy processor | Close other applications; count 1.5 to 2 times the song length |
 | Wrong structure | Automatic detection is not perfect | Step 11: edit the regions in REAPER then *Prepare*, or ask Claude; wrong tempo: tempo in the file names |
-| Concert window: “No concert in this project” | The current tab is not a concert | Click a concert in the list (undock the window with a right-click to see it) |
-| A song of the concert has no sections | Its project was saved before the preparation | Open its project, *Prepare*, save, then *Setlist → Rebuild the concert* |
-| Phone (Stage control): “Open the ReaCue - Concert window…” | Concert window closed | Run the **ReaCue - Concert** action on the computer |
-| Stage control: “Wrong PIN code” | Wrong code | Type the code shown by the **PIN** button of the Concert window |
-| Playback no longer stops between songs | Concert window closed, or rehearsal mode on | Open **ReaCue - Concert** again (even docked); otherwise **Exit** rehearsal |
+| Stage tab: “No concert or song open” | The current project tab is empty | **Concert** tab → **Open** a concert, or open a song's project |
+| A song of the concert has no sections | Its project was saved before the preparation | Open its project, *Prepare*, save, then *Rebuild the concert* |
+| Phone (Stage control): “Open the ReaCue window…” | ReaCue window closed | Run the **ReaCue** action on the computer |
+| Stage control: “Wrong PIN code” | Wrong code | Type the code shown by the **PIN** button of the Stage tab |
+| Playback no longer stops between songs | ReaCue window closed, or rehearsal mode on | Open **ReaCue** again (even docked); otherwise **Exit** rehearsal |
+| A stem stays muted | “Played live” profile or a manual choice | Stage tab: **Hear everything**, or **Played live…** to change the profile |
 | **Check** shows red | See the line concerned | Table of step 16.7; **Fix** when the button is offered |
 | After a rehearsal, some tracks stay muted | REAPER was closed during the count-in bar | Unmute the tracks (**M** button); the window normally restores them by itself |
 | Logs | — | Preparation: `ReaCueMCP/cli.log` (REAPER resource folder); separation: `…-stems/demucs.log` next to the song |
@@ -658,19 +752,20 @@ In an open concert, with the **ReaCue - Concert** window:
 1. Song folder in `Documents/REAPER Media/`, audio files copied into it.
 2. REAPER: *File → New project*, then *File → Save project as…* in that folder.
 3. Drag the stems (one per track) **or** the MP3.
-4. MP3 only: select the item → **ReaCue - Separate stems** (5 to 8 min).
-5. **ReaCue - Prepare the song**.
-6. Check the structure (unusual lengths, names); if needed fix the regions by hand and run *Prepare* again.
-7. Optional: `lyrics.txt` next to the files → **ReaCue - Republish the prompter**.
+4. **ReaCue** window, **Song** tab. MP3 only: select the item → **Split stems** (5 to 8 min).
+5. **Prepare**.
+6. Check the structure (lengths in orange, names); if needed **Name** / **◀ ▶** / **✕** / **+ Section**, then **Apply**.
+7. Optional: `lyrics.txt` next to the files → **Republish**.
 8. Save the project (**Cmd+S** / **Ctrl+S**).
 9. Phones: `http://<IP>:8080/prompteur.html`, pick your role.
 
 **A concert:**
 
 1. Each song prepared **and saved** in its own project.
-2. Claude: “Build a concert “Saturday” with: …” (or the command line, step 16.1).
-3. REAPER: **ReaCue - Concert** → click the concert (new tab).
-4. **Check** → everything should be green (otherwise **Fix**).
-5. **QR** → the musicians scan it; the person in charge picks **Stage control** and types the PIN.
-6. **Space** for each song; playback stops by itself at the end of each one.
-7. At rehearsal: **Rehearsal**, then a section to loop it (2nd section = range), speed if needed.
+2. **Concert** tab: **+** on each song, **Rename**, **Build** (or Claude: “Build a concert “Saturday” with: …”).
+3. The concert opens in a new tab; the window switches to **Stage**.
+4. Optional: **Played live…** → tick what the band plays for real.
+5. **Check** → everything should be green (otherwise **Fix**).
+6. **QR** → the musicians scan it; the person in charge picks **Stage control** and types the PIN.
+7. **Space** for each song; playback stops by itself at the end of each one.
+8. At rehearsal: **Rehearsal**, then a section to loop it (2nd section = range), speed if needed.

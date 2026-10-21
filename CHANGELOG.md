@@ -3,6 +3,46 @@
 ## 0.12.0-beta — 2026-10
 
 ### Added / Ajouts
+- **The ReaCue window / la fenêtre ReaCue** (new main action **ReaCue**, `reaper/ReaCue.lua`): one window with
+  four tabs — **Song** (status; *Split stems*, *Prepare*, *Re-analyse*, *Republish* with the progress in the
+  tab; structure list with first bar and length, odd lengths in orange, click = go and listen, rename, move
+  the start by ±1 bar, delete, add at cursor, each with an Undo point, then *Apply*; lyrics file and line
+  count, *Open folder*, chords / drums published; *Add to a concert*), **Concert** (song projects of the
+  projects folder with prepared ✓ / to prepare, setlist editor with +, reorder, remove, rename and total
+  duration, *Build* / *Rebuild* in the background then open in a new tab, *Open*, *Played live…*, existing
+  concerts), **Stage** (the former Concert window plus the instruments, rehearsal, Check, QR, PIN; a simple
+  transport for a single song with sections, instruments, rehearsal loop and Stage control; message and
+  shortcuts when nothing is open), **Settings** (`reacue_settings.json` written atomically, other keys kept:
+  language, count-in, cue lead, count language, cues, voices from the system list, click output, front of
+  house, volumes, tempo mode, separation model, folders, PIN; installed version). The tab is chosen
+  automatically (concert → Stage, song → Song, otherwise the last one). Docked low: compact transport bar.
+  The background jobs (automatic stop, rehearsal loop, Stage control, live profile) run on every tab. The
+  action **ReaCue - Concert** opens the same window on the Stage tab (a second action hands over to the
+  window already open instead of opening another one). FR/EN everywhere. Lua split into modules:
+  `ReaCue_ui.lua` (drawing, buttons, long press, confirmations) and `ReaCue_tab_song.lua`,
+  `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_settings.lua`.
+  Une seule fenêtre en quatre onglets pour préparer, composer le concert, jouer et régler.
+- **Instruments: mute, solo, “played live” / Instruments : couper, solo, « joué en live »**: a row of
+  Mute/Solo buttons for the concert's instrument tracks (Vocals, Drums, Bass, Guitars, Lead guitar, Keys,
+  Other, Mix; never CLICK / VOICE / CUES): click = mute / unmute (double tap during playback outside
+  rehearsal), long press = solo, *Hear everything*; manual choices last until the next song. A **“played
+  live” profile** saved with the concert (`live`, `live_exceptions` in `<name>.setlist.json`, kept on
+  rebuild) mutes the stems the band plays for real, with **per-song exceptions** (stem / live), applied when
+  each song starts and re-read when the file changes (no rebuild). The rehearsal count-in bar keeps the
+  chosen state. State published in `ReaCue/mix` (`role=1|0[L],…;solo;hear-all;song`). Check view: “Muted
+  stems” information line. Stage control: same buttons (commands `mute|role`, `solo|role`, `hearall|1/0`,
+  PIN). Prompter: each musician sees “your stem is muted / playing”. Claude: `build_concert(…, live=[…],
+  live_exceptions={…})`, `set_sections([{"concert": {…, "live": …}}])`, new tool
+  `set_live_profile(concert, live, exceptions, replace_exceptions)` and
+  `set_sections([{"concert_live": {…}}])` to change an existing concert's profile without rebuilding.
+- Tests: `tests/test_reacue_window.py` (tabs, automatic tab and hand-over between the two actions, Song tab:
+  Prepare / Re-analyse commands and progress, rename / move / delete / add a region, lyrics count, add to a
+  concert; Concert tab: scan, +, reorder, rename, Build command then open in a new tab, live profile kept;
+  Settings tab: values written, other keys kept, language switch; instruments: profile, exceptions, solo,
+  hear everything, remote commands with PIN, profile edited by Python and by the window, Check line,
+  rehearsal count-in bar; Lua JSON round trip; FR and EN; renders the tabs to PNG with
+  `REACUE_SHOTS=<folder>`), `tests/test_concert.py` (live profile kept on rebuild, edited without rebuild,
+  MCP), Stage control page extended (instruments, “your stem” note per role).
 - **Check / Vérifier** (pre-show check) in the *ReaCue - Concert* window: audio files readable (not offline),
   spoken cue files present, songs prepared (structure and tempo), concert up to date (fingerprint — size and
   Adler-32 — of each song project stored at build time and compared), ReaCue bridge, REAPER web interface,
@@ -28,7 +68,14 @@
 - Concert sidecar `.concert.lua` version 2: build time and a fingerprint of each song project.
 - Concert window: tool row on its own line (status, then Check / Rehearsal / Setlist / PIN / QR); text
   truncation now cuts whole UTF-8 characters.
-- `ReaCue_run.lua` exposes `bridge_alive`.
+- `ReaCue_run.lua` exposes `bridge_alive`, a small JSON encoder / decoder, atomic writes and a
+  start / status API for background CLI jobs; `ReaCue_stems.lua` exposes start / poll / finish (progress shown
+  inside the ReaCue window).
+- Installers register the **ReaCue** action (first) and copy the new Lua modules.
+- Settings: the click output menu now offers outputs 1/2 as well.
+- Stage control page and docs: “ReaCue - Concert window” is now “the ReaCue window (Stage tab)”.
+- Docs: README / LISEZMOI and both tutorials reorganised around the window tabs, with screenshots of a
+  made-up concert.
 - Package version `0.12.0b1`.
 
 ## 0.11.0-beta — 2026-10

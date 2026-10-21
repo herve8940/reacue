@@ -37,6 +37,7 @@ language with Claude (MCP server).
 - [Installation](#installation)
 - [Enable REAPER's web interface (prompter)](#enable-reapers-web-interface-prompter)
 - [Stem separation (optional)](#stem-separation-optional)
+- [The ReaCue window](#the-reacue-window)
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
 - [Lyrics](#lyrics)
@@ -50,7 +51,8 @@ language with Claude (MCP server).
 
 ## Features
 
-In REAPER, from the audio already in your project:
+In REAPER, from the audio already in your project — everything from **one window, “ReaCue”**, with four tabs
+(Song, Concert, Stage, Settings):
 
 - **Tempo map** locked to the song: fixed tempo when the recording is quantised, or one tempo marker per
   bar when it was played without a click (the click then follows the band). The audio is moved so that
@@ -66,9 +68,12 @@ In REAPER, from the audio already in your project:
   piano, other) with [Demucs](https://github.com/facebookresearch/demucs), on your computer, no
   subscription and no upload — then ReaCue prepares the song from the stems.
 - **Concert mode**: several prepared songs chained in one project, automatic stop at the end of each song,
-  a *ReaCue - Concert* window to drive the show, a **QR code** for the musicians and a **Stage control**
+  a **Stage** tab to drive the show, a **QR code** for the musicians and a **Stage control**
   remote on a phone (PIN code); a **Check** button (pre-show check with one-click fixes) and a
   **Rehearsal** mode: loop a section or a range with a one-bar count-in before each repeat, 100–70 % speed.
+- **Instruments**: mute / solo each stem of the concert (Vocals, Drums, Bass…), *Hear everything*, and a
+  **“Played live”** profile saved with the concert (the band plays drums and bass for real → those stems are
+  muted on every song, with per-song exceptions). From the window, the Stage control phone or Claude.
 
 On the musicians' phones and tablets (web prompter):
 
@@ -118,12 +123,12 @@ On the musicians' phones and tablets (web prompter):
 4. Answer the questions: language (`fr` / `en`), whether to register ReaCue in Claude Desktop
    (optional, answer *no* if you don't use Claude) and whether to install **stem separation** (optional,
    about 1 GB to download, 5 to 15 minutes; see [Stem separation](#stem-separation-optional)).
-5. Start REAPER. The bridge starts by itself and three actions are available in *Actions → Show action list*:
-   - **ReaCue - Prepare the song**
-   - **ReaCue - Republish the prompter**
-   - **ReaCue - Separate stems** (works once stem separation is installed)
-
-   Tip: add them to a toolbar (right-click a toolbar → *Customize toolbar* → *Add*).
+5. Start REAPER. The bridge starts by itself and the actions are available in *Actions → Show action list*:
+   - **ReaCue** — the main window (Song, Concert, Stage, Settings tabs): **add this one to a toolbar**
+     (right-click a toolbar → *Customize toolbar* → *Add*), it is all you need day to day;
+   - **ReaCue - Concert** — the same window, opened on the Stage tab;
+   - **ReaCue - Prepare the song**, **ReaCue - Republish the prompter**, **ReaCue - Separate stems**
+     (also buttons of the Song tab), **ReaCue - Next song** / **Previous song** (for a pedal or a shortcut).
 
 The installer can be run again at any time (to change the language or repair an installation): your
 settings and prepared songs are kept.
@@ -135,8 +140,8 @@ registers the actions in `reaper-kb.ini` (only when REAPER is closed), and write
 `<REAPER resources>/ReaCueMCP/reacue_settings.json`. Nothing else in your system is modified.
 
 If REAPER was open during installation, load the actions by hand once: *Actions → Show action list →
-New action → Load ReaScript…* → pick `ReaCue_Preparer.lua`, `ReaCue_Republier_prompteur.lua` and
-`ReaCue_Separer_stems.lua` in
+New action → Load ReaScript…* → pick `ReaCue.lua` (and, if you want them as separate actions,
+`ReaCue_Preparer.lua`, `ReaCue_Republier_prompteur.lua`, `ReaCue_Separer_stems.lua`) in
 `<REAPER resources>/Scripts/ReaCue/`. (*Options → Show REAPER resource path* opens that folder.)
 
 ## Enable REAPER's web interface (prompter)
@@ -200,6 +205,38 @@ Details:
 - Mac Intel: PyTorch stopped supporting Intel Macs after version 2.2.2; the installer pins the right
   versions automatically.
 
+## The ReaCue window
+
+Action **ReaCue** (put it on a toolbar). One window, four tabs; it opens on the right tab by itself
+(a concert project → **Stage**, a song project → **Song**, otherwise the last tab used). Right-click: dock /
+undock — docked low, it becomes a compact transport bar. While it is open, on any tab, it also runs the
+concert's automatic stop, the rehearsal loop, the Stage control remote and the “played live” profile.
+
+| Song | Concert |
+|---|---|
+| <img src="docs/images/window_song_en.png" width="380"> | <img src="docs/images/window_concert_en.png" width="380"> |
+| **Stage** | **Settings** |
+| <img src="docs/images/window_stage_en.png" width="380"> | <img src="docs/images/window_settings_en.png" width="380"> |
+
+*(Made-up demo songs.)*
+
+- **Song** — the project that is open: status (prepared, tempo, bars, key).
+  **1. Prepare**: *Split stems* (a single MP3/WAV), *Prepare*, *Re-analyse* (computes the structure again,
+  after a confirmation), *Republish* (prompter); the progress shows in the tab.
+  **2. Structure**: the sections with their first bar and length (orange when not 4, 8 or 16 bars); click a
+  name to go there and listen; *Name* renames, ◀ ▶ move the start by one bar (the previous section follows),
+  ✕ deletes, *+ Section at cursor* adds one; then **Apply** (= *Prepare*, which takes your edited regions).
+  **3. Extras**: lyrics file found (number of lines, *Open the folder*), chords / drums published for the
+  prompter, **Add to a concert** (new or existing setlist).
+- **Concert** — the song projects of the projects folder (✓ prepared, orange = to prepare), **+** adds one to
+  the setlist; reorder (▲ ▼), remove (✕), *Rename*; **Build** (or *Rebuild*) the concert, *Open* it in a new
+  project tab, *Played live…*; the existing concerts (*Edit*, *Open*).
+- **Stage** — drives the concert: song x/N, transport, sections, **instruments**, next song, *Check*,
+  *Rehearsal*, *Setlist*, *PIN*, *QR*. With a single song open (no concert) it gives a simple transport
+  (Start, Play, Stop), the sections, the instruments and the rehearsal loop.
+- **Settings** — `reacue_settings.json` without editing the file (language, count-in, cues, voices, outputs,
+  volumes, tempo, separation, folders, PIN); changes apply at the next preparation; installed version.
+
 ## Usage
 
 1. **Import the song** into a REAPER project, one stem per track, all starting at the same time (drag and
@@ -210,14 +247,16 @@ Details:
      anything else counts as keys/other.
    - Optional: key and tempo in the file names (e.g. `Demo Song-A minor-112bpm-drums.wav`) help the chords
      and the tempo octave.
-2. Run **ReaCue - Prepare the song**. A small window shows the progress (from 20 s to about 1 min); you can
+2. In the **Song** tab of the ReaCue window, click **Prepare** (or run the action **ReaCue - Prepare the
+   song**). The progress shows in the tab (from 20 s to about 1 min); you can
    close it, the result appears at the end: tempo, structure (bars and lengths), what was published.
-3. Check the structure (regions) and play the song. To correct it, **edit the regions by hand in REAPER**
-   (move, rename, add, delete), then run *Prepare* again: see [Correcting the structure](#correcting-the-structure).
+3. Check the structure (regions) and play the song. To correct it, use the **Structure** list of the Song
+   tab (rename, move by a bar, add, delete, then *Apply*) or **edit the regions by hand in REAPER**, then run
+   *Prepare* again: see [Correcting the structure](#correcting-the-structure).
    Running *Prepare* again on the same project **keeps the validated structure** (or takes your edited
    regions) and rebuilds everything (click, cues, prompter), applying the settings file if you changed it
    in the meantime.
-4. After adding or editing a lyrics file, run **ReaCue - Republish the prompter** (nothing in the REAPER
+4. After adding or editing a lyrics file, click **Republish** (action **ReaCue - Republish the prompter**) (nothing in the REAPER
    project is changed).
 
 Each preparation **replaces** the regions, markers, tempo map and the CLICK / CUES / VOICE tracks of the
@@ -253,14 +292,15 @@ the click already in REAPER): it shows a warning asking you to run *Prepare*.
 Chain several songs that are **already prepared** (each in its own project) in one REAPER project, and
 drive the whole show from one window or from a phone.
 
-1. **Build the concert** — with Claude: *“concert “Saturday”: Demo Song, Second Demo, Third Demo”*
+1. **Build the concert** — in the **Concert** tab of the ReaCue window: **+** on each song, order them,
+   *Rename*, **Build** (the concert opens in a new tab when it is ready). Or with Claude: *“concert “Saturday”: Demo Song, Second Demo, Third Demo”*
    (tool `build_concert`), or from the command line:
    `python -m reacue_mcp.cli concert --name "Saturday" --songs "Demo Song" "Second Demo"`
    (macOS/Linux, from the ReaCue folder with `.venv/bin/python`; Windows: `.venv\Scripts\python reacue_cli.py concert …`).
    Songs are found by project name in the projects folder (setting `projects_dir`, default
    `<Documents>/REAPER Media`) or given as `.RPP` paths. Nothing is re-analysed: each song keeps its stems,
    tempo map (fixed or one tempo per bar), validated structure, spoken cues and click.
-2. **Open it** — REAPER action **ReaCue - Concert**: with no concert open, the window lists the concerts
+2. **Open it** — **Concert** tab (*Open*), or action **ReaCue - Concert** (Stage tab): with no concert open, it lists the concerts
    (folder: setting `concert_dir`, default `<projects folder>/Concerts`); one click opens it in a **new
    project tab** (your current project stays open).
 3. **Play** — one project: one track per instrument shared by all songs (Vocals, Drums, Bass, Guitars…,
@@ -273,13 +313,28 @@ Files written next to each other: `<name>.RPP` (the concert), `<name>.setlist.js
 show). Edit a song in **its own project**, then *Rebuild the concert* (Setlist button): changes made
 directly in the concert project are overwritten.
 
-**The ReaCue - Concert window** (dockable: right-click) shows “2 / 6 · Song”, tempo, key, section,
+**The Stage tab** (window dockable: right-click) shows “2 / 6 · Song”, tempo, key, section,
 “bar x / N”, a Playing / Paused / Stopped badge, song progress and time left, concert time and the next
 song; big **Previous / Start / Play-Pause / Stop / Next** buttons (during playback Stop, Previous and Next
 need a **double tap** within 2 s, to avoid accidents); the song's **sections** as coloured pills (click =
 go there, playback continues); **Setlist**, **PIN** and **QR** buttons. Docked low, it shrinks to one line
 (state + transport + QR). Extra actions *ReaCue - Next song* / *Previous song* for a pedal or a shortcut.
-The automatic stop and the phone remote only work while this window is open (even docked).
+The automatic stop and the phone remote only work while the ReaCue window is open (any tab, even docked).
+
+**Instruments (mute / solo / played live)** — under the sections, one button per instrument track of the
+concert (Vocals, Drums, Bass, Guitars, Lead guitar, Keys, Other, Mix; not CLICK / VOICE / CUES): a click
+mutes / unmutes it (during playback outside rehearsal: **double tap**), a **long press** = solo (again =
+back), **Hear everything** unmutes all (again = back to the profile). These manual choices last until the
+next song. **Played live…** opens the concert's profile: tick what the band plays for real (e.g. Drums and
+Bass) — those stems are muted automatically on every song — and set **per-song exceptions** (click a cell:
+stem / live / profile; e.g. the bass stem is kept on the song where the bassist plays keys). The profile is
+saved in `<name>.setlist.json` (`live`, `live_exceptions`), kept when the concert is rebuilt, and applied
+when each song starts. The rehearsal count-in bar does not overwrite your choices. The *Check* view shows
+which stems are muted. The prompter tells each musician “your stem is muted / playing”, and the Stage
+control phone has the same buttons (PIN). With Claude: `build_concert(…, live=["drums", "bass"],
+live_exceptions={"Second Demo": {"bass": "stem"}})`, or change the profile of an existing concert without
+rebuilding it: `set_live_profile("Saturday", live=[…], exceptions={…})` (also
+`set_sections([{"concert_live": {…}}])`).
 
 **QR code for the musicians** — the QR button shows, large, the prompter address
 `http://<this computer's IP>:<port>/prompteur.html`: the IP is computed when you click (macOS `ipconfig`,
@@ -288,14 +343,15 @@ Windows `ipconfig`, Linux `hostname -I`) and the port is read from REAPER's web 
 [luaqrcode](https://github.com/speedata/luaqrcode) (BSD licence).
 
 **Stage control (phone remote)** — in the prompter, choose the role **Stage control**: Play/Pause, Stop,
-Previous / Next, Start of song, clickable setlist and sections, with a ✓ when REAPER executed the command.
-It asks once for the **4-digit PIN** shown in the Concert window (generated on first launch, changeable
+Previous / Next, Start of song, clickable setlist and sections, instruments (tap = mute, long press = solo,
+*Hear everything*), with a ✓ when REAPER executed the command.
+It asks once for the **4-digit PIN** shown in the Stage tab (generated on first launch, changeable
 with the PIN button, remembered on the phone). Commands go through REAPER's web interface
-(`/_/SET/EXTSTATE/ReaCue/remote/…`) and are checked by the Concert window (PIN, replay protection).
+(`/_/SET/EXTSTATE/ReaCue/remote/…`) and are checked by the ReaCue window (PIN, replay protection).
 ⚠️ The PIN prevents mistakes, **not attacks**: anyone on the same network can reach REAPER's web interface
 (`/_/…`) directly. Use a Wi-Fi reserved for the band at gigs.
 
-**Check (pre-show check)** — the **Check** button of the Concert window lists, with a green / orange / red
+**Check (pre-show check)** — the **Check** button of the Stage tab lists, with a green / orange / red
 dot: audio files readable (no “OFFLINE”), spoken cue files present, songs prepared (structure and tempo),
 concert up to date (no song project changed since the concert was built — fingerprint stored at build
 time), ReaCue bridge, REAPER web interface, network address, audio device running, click and cue outputs
@@ -347,8 +403,9 @@ Then run *Republish the prompter*.
 
 ## Settings
 
-File: `<REAPER resources>/ReaCueMCP/reacue_settings.json` (created by the installer; edit it with any text
-editor; missing keys take their default value). Taken into account at the next *Prepare*, including for
+Easiest: the **Settings** tab of the ReaCue window (written at once, other keys of the file kept).
+File: `<REAPER resources>/ReaCueMCP/reacue_settings.json` (created by the installer; can also be edited with
+any text editor; missing keys take their default value). Taken into account at the next *Prepare*, including for
 an already prepared song (its validated structure is kept). The `language` setting names the sections of
 newly analysed songs; section names you validated yourself are kept as they are.
 
@@ -396,6 +453,8 @@ installer again). The `reacue` server is added to Claude Desktop's configuration
 | `set_grid` | Impose a fixed-tempo grid when the detection is wrong |
 | `update_options` | Count-in, tempo mode, click, cues, voices… without re-analysing |
 | `get_project_state`, `goto_section`, `transport` | Project state, navigation, play/stop |
+| `build_concert` | Build a concert from prepared songs (optionally with the “played live” profile `live`, `live_exceptions`) |
+| `set_live_profile` | Change the “played live” profile of an existing concert, no rebuild |
 
 Both modes share the same memory of the last prepared song: you can prepare with the button and fine-tune
 with Claude, or the other way round.
@@ -426,10 +485,10 @@ tools are loaded when a conversation starts: after updating ReaCue, start a new 
 - **Windows: beta, not yet tested on a real machine.** In particular the background launch from REAPER,
   the SAPI voices and paths with accents should be checked. Please report issues.
 - Linux: not packaged (the code runs; spoken cues need `espeak-ng`).
-- **Concert mode**: the automatic stop and the phone remote need the *ReaCue - Concert* window open;
+- **Concert mode**: the automatic stop, the phone remote and the instrument profile need the *ReaCue* window open;
   Previous / Next / Start stop playback and place the cursor (press Play again); *Rebuild* overwrites
   changes made directly in the concert project. The Stage control PIN is not a security barrier.
-- **Rehearsal loop**: driven by the Concert window (not REAPER's own loop), so a repeat jumps back with
+- **Rehearsal loop**: driven by the ReaCue window (not REAPER's own loop), so a repeat jumps back with
   REAPER's usual seek latency (a few milliseconds); the instrument tracks are muted during the count-in bar
   by the window (if REAPER quits during that bar, unmute them by hand). Speeds below 100 % use REAPER's
   playrate with pitch preservation (quality depends on the stretch mode of the project).
@@ -479,14 +538,14 @@ folder (internet needed once).
 loading). Count 1.5 to 2 times the song length on an Intel Mac. Close other heavy applications. The log is
 `<song name>-stems/demucs.log`, next to the original file.
 
-**Concert: “No concert in this project”.** The current tab is not a concert. Undock the Concert window
-(right-click) to see the list of concerts, or open `<concerts folder>/<name>.RPP` with *File → Open project*.
+**Stage: “No concert or song open”.** The current project tab is neither a concert nor a song. The
+**Concert** tab lists the concerts (*Open*), or open `<concerts folder>/<name>.RPP` with *File → Open project*.
 A song shows no sections in the concert: its project was saved before *Prepare* — prepare it, save it
 (Cmd/Ctrl+S), then *Rebuild the concert*.
 
-**Stage control: “Open the ReaCue - Concert window…”.** The phone talks to REAPER through that window:
-open the *ReaCue - Concert* action on the computer. “Wrong PIN code”: type the code shown by the PIN
-button of the window. The QR shows no address: the computer is not on a network.
+**Stage control: “Open the ReaCue window…”.** The phone talks to REAPER through that window: run the
+*ReaCue* action on the computer (any tab, docked or not). “Wrong PIN code”: type the code shown by the PIN
+button of the Stage tab. The QR shows no address: the computer is not on a network.
 
 **Where are the logs?** `<REAPER resources>/ReaCueMCP/cli.log` (preparation, concert) and
 `<song name>-stems/demucs.log` (stem separation).
@@ -505,7 +564,8 @@ hundred MB): delete that folder if you no longer need them. Separated stems stay
 ```bash
 uv pip install -r requirements-dev.txt     # pytest, lupa, playwright
 python -m pytest tests                     # light tests: no audio, no REAPER
-python tools/make_screenshots.py           # regenerates docs/images (Playwright + Chromium)
+python tools/make_screenshots.py           # regenerates docs/images/prompter_* (Playwright + Chromium)
+REACUE_SHOTS=/tmp/shots python -m pytest tests/test_reacue_window.py   # renders the window tabs to PNG
 ```
 
 Project layout:
@@ -514,7 +574,7 @@ Project layout:
 |---|---|
 | `reacue_mcp/` | Python package: analysis, planner, bridge client, prompter, chords, lyrics, drums, voice, i18n, settings, CLI, MCP server |
 | `reacue_mcp/web/prompteur.html` | The prompter page (single file) |
-| `reaper/` | REAPER scripts: bridge and the actions (`ReaCue_stems.lua`: stem separation; `ReaCue_Concert.lua`, `ReaCue_concert_lib.lua`: concert window and Stage control; `ReaCue_qrcode.lua`: QR encoder, luaqrcode, BSD) |
+| `reaper/` | REAPER scripts: bridge and the actions (`ReaCue_stems.lua`: stem separation; `ReaCue.lua`: the main window, with `ReaCue_ui.lua` (drawing, buttons) and one module per tab `ReaCue_tab_song.lua`, `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_settings.lua`; `ReaCue_Concert.lua`: same window on the Stage tab; `ReaCue_concert_lib.lua`: concert, instruments, rehearsal, checks and Stage control; `ReaCue_qrcode.lua`: QR encoder, luaqrcode, BSD) |
 | `reacue_stems.py`, `requirements-stems.txt` | Stem separation launcher (runs in `.venv-demucs`) and its pinned dependencies |
 | `install/` | Installers (macOS, Windows) and the shared `reacue_setup.py` |
 | `tests/` | pytest suite (fake REAPER bridge, Lua run through `lupa`, installer, prompter page) |
