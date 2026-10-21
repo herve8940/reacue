@@ -46,6 +46,36 @@ reaper = {
   ColorFromNative=function(c) return (c>>16)&255, (c>>8)&255, c&255 end,
   TimeMap2_timeToBeats=function(p, t) local m=0; for k=1,#BARS do if BARS[k] <= t + 1e-9 then m=k-1 end end; return 0, m, 4, 0, 4 end,
 }
+-- pistes, items, carte son, boucle/vitesse (contrôle avant concert, mode répétition)
+TRACKS, ITEMS, AUDIO_ON, NOUT = {}, {}, 1, 2
+state.toggles, state.rep, state.sel, state.rate, state.mutelog = {}, 1, {12, 20}, 1.0, {}
+reaper.CountTracks=function() return #TRACKS end
+reaper.GetTrack=function(p, i) return TRACKS[i+1] end
+reaper.GetTrackName=function(tr) return true, tr.name end
+reaper.GetMediaTrackInfo_Value=function(tr, k) if k=="B_MUTE" then return tr.mute or 0 elseif k=="B_MAINSEND" then return tr.main or 1 end return 0 end
+reaper.SetMediaTrackInfo_Value=function(tr, k, v) if k=="B_MUTE" then tr.mute=v; table.insert(state.mutelog, {tr.name, v}) end end
+reaper.GetTrackNumSends=function(tr, c) return #(tr.sends or {}) end
+reaper.GetTrackSendInfo_Value=function(tr, c, i, k) return tr.sends[i+1] end
+reaper.CountMediaItems=function() return #ITEMS end
+reaper.GetMediaItem=function(p, i) return ITEMS[i+1] end
+reaper.GetActiveTake=function(it) return it end
+reaper.TakeIsMIDI=function(t) return t.midi or false end
+reaper.GetMediaItemTake_Source=function(t) return t end
+reaper.GetMediaSourceParent=function(s) return nil end
+reaper.GetMediaSourceFileName=function(s, b) return s.file or "" end
+reaper.GetMediaSourceSampleRate=function(s) return s.sr or 44100 end
+reaper.GetMediaItem_Track=function(it) return TRACKS[it.track] end
+reaper.Audio_IsRunning=function() return AUDIO_ON end
+reaper.GetAudioDeviceInfo=function(k, b) return true, "Fake Device" end
+reaper.GetNumAudioOutputs=function() return NOUT end
+reaper.GetSetRepeat=function(v) if v >= 0 then state.rep=v end return state.rep end
+reaper.GetSet_LoopTimeRange=function(set, loop, a, b, auto) if set then state.sel={a, b} end return state.sel[1], state.sel[2] end
+reaper.GetToggleCommandState=function(c) return state.toggles[c] or 0 end
+reaper.Master_GetPlayRate=function() return state.rate end
+reaper.CSurf_OnPlayRateChange=function(r) state.rate=r end
+reaper.TimeMap2_beatsToTime=function(p, tpos, m) return BARS[m+1] end
+local _moc = reaper.Main_OnCommand
+reaper.Main_OnCommand=function(c, f) if c==40671 then state.toggles[c] = 1 - (state.toggles[c] or 0) end; _moc(c, f) end
 os.execute = function(cmd) table.insert(state.shell, cmd); return true end
 local function op(...) table.insert(state.ops, {...}) end
 gfx = setmetatable({w=540,h=300,mouse_x=0,mouse_y=0,mouse_cap=0,x=0,y=0}, {__index=function(t,k)

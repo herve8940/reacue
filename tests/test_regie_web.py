@@ -21,10 +21,12 @@ PAGE = (ROOT / "reacue_mcp" / "web" / "prompteur.html").read_text(encoding="utf-
 TXT = {
     "fr": {"pick": "Régie", "state_play": "Lecture", "state_stop": "Arrêt", "pin4": "4 chiffres.",
            "bad": "incorrect", "again": "Encore ?", "closed": "Ouvre la fenêtre ReaCue - Concert",
-           "noanswer": "Pas de réponse", "pin_foot": "Code PIN : 2468"},
+           "noanswer": "Pas de réponse", "pin_foot": "Code PIN : 2468", "reh": "Répétition", "reh_on": "Répétition ✓",
+           "banner": "Répétition · boucle : ", "loopoff": "Boucle off"},
     "en": {"pick": "Stage control", "state_play": "Playing", "state_stop": "Stopped", "pin4": "4 digits.",
            "bad": "Wrong", "again": "Again?", "closed": "Open the ReaCue - Concert window",
-           "noanswer": "No answer", "pin_foot": "PIN code: 2468"},
+           "noanswer": "No answer", "pin_foot": "PIN code: 2468", "reh": "Rehearsal", "reh_on": "Rehearsal ✓",
+           "banner": "Rehearsal · loop: ", "loopoff": "Loop off"},
 }
 
 
@@ -78,6 +80,7 @@ class Fake:
                         if fake.alive:                    # « boucle defer » de la fenêtre Concert
                             st.t = time.time()
                             fake.M.remote_alive(st.t)
+                            fake.M.poll_seen(st.t)
                             fake.M.remote_poll(fake.C)
                         if st.play == 1:
                             st.pos = st.pos + 0.02
@@ -150,6 +153,22 @@ def test_regie_end_to_end(TL_concert, lang):
             assert st.pos == pytest.approx(exp, abs=0.3) and st.play == 1
             pg.click("#rHome"); pg.wait_for_timeout(300)        # pendant la lecture : sans confirmation
             pg.wait_for_timeout(400)
+            # mode répétition : boucle sur une section (1 mesure avant), vitesse, boucle off, sortie
+            assert pg.inner_text("#rRehBtn") == tx["reh"] and not pg.is_visible("#rLoopOff")
+            pg.click("#rRehBtn"); pg.wait_for_timeout(700)
+            assert fake.M.reh.on and pg.inner_text("#rRehBtn") == tx["reh_on"] and pg.is_visible("#rLoopOff")
+            pg.click(f"#rSecs button[data-i='{k}']"); pg.wait_for_timeout(700)
+            assert fake.M.reh.loop and fake.M.reh.loop.start == pytest.approx(exp, abs=0.05)
+            assert st.play == 1 and st.pos < exp
+            assert pg.inner_text("#rRehB").startswith(tx["banner"])
+            assert "inloop" in pg.get_attribute(f"#rSecs button[data-i='{k}']", "class")
+            pg.click("#rReh button[data-rate='0.8']"); pg.wait_for_timeout(600)
+            assert st.rate == pytest.approx(0.8) and "80 %" in pg.inner_text("#rRehB")
+            pg.click("#rLoopOff"); pg.wait_for_timeout(600)
+            assert fake.M.reh.loop is None and fake.M.reh.on
+            pg.click("#rRehBtn"); pg.wait_for_timeout(700)
+            assert not fake.M.reh.on and st.rate == pytest.approx(1.0) and not pg.is_visible("#rLoopOff")
+            assert any(x.startswith("SET/EXTSTATE/ReaCue/remote_seen/") for x in fake.log)
             # fenêtre Concert fermée -> message
             fake.alive = False
             st.ext["remote_alive"] = ""
