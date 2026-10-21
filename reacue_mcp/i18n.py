@@ -220,6 +220,27 @@ MSG = {
     "cli_prepared": ("Morceau préparé", "Song prepared"),
     "cli_published_title": ("Prompteur republié", "Prompter republished"),
     "cli_rebuilt": ("Morceau reconstruit (structure conservée)", "Song rebuilt (structure kept)"),
+    "cli_from_regions": ("Structure reprise de tes régions REAPER", "Structure taken from your REAPER regions"),
+    # régions modifiées à la main dans REAPER
+    "region_before": ("Région « {name} » avant la mesure 1 : ignorée.", "Region “{name}” before bar 1: ignored."),
+    "region_after": ("Région « {name} » après la fin du morceau : ignorée.",
+                     "Region “{name}” after the end of the song: ignored."),
+    "region_rounded": ("Région « {name} » entre deux mesures : placée au début de la mesure {bar}.",
+                       "Region “{name}” between two bars: moved to the start of bar {bar}."),
+    "region_duplicate": ("Région « {name} » à la même mesure ({bar}) qu'une autre : ignorée.",
+                         "Region “{name}” on the same bar ({bar}) as another one: ignored."),
+    "region_first": ("Aucune région sur la mesure 1 : les mesures 1 à {last} sont rattachées à « {name} ».",
+                     "No region on bar 1: bars 1 to {last} are joined to “{name}”."),
+    "region_unnamed": ("Section {n}", "Section {n}"),
+    "regions_none": ("Aucune région utilisable dans le projet : la structure enregistrée est gardée.",
+                     "No usable region in the project: the saved structure is kept."),
+    "regions_changed_publish": (
+        "Tes régions REAPER ont changé depuis la dernière préparation : le prompteur garde la structure "
+        "enregistrée (pour rester d'accord avec les annonces et le click). Lance « ReaCue - Préparer le "
+        "morceau » pour reprendre tes régions partout.",
+        "Your REAPER regions changed since the last preparation: the prompter keeps the saved structure "
+        "(to stay in line with the cues and the click). Run “ReaCue - Prepare the song” to take your "
+        "regions everywhere."),
     "cli_running": ("Analyse et préparation en cours…", "Analysis and preparation in progress…"),
     "cli_unknown": ("commande inconnue : {cmd}", "unknown command: {cmd}"),
 }
