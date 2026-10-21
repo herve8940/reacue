@@ -206,15 +206,41 @@ Details:
      and the tempo octave.
 2. Run **ReaCue - Prepare the song**. A small window shows the progress (from 20 s to about 1 min); you can
    close it, the result appears at the end: tempo, structure (bars and lengths), what was published.
-3. Check the structure (regions) and play the song. Regions edited by hand in REAPER are **not** read
-   back by ReaCue: to correct the structure, use the Claude mode (`set_sections`, see below). Running
-   *Prepare* again on the same project **keeps the validated structure** and rebuilds everything (click,
-   cues, prompter), applying the settings file if you changed it in the meantime.
+3. Check the structure (regions) and play the song. To correct it, **edit the regions by hand in REAPER**
+   (move, rename, add, delete), then run *Prepare* again: see [Correcting the structure](#correcting-the-structure).
+   Running *Prepare* again on the same project **keeps the validated structure** (or takes your edited
+   regions) and rebuilds everything (click, cues, prompter), applying the settings file if you changed it
+   in the meantime.
 4. After adding or editing a lyrics file, run **ReaCue - Republish the prompter** (nothing in the REAPER
    project is changed).
 
 Each preparation **replaces** the regions, markers, tempo map and the CLICK / CUES / VOICE tracks of the
 project (one *Undo* goes back). Use one project per song.
+
+### Correcting the structure
+
+Two ways, which can be mixed:
+
+- **By hand in REAPER, then *Prepare*.** Double-click a region in the region lane (top of the
+  window) to change its name or its start; add one with a time selection and *Markers → Insert region from
+  time selection* (Shift+R); delete one with right-click → *Remove region*; or simply drag its edges, then run **ReaCue - Prepare the song**.
+  When the song was already prepared (same audio items), ReaCue reads the project's regions and, if they
+  differ from the saved structure, **adopts them as the new structure**; the final window then says
+  “Structure taken from your REAPER regions”. Rules:
+  - only the **start** of each region counts: a section lasts until the next region starts;
+  - the start is moved to the nearest bar line (within a quarter of a bar it is silent; further away it
+    is rounded with a warning);
+  - names are kept as typed (French or English); the section type — colour, spoken cue, prompter role — is
+    deduced from the name (“Chorus 2”, “Refrain”, “Solo”…);
+  - regions before bar 1, after the end of the song, or on the same bar as another one are ignored with a
+    warning; if no region starts on bar 1, the first bars are joined to the first region;
+  - regions, colours, “→” markers, CUES, VOICE, CLICK and the prompter are then rebuilt.
+  If no region was changed, nothing changes (structure kept). In another project (consolidated, other
+  song), the regions are never read and nothing is modified.
+- **With Claude** (optional mode, below): “chorus 1 starts at bar 37”, “rename section 6 to Solo”.
+
+*Republish the prompter* does **not** take edited regions (the prompter must stay in line with the cues and
+the click already in REAPER): it shows a warning asking you to run *Prepare*.
 
 ## Lyrics
 
@@ -286,19 +312,27 @@ installer again). The `reacue` server is added to Claude Desktop's configuration
 - “Rename section 6 to Guitar solo.” → `rename_section`
 - “1 bar of count-in, click only on outputs 3/4.” → `update_options`
 - “It's 94 BPM, not 188.” → `prepare_song` with `bpm_hint`
+- “I moved the regions in REAPER, take them.” → `prepare_song` (regions adopted, no re-analysis)
 
 | Tool | Role |
 |---|---|
 | `reaper_status` | Are REAPER and the bridge answering? |
 | `prepare_song` | Full preparation (optionally imports a file) |
 | `analyze_audio` | Analysis only, without touching the project |
-| `set_sections` / `rename_section` | Fix the structure; everything is rebuilt (names can be in English or French) |
+| `set_sections` / `rename_section` | Fix the structure; everything is rebuilt (names can be in English or French). `set_sections` **wins** over regions edited by hand; `rename_section` first takes them (numbers = current regions) |
 | `set_grid` | Impose a fixed-tempo grid when the detection is wrong |
 | `update_options` | Count-in, tempo mode, click, cues, voices… without re-analysing |
 | `get_project_state`, `goto_section`, `transport` | Project state, navigation, play/stop |
 
 Both modes share the same memory of the last prepared song: you can prepare with the button and fine-tune
 with Claude, or the other way round.
+
+Regions edited by hand in REAPER are taken by `prepare_song` (song already prepared; `reanalyse=true`,
+`bpm_hint` or `beats_per_bar` force a full analysis instead), `update_options` and `rename_section`.
+On an already prepared song whose regions were not edited, `prepare_song` still runs a new analysis (the
+*Prepare* button keeps the structure instead).
+`set_sections` and `set_grid` impose the structure they are given and replace those regions. Claude's
+tools are loaded when a conversation starts: after updating ReaCue, start a new conversation.
 
 ## Known limitations
 
@@ -312,8 +346,9 @@ with Claude, or the other way round.
 - **Drums**: kick, snare and hi-hat are reliable; toms and ride are approximate. Fills are detected as
   bars that differ from the section's groove.
 - **Chords**: triads, sevenths, sus and power chords; complex jazz voicings are simplified.
-- Without Claude, the detected structure cannot be edited yet (only re-analysed); manual region edits in
-  REAPER are overwritten by the next preparation.
+- Hand-edited regions: only their starts and names are read (not their ends); a full re-analysis of an
+  already prepared song is only available through Claude (`reanalyse`) or the command line
+  (`reacue_cli.py prepare --reanalyse`).
 - Time signatures in x/4 only (4/4 and 3/4 detected).
 - **Windows: beta, not yet tested on a real machine.** In particular the background launch from REAPER,
   the SAPI voices and paths with accents should be checked. Please report issues.

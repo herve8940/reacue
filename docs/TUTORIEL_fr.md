@@ -33,9 +33,10 @@ Durée : 30 à 45 minutes la première fois (installation comprise), puis 5 à 1
 12. [Ajouter les paroles](#12-ajouter-les-paroles)
 13. [Ouvrir le prompteur sur les téléphones](#13-ouvrir-le-prompteur-sur-les-téléphones)
 14. [Régler le click, les annonces et les in-ears](#14-régler-le-click-les-annonces-et-les-in-ears)
-15. [En répétition](#15-en-répétition)
-16. [Dépannage](#16-dépannage)
-17. [Pense-bête : un nouveau morceau](#17-pense-bête--un-nouveau-morceau)
+15. [Relier Claude Desktop (facultatif)](#15-relier-claude-desktop-facultatif)
+16. [En répétition](#16-en-répétition)
+17. [Dépannage](#17-dépannage)
+18. [Pense-bête : un nouveau morceau](#18-pense-bête--un-nouveau-morceau)
 
 ---
 
@@ -253,7 +254,7 @@ l'action sur le même MP3, l'import est immédiat (pas de nouvelle séparation).
 | Message | Solution |
 |---|---|
 | « Sélectionne l'item audio du morceau » | Clique sur l'item du MP3, puis relance l'action |
-| « Fichier audio introuvable… OFFLINE » | Le fichier n'est pas lisible : voir [Dépannage](#16-dépannage) |
+| « Fichier audio introuvable… OFFLINE » | Le fichier n'est pas lisible : voir [Dépannage](#17-dépannage) |
 | « La séparation de stems n'est pas installée » | Double-clic sur `Install ReaCue Stems.command` / `.bat` dans le dossier ReaCue |
 | « La séparation a échoué » | Lis la fin du journal affichée ; le journal complet est `…-stems/demucs.log` |
 | La fenêtre reste longtemps à 0 % | Normal pendant la première minute (chargement du modèle) |
@@ -302,13 +303,39 @@ Lis la structure dans la fenêtre de résultat et en haut du projet. Points à r
 Écoute les débuts de section : **clique dans la règle** (la barre des temps, en haut) au début d'une région
 pour y placer le curseur, puis **Espace**.
 
-**Pour corriger :**
+**Pour corriger, deux méthodes (tu peux les mélanger) :**
 
-- Les régions déplacées ou renommées **à la main** dans REAPER ne sont **pas** relues par ReaCue : elles
-  seront écrasées à la préparation suivante.
-- Avec **Claude Desktop** (mode facultatif, voir le README) : dis simplement « le refrain 1 commence mesure
-  37 » ou « renomme la section 6 en Solo » ; tout est reconstruit (régions, click, annonces, prompteur).
-- Relancer *Préparer* sur le même projet **garde la structure validée** et reconstruit le reste.
+**Méthode 1 — à la main dans REAPER, puis « Préparer »** (sans Claude)
+
+1. Corrige les régions dans la barre des régions (en haut de la fenêtre) :
+   - **renommer** ou **changer le début** : double-clique sur la région → change *Name* ou *Start* → **OK** ;
+   - **déplacer le début** : tu peux aussi faire glisser le bord gauche de la région ;
+   - **ajouter** : fais une sélection de temps (glisser dans la règle) qui commence au début de la nouvelle
+     section, puis menu *Markers → Insert region from time selection* (raccourci par défaut Maj+R), et
+     nomme-la ;
+   - **supprimer** : clic droit sur la région → *Remove region*.
+2. Lance **ReaCue - Préparer le morceau**.
+3. La fenêtre de fin commence par **« Structure reprise de tes régions REAPER »**, avec le nouveau tableau.
+   Les régions sont recolorées, et les marqueurs « → », les annonces, le click et le prompteur suivent.
+
+Bon à savoir :
+
+- seul le **début** de chaque région compte : une section dure jusqu'au début de la région suivante (pas
+  besoin d'ajuster les fins) ;
+- un début placé entre deux mesures est recalé sur la barre de mesure la plus proche (un avertissement le
+  signale s'il était à plus d'un quart de mesure) ;
+- le nom choisit la couleur et l'annonce : « Refrain 2 » ou « Chorus 2 » donne un refrain, « Solo » un solo… ;
+- une région avant la mesure 1, après la fin du morceau ou sur la même mesure qu'une autre est ignorée
+  (avertissement) ;
+- si tu n'as rien changé, *Préparer* garde la structure enregistrée, comme avant ;
+- *Republier le prompteur* ne reprend pas les régions modifiées : il affiche un avertissement qui te demande
+  de lancer *Préparer*.
+
+**Méthode 2 — avec Claude Desktop** (facultatif, voir [l'étape 15](#15-relier-claude-desktop-facultatif))
+
+Dis simplement « le refrain 1 commence mesure 37 » ou « renomme la section 6 en Solo » : tout est
+reconstruit (régions, click, annonces, prompteur). Ce que tu dis à Claude remplace les régions modifiées à
+la main.
 
 ---
 
@@ -392,7 +419,62 @@ Pour les voix des annonces (`announce_voice`), voir la section *Réglages* du LI
 
 ---
 
-## 15. En répétition
+## 15. Relier Claude Desktop (facultatif)
+
+Tout ReaCue marche sans Claude. Relier [Claude Desktop](https://claude.ai/download) permet en plus de
+piloter ReaCue en français courant : corriger la structure, changer un réglage, naviguer dans le morceau.
+
+**Prérequis**
+
+- Claude Desktop installé sur **le même ordinateur** que REAPER, et connecté à ton compte Claude (un
+  abonnement peut être nécessaire selon l'offre : vérifie les conditions actuelles sur claude.ai) ;
+- ReaCue installé (étape 4) et REAPER ouvert, avec le pont qui tourne.
+
+**Relier ReaCue à Claude Desktop**
+
+1. Si tu as répondu `o` à la question « Déclarer ReaCue dans Claude Desktop » à l'étape 4, c'est déjà fait.
+   Sinon, **relance l'installateur** (`Install ReaCue.command` / `.bat`) et réponds `o` à cette question.
+   L'installateur ajoute le serveur `reacue` à la configuration de Claude Desktop (une copie de sauvegarde
+   de l'ancienne configuration est gardée).
+2. **Quitte complètement Claude Desktop** puis relance-le (Mac : menu *Claude → Quitter*, pas seulement
+   fermer la fenêtre ; Windows : clic droit sur l'icône Claude près de l'horloge → *Quitter*, si elle y est).
+3. **Ouvre une nouvelle conversation.**
+
+**Vérifier que les outils ReaCue sont là**
+
+Selon ta version de Claude Desktop, les outils des serveurs reliés se trouvent derrière une icône d'outils
+ou un menu « connecteurs » / « outils » près de la zone de saisie. Tu dois y voir **reacue** avec ses outils
+(`prepare_song`, `set_sections`, `reaper_status`…). Le plus simple pour tester : écris « vérifie que REAPER
+répond ». Claude utilise `reaper_status` (il peut te demander l'autorisation la première fois) et doit
+répondre que REAPER et le pont sont connectés.
+
+**Exemples de phrases**
+
+| Tu dis | Ce qui se passe |
+|---|---|
+| « Prépare le morceau ouvert dans REAPER » | Nouveau morceau : analyse complète. Morceau déjà préparé dont tu as modifié les régions : tes régions sont reprises. Morceau déjà préparé sans modification : **nouvelle analyse** (la structure validée est remplacée) — pour seulement reconstruire, utilise plutôt le bouton *Préparer* |
+| « Le refrain 1 commence mesure 37 » | Structure corrigée, tout est reconstruit |
+| « Renomme la section 6 en Solo » | Région renommée, recolorée, annonce changée |
+| « Republie seulement le prompteur » | Prompteur mis à jour, rien ne change dans REAPER |
+| « Va au refrain 2 » | Le curseur de REAPER se place au début de la région |
+| « Une seule mesure de décompte » | Réglage changé, click et annonces reconstruits |
+
+**Ce qui se met à jour tout seul** : après chaque demande de ce type, les régions, marqueurs, pistes CUES /
+VOIX / CLICK dans REAPER et le prompteur des téléphones (qui relit ses données toutes les 2 secondes). Rien à
+relancer.
+
+**Si ça ne marche pas**
+
+| Problème | Solution |
+|---|---|
+| reacue n'apparaît pas dans les outils | Relance l'installateur en répondant `o`, puis quitte complètement Claude Desktop et relance-le |
+| Claude dit que REAPER ne répond pas | REAPER doit être ouvert ; redémarre-le pour relancer le pont ; une fenêtre restée ouverte dans REAPER bloque aussi le pont |
+| Les nouveautés de ReaCue ne sont pas visibles | Les outils sont chargés au début d'une conversation : après une mise à jour de ReaCue, **ouvre une nouvelle conversation** (et relance Claude Desktop) |
+| « le projet ouvert ne contient plus les pistes du dernier morceau » | Tu as changé de projet (ou consolidé) : demande « prépare le morceau ouvert » pour l'analyser |
+
+---
+
+## 16. En répétition
 
 - Ouvre le projet du morceau, place le curseur au tout début (**Home**), appuie sur **Espace**.
 - Les musiciens entendent (ou voient sur le prompteur) le décompte, puis les annonces avant chaque section.
@@ -403,7 +485,7 @@ Pour les voix des annonces (`announce_voice`), voir la section *Réglages* du LI
 
 ---
 
-## 16. Dépannage
+## 17. Dépannage
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
@@ -413,19 +495,19 @@ Pour les voix des annonces (`announce_voice`), voir la section *Réglages* du LI
 | Les téléphones ne trouvent plus la page | L'adresse IP de l'ordinateur a changé | Nouvelle adresse (étape 13), puis réservation DHCP |
 | Pas d'annonces vocales | Voix absente | Mac : *Réglages Système → Accessibilité → Contenu énoncé* ; Windows : *Paramètres → Heure et langue → Voix* |
 | Séparation de stems très lente | Processeur occupé | Ferme les autres applications ; compte 1,5 à 2 fois la durée du morceau |
-| Structure fausse | Détection automatique imparfaite | Étape 11 (Claude, ou tempo dans le nom des fichiers) |
+| Structure fausse | Détection automatique imparfaite | Étape 11 : corrige les régions dans REAPER puis *Préparer*, ou demande à Claude ; tempo faux : tempo dans le nom des fichiers |
 | Journaux | — | Préparation : `ReaCueMCP/cli.log` (dossier des ressources REAPER) ; séparation : `…-stems/demucs.log` à côté du morceau |
 
 ---
 
-## 17. Pense-bête : un nouveau morceau
+## 18. Pense-bête : un nouveau morceau
 
 1. Dossier du morceau dans `Documents/REAPER Media/`, fichiers audio copiés dedans.
 2. REAPER : *File → New project*, puis *File → Save project as…* dans ce dossier.
 3. Glisser les stems (un par piste) **ou** le MP3.
 4. MP3 seul : sélectionner l'item → **ReaCue - Séparer les stems** (5 à 8 min).
 5. **ReaCue - Préparer le morceau**.
-6. Vérifier la structure (longueurs inhabituelles, noms).
+6. Vérifier la structure (longueurs inhabituelles, noms) ; au besoin corriger les régions à la main et relancer *Préparer*.
 7. Facultatif : `paroles.txt` à côté des fichiers → **ReaCue - Republier le prompteur**.
 8. Enregistrer le projet (**Cmd+S** / **Ctrl+S**).
 9. Téléphones : `http://<IP>:8080/prompteur.html`, choisir son rôle.

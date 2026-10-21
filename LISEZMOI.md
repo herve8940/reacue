@@ -208,15 +208,44 @@ Détails :
      aident les accords et le choix entre tempo double et moitié.
 2. Lance **ReaCue - Préparer le morceau**. Une petite fenêtre montre l'avancement (de 20 s à 1 min environ) ;
    tu peux la fermer, le résultat s'affiche à la fin : tempo, structure (mesures et longueurs), ce qui a été publié.
-3. Vérifie la structure (régions) et écoute. Les régions modifiées à la main dans REAPER ne sont **pas**
-   relues par ReaCue : pour corriger la structure, utilise le mode Claude (`set_sections`, voir plus bas).
-   Relancer *Préparer* sur le même projet **garde la structure validée** et reconstruit tout (click, annonces,
-   prompteur), en appliquant le fichier de réglages s'il a été modifié entre-temps.
+3. Vérifie la structure (régions) et écoute. Pour la corriger, **modifie les régions à la main dans REAPER**
+   (déplacer, renommer, ajouter, supprimer), puis relance *Préparer* : voir
+   [Corriger la structure](#corriger-la-structure). Relancer *Préparer* sur le même projet **garde la
+   structure validée** (ou reprend tes régions modifiées) et reconstruit tout (click, annonces, prompteur),
+   en appliquant le fichier de réglages s'il a été modifié entre-temps.
 4. Après avoir ajouté ou modifié un fichier de paroles, lance **ReaCue - Republier le prompteur** (rien
    n'est modifié dans le projet REAPER).
 
 Chaque préparation **remplace** les régions, marqueurs, la carte de tempo et les pistes CLICK / CUES / VOIX
 du projet (un seul *Annuler* revient en arrière). Prévois un projet par morceau.
+
+### Corriger la structure
+
+Deux méthodes, qu'on peut mélanger :
+
+- **À la main dans REAPER, puis *Préparer*.** Double-clique sur une région dans la barre des régions (en haut
+  de la fenêtre) pour changer son nom ou son début ; ajoutes-en une avec une sélection de temps et *Markers →
+  Insert region from time selection* (Maj+R) ; supprimes-en une avec clic droit → *Remove region* ; ou fais
+  simplement glisser ses bords, puis lance
+  **ReaCue - Préparer le morceau**. Quand le morceau est déjà préparé (mêmes items audio), ReaCue lit les
+  régions du projet et, si elles diffèrent de la structure enregistrée, **les adopte comme nouvelle
+  structure** ; la fenêtre de fin indique alors « Structure reprise de tes régions REAPER ». Règles :
+  - seul le **début** de chaque région compte : une section dure jusqu'au début de la région suivante ;
+  - le début est placé sur la barre de mesure la plus proche (à moins d'un quart de mesure, sans rien dire ;
+    au-delà, arrondi avec un avertissement) ;
+  - les noms sont repris tels quels (français ou anglais) ; le type de section — couleur, annonce, rôle dans
+    le prompteur — est déduit du nom (« Refrain 2 », « Chorus », « Solo »…) ;
+  - une région avant la mesure 1, après la fin du morceau ou sur la même mesure qu'une autre est ignorée
+    avec un avertissement ; si aucune région ne commence à la mesure 1, les premières mesures sont
+    rattachées à la première région ;
+  - régions, couleurs, marqueurs « → », CUES, VOIX, CLICK et prompteur sont ensuite reconstruits.
+  Si aucune région n'a changé, rien ne change (structure conservée). Dans un autre projet (consolidé, autre
+  morceau), les régions ne sont jamais lues et rien n'est modifié.
+- **Avec Claude** (mode facultatif, plus bas) : « le refrain 1 commence mesure 37 », « renomme la section 6
+  en Solo ».
+
+*Republier le prompteur* ne reprend **pas** les régions modifiées (le prompteur doit rester d'accord avec les
+annonces et le click déjà dans REAPER) : un avertissement demande de lancer *Préparer*.
 
 ## Paroles
 
@@ -288,19 +317,27 @@ l'installateur). Le serveur `reacue` est ajouté à la configuration de Claude D
 - « Renomme la section 6 en Solo guitare. » → `rename_section`
 - « 1 mesure de count-in, click seulement sur les sorties 3/4. » → `update_options`
 - « C'est à 94 BPM, pas 188. » → `prepare_song` avec `bpm_hint`
+- « J'ai déplacé les régions dans REAPER, reprends-les. » → `prepare_song` (régions reprises, sans réanalyse)
 
 | Outil | Rôle |
 |---|---|
 | `reaper_status` | REAPER et le pont répondent ? |
 | `prepare_song` | Préparation complète (peut importer un fichier) |
 | `analyze_audio` | Analyse seule, sans toucher au projet |
-| `set_sections` / `rename_section` | Corriger la structure ; tout est reconstruit (noms en français ou en anglais) |
+| `set_sections` / `rename_section` | Corriger la structure ; tout est reconstruit (noms en français ou en anglais). `set_sections` **l'emporte** sur les régions modifiées à la main ; `rename_section` les reprend d'abord (numéros = régions actuelles) |
 | `set_grid` | Imposer une grille à tempo fixe quand la détection se trompe |
 | `update_options` | Count-in, mode de tempo, click, annonces, voix… sans réanalyser |
 | `get_project_state`, `goto_section`, `transport` | État du projet, navigation, lecture/arrêt |
 
 Les deux modes partagent la même mémoire du dernier morceau préparé : on peut préparer avec le bouton et
 affiner avec Claude, ou l'inverse.
+
+Les régions modifiées à la main dans REAPER sont reprises par `prepare_song` (morceau déjà préparé ;
+`reanalyse=true`, `bpm_hint` ou `beats_per_bar` forcent une analyse complète), `update_options` et
+`rename_section`. Sur un morceau déjà préparé dont les régions n'ont pas été modifiées, `prepare_song` refait
+une analyse (le bouton *Préparer*, lui, garde la structure). `set_sections` et `set_grid` imposent la structure donnée et remplacent ces régions. Les
+outils de Claude sont chargés au début d'une conversation : après une mise à jour de ReaCue, ouvre une
+nouvelle conversation.
 
 ## Limites connues
 
@@ -314,8 +351,9 @@ affiner avec Claude, ou l'inverse.
 - **Batterie** : grosse caisse, caisse claire et charley sont fiables ; toms et ride sont approximatifs. Les
   fills sont les mesures qui s'écartent du groove de la section.
 - **Accords** : accords parfaits, septièmes, sus et power chords ; les voicings jazz complexes sont simplifiés.
-- Sans Claude, la structure détectée ne peut pas encore être modifiée (seulement réanalysée) ; les régions
-  modifiées à la main dans REAPER sont écrasées à la préparation suivante.
+- Régions modifiées à la main : seuls leurs débuts et leurs noms sont lus (pas leurs fins) ; une réanalyse
+  complète d'un morceau déjà préparé n'est possible qu'avec Claude (`reanalyse`) ou en ligne de commande
+  (`reacue_cli.py prepare --reanalyse`).
 - Mesures en x/4 uniquement (4/4 et 3/4 détectés).
 - **Windows : bêta, pas encore testé sur une vraie machine.** À vérifier en particulier : le lancement en
   arrière-plan depuis REAPER, les voix SAPI et les chemins avec accents. Merci de signaler les problèmes.

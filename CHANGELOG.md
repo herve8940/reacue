@@ -19,8 +19,19 @@
 - `reacue_stems.py`: launcher run by the action (`separate`, status JSON + log read by REAPER) and installer
   check (`check`); `--repo` for offline/local models.
 - Lyrics: for stems separated by ReaCue, the lyrics file can also sit next to the original song file.
-- Step-by-step beginner tutorials: `docs/TUTORIEL_fr.md`, `docs/TUTORIAL_en.md`.
-- Tests: `tests/test_stems.py` (launcher with a fake Demucs, Lua action: paths, quoting macOS/Windows,
+- **Hand-edited regions are read back**: when the song is already prepared (same audio items), *Prepare*
+  (and, with Claude, `prepare_song`, `update_options`, `rename_section`) reads the project's regions and,
+  if they differ from the saved structure, adopts them: start → nearest bar (¼-bar tolerance, otherwise
+  rounded with a warning), names kept (section type deduced from the name, FR/EN), added/deleted regions
+  taken into account, regions before bar 1 / after the end / on a taken bar ignored with a warning. The
+  final window says “Structure taken from your REAPER regions”. *Republish the prompter* does not adopt
+  them (warning instead). `set_sections` / `set_grid` still win. Other projects (consolidated, other song)
+  are never read. New `reacue_mcp/regions.py`, `prepare_song(reanalyse=…)`.
+  Les régions modifiées à la main dans REAPER sont reprises à la préparation suivante.
+- Step-by-step beginner tutorials: `docs/TUTORIEL_fr.md`, `docs/TUTORIAL_en.md` (including linking
+  Claude Desktop and both ways of correcting the structure).
+- Tests: `tests/test_regions.py` (moved, renamed, added, deleted, off-grid, out-of-song regions, publish
+  only, Claude tools, other project protected), `tests/test_stems.py` (launcher with a fake Demucs, Lua action: paths, quoting macOS/Windows,
   progress, import and alignment, cache, messages), installer and script syntax tests extended.
 
 ### Changed / Modifications

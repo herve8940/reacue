@@ -33,9 +33,10 @@ Time needed: 30 to 45 minutes the first time (installation included), then 5 to 
 12. [Add the lyrics](#12-add-the-lyrics)
 13. [Open the prompter on the phones](#13-open-the-prompter-on-the-phones)
 14. [Set up the click, the spoken cues and the in-ears](#14-set-up-the-click-the-spoken-cues-and-the-in-ears)
-15. [At rehearsal](#15-at-rehearsal)
-16. [Troubleshooting](#16-troubleshooting)
-17. [Cheat sheet: a new song](#17-cheat-sheet-a-new-song)
+15. [Link Claude Desktop (optional)](#15-link-claude-desktop-optional)
+16. [At rehearsal](#16-at-rehearsal)
+17. [Troubleshooting](#17-troubleshooting)
+18. [Cheat sheet: a new song](#18-cheat-sheet-a-new-song)
 
 ---
 
@@ -248,7 +249,7 @@ on the same MP3, the import is immediate (no new separation).
 | Message | Solution |
 |---|---|
 | “Select the song's audio item” | Click the MP3 item, then run the action again |
-| “Audio file not found… OFFLINE” | The file cannot be read: see [Troubleshooting](#16-troubleshooting) |
+| “Audio file not found… OFFLINE” | The file cannot be read: see [Troubleshooting](#17-troubleshooting) |
 | “Stem separation is not installed” | Double-click `Install ReaCue Stems.command` / `.bat` in the ReaCue folder |
 | “The separation failed” | Read the end of the log shown; the full log is `…-stems/demucs.log` |
 | The window stays at 0 % for a while | Normal during the first minute (model loading) |
@@ -296,13 +297,35 @@ Read the structure in the result window and at the top of the project. Things to
 Listen to the section starts: **click in the ruler** (the timeline at the top) at the beginning of a region to
 put the cursor there, then **Space**.
 
-**To fix it:**
+**To fix it, two ways (you can mix them):**
 
-- Regions moved or renamed **by hand** in REAPER are **not** read back by ReaCue: they are overwritten by the
-  next preparation.
-- With **Claude Desktop** (optional mode, see the README): just say “chorus 1 starts at bar 37” or “rename
-  section 6 to Solo”; everything is rebuilt (regions, click, cues, prompter).
-- Running *Prepare* again on the same project **keeps the validated structure** and rebuilds the rest.
+**Way 1 — by hand in REAPER, then “Prepare”** (no Claude needed)
+
+1. Fix the regions in the region lane (top of the window):
+   - **rename** or **change the start**: double-click the region → change *Name* or *Start* → **OK**;
+   - **move the start**: you can also drag the region's left edge;
+   - **add**: make a time selection (drag in the ruler) starting where the new section starts, then menu
+     *Markers → Insert region from time selection* (default shortcut Shift+R), and name it;
+   - **delete**: right-click the region → *Remove region*.
+2. Run **ReaCue - Prepare the song**.
+3. The final window starts with **“Structure taken from your REAPER regions”**, with the new table. The
+   regions are recoloured, and the “→” markers, the cues, the click and the prompter follow.
+
+Good to know:
+
+- only the **start** of each region counts: a section lasts until the next region starts (no need to fix
+  the ends);
+- a start placed between two bars is moved to the nearest bar line (a warning tells you if it was more than
+  a quarter of a bar away);
+- the name sets the colour and the cue: “Chorus 2” or “Refrain 2” makes a chorus, “Solo” a solo…;
+- a region before bar 1, after the end of the song or on the same bar as another one is ignored (warning);
+- if you changed nothing, *Prepare* keeps the saved structure, as before;
+- *Republish the prompter* does not take edited regions: it shows a warning asking you to run *Prepare*.
+
+**Way 2 — with Claude Desktop** (optional, see [step 15](#15-link-claude-desktop-optional))
+
+Just say “chorus 1 starts at bar 37” or “rename section 6 to Solo”: everything is rebuilt (regions, click,
+cues, prompter). What you tell Claude replaces regions edited by hand.
 
 ---
 
@@ -383,7 +406,61 @@ For the cue voices (`announce_voice`), see the *Settings* section of the README.
 
 ---
 
-## 15. At rehearsal
+## 15. Link Claude Desktop (optional)
+
+All of ReaCue works without Claude. Linking [Claude Desktop](https://claude.ai/download) also lets you drive
+ReaCue in plain English: fix the structure, change a setting, move around the song.
+
+**Requirements**
+
+- Claude Desktop installed on **the same computer** as REAPER and signed in to your Claude account (a paid
+  plan may be needed depending on the offer: check the current terms on claude.ai);
+- ReaCue installed (step 4) and REAPER open, with the bridge running.
+
+**Link ReaCue to Claude Desktop**
+
+1. If you answered `y` to “Register ReaCue in Claude Desktop” in step 4, it is already done. Otherwise
+   **run the installer again** (`Install ReaCue.command` / `.bat`) and answer `y` to that question. The
+   installer adds the `reacue` server to Claude Desktop's configuration (a backup of the previous
+   configuration is kept).
+2. **Quit Claude Desktop completely** and start it again (Mac: menu *Claude → Quit*, not just closing the
+   window; Windows: right-click the Claude icon near the clock → *Quit*, if it is there).
+3. **Start a new conversation.**
+
+**Check that the ReaCue tools are there**
+
+Depending on your version of Claude Desktop, the tools of linked servers are behind a tools icon or a
+“connectors” / “tools” menu near the message box. You should see **reacue** with its tools (`prepare_song`,
+`set_sections`, `reaper_status`…). The simplest test: type “check that REAPER is responding”. Claude uses
+`reaper_status` (it may ask for permission the first time) and should answer that REAPER and the bridge are
+connected.
+
+**Example requests**
+
+| You say | What happens |
+|---|---|
+| “Prepare the song open in REAPER” | New song: full analysis. Already prepared song whose regions you edited: your regions are taken. Already prepared song with no edit: **new analysis** (the validated structure is replaced) — to only rebuild, use the *Prepare* button instead |
+| “Chorus 1 starts at bar 37” | Structure fixed, everything rebuilt |
+| “Rename section 6 to Solo” | Region renamed, recoloured, cue changed |
+| “Only republish the prompter” | Prompter updated, nothing changes in REAPER |
+| “Go to chorus 2” | REAPER's cursor jumps to the start of the region |
+| “Just one bar of count-in” | Setting changed, click and cues rebuilt |
+
+**What updates by itself**: after each of these requests, the regions, markers, CUES / VOICE / CLICK tracks
+in REAPER and the phones' prompter (which reloads its data every 2 seconds). Nothing to restart.
+
+**If it does not work**
+
+| Problem | Solution |
+|---|---|
+| reacue does not show in the tools | Run the installer again answering `y`, then quit Claude Desktop completely and start it again |
+| Claude says REAPER is not responding | REAPER must be open; restart it to restart the bridge; a dialog left open in REAPER also blocks the bridge |
+| ReaCue's new features are not visible | Tools are loaded when a conversation starts: after updating ReaCue, **start a new conversation** (and restart Claude Desktop) |
+| “the project open in REAPER no longer contains the tracks of the last prepared song” | You switched projects (or consolidated): ask “prepare the song open in REAPER” to analyse it |
+
+---
+
+## 16. At rehearsal
 
 - Open the song's project, put the cursor at the very beginning (**Home**), press **Space**.
 - The musicians hear (or see on the prompter) the count-in, then the cues before each section.
@@ -395,7 +472,7 @@ For the cue voices (`announce_voice`), see the *Settings* section of the README.
 
 ---
 
-## 16. Troubleshooting
+## 17. Troubleshooting
 
 | Symptom | Likely cause | Solution |
 |---|---|---|
@@ -405,19 +482,19 @@ For the cue voices (`announce_voice`), see the *Settings* section of the README.
 | The phones cannot find the page any more | The computer's IP address changed | New address (step 13), then a DHCP reservation |
 | No spoken cues | Voice missing | Mac: *System Settings → Accessibility → Spoken Content*; Windows: *Settings → Time & language → Speech* |
 | Stem separation very slow | Busy processor | Close other applications; count 1.5 to 2 times the song length |
-| Wrong structure | Automatic detection is not perfect | Step 11 (Claude, or tempo in the file names) |
+| Wrong structure | Automatic detection is not perfect | Step 11: edit the regions in REAPER then *Prepare*, or ask Claude; wrong tempo: tempo in the file names |
 | Logs | — | Preparation: `ReaCueMCP/cli.log` (REAPER resource folder); separation: `…-stems/demucs.log` next to the song |
 
 ---
 
-## 17. Cheat sheet: a new song
+## 18. Cheat sheet: a new song
 
 1. Song folder in `Documents/REAPER Media/`, audio files copied into it.
 2. REAPER: *File → New project*, then *File → Save project as…* in that folder.
 3. Drag the stems (one per track) **or** the MP3.
 4. MP3 only: select the item → **ReaCue - Separate stems** (5 to 8 min).
 5. **ReaCue - Prepare the song**.
-6. Check the structure (unusual lengths, names).
+6. Check the structure (unusual lengths, names); if needed fix the regions by hand and run *Prepare* again.
 7. Optional: `lyrics.txt` next to the files → **ReaCue - Republish the prompter**.
 8. Save the project (**Cmd+S** / **Ctrl+S**).
 9. Phones: `http://<IP>:8080/prompteur.html`, pick your role.
