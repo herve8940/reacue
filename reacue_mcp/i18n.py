@@ -241,6 +241,35 @@ MSG = {
         "Your REAPER regions changed since the last preparation: the prompter keeps the saved structure "
         "(to stay in line with the cues and the click). Run “ReaCue - Prepare the song” to take your "
         "regions everywhere."),
+    # mode concert
+    "concert_rpp_unreadable": ("Fichier RPP illisible.", "Unreadable RPP file."),
+    "concert_project_missing": ("Projet introuvable pour « {name} » (cherché dans {dirs}).",
+                                "Project not found for “{name}” (searched in {dirs})."),
+    "concert_no_audio": ("{title} : aucun item audio trouvé dans le projet.",
+                         "{title}: no audio item found in the project."),
+    "concert_region_off_grid": ("{title} : la 1re région n'est pas sur une barre de mesure.",
+                                "{title}: the first region is not on a bar line."),
+    "concert_no_regions": ("{title} : aucune région (structure) : morceau entier sans sections. Prépare ce "
+                           "morceau et enregistre son projet, puis reconstruis le concert.",
+                           "{title}: no regions (structure): whole song without sections. Prepare this song "
+                           "and save its project, then rebuild the concert."),
+    "concert_empty": ("Setlist vide.", "Empty setlist."),
+    "concert_lane_songs": ("Morceaux", "Songs"),
+    "concert_prompter_failed": ("Prompteur du concert non publié : {e}", "Concert prompter not published: {e}"),
+    "concert_extra_failed": ("{title} : {what} non disponible ({e})", "{title}: {what} not available ({e})"),
+    "concert_built": ("Concert « {name} » construit", "Concert “{name}” built"),
+    "concert_line": ("  {n}. {title}  ·  {bpm:g} BPM  ·  {bars} mesures", "  {n}. {title}  ·  {bpm:g} BPM  ·  {bars} bars"),
+    "concert_duration": ("Durée : {m} min {s:02d} s", "Length: {m} min {s:02d} s"),
+    "concert_extras_running": ("Accords, paroles et batterie : calcul en cours pour le prompteur.",
+                               "Chords, lyrics and drums: being computed for the prompter."),
+    "concert_args": ("concert : donne --setlist, ou --name et --songs", "concert: give --setlist, or --name and --songs"),
+    "cli_concert_running": ("Construction du concert…", "Building the concert…"),
+    "concert_extras_spawned": ("structure publiée ; accords, paroles et batterie en cours de calcul (arrière-plan)",
+                               "structure published; chords, lyrics and drums being computed (background)"),
+    "concert_extras_not_spawned": ("Calcul des accords/paroles/batterie non lancé : {e}",
+                                   "Chords/lyrics/drums computation not started: {e}"),
+    "concert_open_hint": ("Dans REAPER : action « ReaCue - Concert » → choisir le concert (nouvel onglet).",
+                          "In REAPER: “ReaCue - Concert” action → choose the concert (new tab)."),
     "cli_running": ("Analyse et préparation en cours…", "Analysis and preparation in progress…"),
     "cli_unknown": ("commande inconnue : {cmd}", "unknown command: {cmd}"),
 }

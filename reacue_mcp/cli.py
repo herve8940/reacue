@@ -3,6 +3,8 @@ le prompteur » de REAPER (ou à la main).
 
     <python du venv> -m reacue_mcp.cli prepare      # analyse + régions, click, annonces, prompteur
     <python du venv> -m reacue_mcp.cli publish      # republie seulement le prompteur
+    <python du venv> -m reacue_mcp.cli concert --setlist "<Concerts>/Concert.setlist.json"
+    <python du venv> -m reacue_mcp.cli concert --name "Concert" --songs "Song A" "Song B"
     (Windows : reacue_cli.py, à la racine, fait la même chose sans dépendre du dossier courant)
 
 Même code que le serveur MCP (mêmes réglages, même mémoire du dernier morceau) : on peut ensuite
@@ -115,14 +117,55 @@ async def _same_song(server) -> bool:
     return await server._same_song(item, items)
 
 
+def _concert_message(res) -> str:
+    from .i18n import t
+    lines = [t("concert_built", name=res.name), ""]
+    for d in res.songs:
+        lines.append(t("concert_line", n=d["n"], title=d["title"], bpm=d["bpm"], bars=d["bars"]))
+    total = res.songs[-1]["stop"] if res.songs else 0
+    lines += ["", t("concert_duration", m=int(total // 60), s=int(total % 60)), t("concert_extras_running")]
+    if res.warnings:
+        lines.append("")
+        lines.extend("! " + w for w in res.warnings[:6])
+    return "\n".join(lines)
+
+
+def _log_exc(log):
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with log.open("a", encoding="utf-8") as f:
+        f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + traceback.format_exc() + "\n")
+
+
+def _concert(args, log) -> int:
+    """Construit (ou reconstruit) un concert, puis enrichit son prompteur (accords, paroles, batterie)."""
+    from . import concert as conc
+    from .i18n import t
+    if args.setlist:
+        res = conc.build_from_setlist(args.setlist)
+    elif args.name and args.songs:
+        res = conc.build_concert(args.name, args.songs, args.gap if args.gap is not None else 4.0)
+    else:
+        raise ValueError(t("concert_args"))
+    _status("done", cmd="concert", message=_concert_message(res), rpp=str(res.rpp))
+    try:
+        conc.extras_from_setlist(res.setlist)
+    except Exception:
+        _log_exc(log)
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="reacue")
-    ap.add_argument("cmd", choices=["prepare", "publish"])
+    ap.add_argument("cmd", choices=["prepare", "publish", "concert", "concert-extras"])
     ap.add_argument("--bpm", type=float, help="tempo approximatif (corrige double/moitié)")
     ap.add_argument("--count-in", type=int, help="mesures de count-in (défaut : réglages, 2)")
     ap.add_argument("--reanalyse", action="store_true",
                     help="refaire l'analyse même si le morceau est déjà préparé (structure remplacée)")
     ap.add_argument("--resource-dir", help="dossier des ressources REAPER (transmis par le script Lua)")
+    ap.add_argument("--setlist", help="concert : fichier <nom>.setlist.json")
+    ap.add_argument("--name", help="concert : nom du concert")
+    ap.add_argument("--songs", nargs="+", help="concert : morceaux dans l'ordre (noms de projets ou chemins .RPP)")
+    ap.add_argument("--gap", type=float, help="concert : blanc minimum entre deux morceaux (s)")
     args = ap.parse_args(argv)
     if args.resource_dir:
         # avant tout import de bridge : BRIDGE_DIR en dépend (REAPER portable, chemin non standard)
@@ -130,6 +173,22 @@ def main(argv=None):
     from .i18n import t, use_settings_lang
     use_settings_lang()
     _, _, log = _dirs()
+    if args.cmd == "concert-extras":           # arrière-plan, sans fenêtre de progression
+        from . import concert as conc
+        try:
+            conc.extras_from_setlist(args.setlist)
+            return 0
+        except Exception:
+            _log_exc(log)
+            return 1
+    if args.cmd == "concert":
+        _status("running", cmd="concert", step=t("cli_concert_running"))
+        try:
+            return _concert(args, log)
+        except Exception as e:
+            _log_exc(log)
+            _status("error", cmd="concert", message=t("cli_error_log", e=e, log=log))
+            return 1
     titles = {"prepare": t("cli_prepared"), "publish": t("cli_published_title")}
     _status("running", cmd=args.cmd, step=t("cli_running"))
     try:

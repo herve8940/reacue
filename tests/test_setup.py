@@ -175,6 +175,27 @@ def test_stems_action_and_setting(reaper):
     assert s["stems_model"] == "htdemucs_6s"
 
 
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_concert_actions_scripts_and_settings(reaper, lang, monkeypatch, tmp_path):
+    monkeypatch.setattr(S, "claude_config_path", lambda *a, **k: tmp_path / "none.json")
+    run_install(reaper, lang)
+    kb = (reaper / "reaper-kb.ini").read_text(encoding="utf-8")
+    names = {"fr": ("ReaCue - Concert", "ReaCue - Morceau suivant", "ReaCue - Morceau précédent"),
+             "en": ("ReaCue - Concert", "ReaCue - Next song", "ReaCue - Previous song")}[lang]
+    for cid, f, n in zip(("REACUE_CONCERT", "REACUE_NEXT_SONG", "REACUE_PREV_SONG"),
+                         ("ReaCue_Concert.lua", "ReaCue_Morceau_suivant.lua", "ReaCue_Morceau_precedent.lua"), names):
+        assert f'SCR 4 0 {cid} "Custom: {n}" "ReaCue/{f}"' in kb
+    for f in ("ReaCue_Concert.lua", "ReaCue_concert_lib.lua", "ReaCue_qrcode.lua", "ReaCue_Morceau_suivant.lua",
+              "ReaCue_Morceau_precedent.lua", "ReaCue_run.lua"):
+        assert (reaper / "Scripts" / "ReaCue" / f).exists()
+    s = json.loads((reaper / "ReaCueMCP" / "reacue_settings.json").read_text(encoding="utf-8"))
+    assert s["concert_dir"] is None and s["projects_dir"] is None
+    assert "remote_pin" not in json.dumps(s)            # le PIN de la Régie est généré dans REAPER, jamais ici
+    S.main(["uninstall", "--reaper-dir", str(reaper), "--lang", lang])
+    kb = (reaper / "reaper-kb.ini").read_text(encoding="utf-8")
+    assert "REACUE_CONCERT" not in kb and "REACUE_NEXT_SONG" not in kb
+
+
 def test_uninstall_stems_env(reaper, monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(S, "claude_config_path", lambda *a, **k: tmp_path / "none.json")
     inst = tmp_path / "ReaCue"

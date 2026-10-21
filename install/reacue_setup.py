@@ -26,18 +26,23 @@ ROOT = HERE.parent
 STARTUP_MARK = "-- ReaCue MCP"
 STARTUP_LINE = 'dofile(reaper.GetResourcePath() .. "/Scripts/ReaCue/ReaCue_Bridge.lua") ' + STARTUP_MARK
 SCRIPT_FILES = ("ReaCue_Bridge.lua", "ReaCue_run.lua", "ReaCue_Preparer.lua", "ReaCue_Republier_prompteur.lua",
-                "ReaCue_stems.lua", "ReaCue_Separer_stems.lua")
+                "ReaCue_stems.lua", "ReaCue_Separer_stems.lua", "ReaCue_concert_lib.lua", "ReaCue_qrcode.lua",
+                "ReaCue_Concert.lua", "ReaCue_Morceau_suivant.lua", "ReaCue_Morceau_precedent.lua")
 ACTIONS = (   # (identifiant de commande, fichier, nom FR, nom EN)
     ("REACUE_PREPARE", "ReaCue_Preparer.lua", "ReaCue - Préparer le morceau", "ReaCue - Prepare the song"),
     ("REACUE_PUBLISH", "ReaCue_Republier_prompteur.lua", "ReaCue - Republier le prompteur",
      "ReaCue - Republish the prompter"),
     ("REACUE_STEMS", "ReaCue_Separer_stems.lua", "ReaCue - Séparer les stems", "ReaCue - Separate stems"),
+    ("REACUE_CONCERT", "ReaCue_Concert.lua", "ReaCue - Concert", "ReaCue - Concert"),
+    ("REACUE_NEXT_SONG", "ReaCue_Morceau_suivant.lua", "ReaCue - Morceau suivant", "ReaCue - Next song"),
+    ("REACUE_PREV_SONG", "ReaCue_Morceau_precedent.lua", "ReaCue - Morceau précédent", "ReaCue - Previous song"),
 )
 SETTINGS_DEFAULTS = {
     "language": "fr", "announce_voice": None, "count_voice": None, "count_lang": "en",
     "count_in_bars": 2, "cue_lead_bars": 2, "voice_cues": True, "voice_count_in": True,
     "voice_count_each": True, "voice_volume": 0.8, "click_volume": 0.5, "click_to_master": True,
     "click_hw_output": None, "tempo_mode": "auto", "count_rate": 240, "stems_model": "htdemucs_6s",
+    "projects_dir": None, "concert_dir": None,
 }
 
 MSG = {
@@ -58,10 +63,12 @@ MSG = {
                        "REAPER is running: the actions cannot be registered automatically."),
     "actions_manual": (
         "Dans REAPER : Actions > Show action list > New action > Load ReaScript…, puis choisis\n"
-        "      {d}{sep}ReaCue_Preparer.lua, ReaCue_Republier_prompteur.lua et ReaCue_Separer_stems.lua\n"
+        "      {d}{sep}ReaCue_Preparer.lua, ReaCue_Republier_prompteur.lua, ReaCue_Separer_stems.lua,\n"
+        "      ReaCue_Concert.lua, ReaCue_Morceau_suivant.lua et ReaCue_Morceau_precedent.lua\n"
         "      (ou ferme REAPER et relance l'installation).",
         "In REAPER: Actions > Show action list > New action > Load ReaScript…, then pick\n"
-        "      {d}{sep}ReaCue_Preparer.lua, ReaCue_Republier_prompteur.lua and ReaCue_Separer_stems.lua\n"
+        "      {d}{sep}ReaCue_Preparer.lua, ReaCue_Republier_prompteur.lua, ReaCue_Separer_stems.lua,\n"
+        "      ReaCue_Concert.lua, ReaCue_Morceau_suivant.lua and ReaCue_Morceau_precedent.lua\n"
         "      (or close REAPER and run the installer again)."),
     "action_added": ("Action enregistrée : « {name} »", "Action registered: “{name}”"),
     "action_present": ("Action déjà présente : « {name} »", "Action already there: “{name}”"),
@@ -92,11 +99,11 @@ MSG = {
         "      Then, on the phones: http://<this computer's IP>:8080/prompteur.html"),
     "ip": ("Adresse(s) IP probable(s) de cet ordinateur : {ips}", "Likely IP address(es) of this computer: {ips}"),
     "done": ("Installation terminée. Redémarre REAPER : le pont se lance tout seul, et les actions\n"
-             "« ReaCue - Préparer le morceau », « ReaCue - Republier le prompteur » et « ReaCue - Séparer les stems »\n"
-             "sont dans la liste des actions.",
+             "« ReaCue - Préparer le morceau », « ReaCue - Republier le prompteur », « ReaCue - Séparer les stems »\n"
+             "et « ReaCue - Concert » (+ Morceau suivant / précédent) sont dans la liste des actions.",
              "Installation complete. Restart REAPER: the bridge starts by itself, and the actions\n"
-             "“ReaCue - Prepare the song”, “ReaCue - Republish the prompter” and “ReaCue - Separate stems”\n"
-             "are in the action list."),
+             "“ReaCue - Prepare the song”, “ReaCue - Republish the prompter”, “ReaCue - Separate stems”\n"
+             "and “ReaCue - Concert” (+ Next / Previous song) are in the action list."),
     "uninstalled": ("Désinstallation terminée. Données conservées (réglages, dernier morceau) : {d}\n"
                     "(--purge pour les supprimer). Le dossier de ReaCue lui-même peut être supprimé à la main.",
                     "Uninstall complete. Data kept (settings, last song): {d}\n"
