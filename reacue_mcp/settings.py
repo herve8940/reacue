@@ -28,6 +28,7 @@ DEFAULTS: dict = {
     "click_hw_output": None,     # sortie physique (0 = 1/2, 2 = 3/4…) ; None = aucune
     "tempo_mode": "auto",        # auto | constant | beatmap
     "count_rate": 240,           # débit du décompte (mots/min)
+    "stems_model": "htdemucs_6s",  # séparation de stems (action REAPER) : htdemucs_6s (6 stems) | htdemucs (4)
 }
 
 LANGS = ("fr", "en")
