@@ -35,7 +35,7 @@ local TXT = {
     phone = "téléphone : %s ✓", phone_badpin = "téléphone : code PIN incorrect",
     cmd = { toggle = "Lecture/Pause", play = "Lecture", pause = "Pause", stop = "Stop", prev = "Précédent",
       next = "Suivant", home = "Début", song = "Morceau", seek = "Section", reh = "Répétition", loop = "Boucle",
-      loopoff = "Boucle off", rate = "Vitesse" },
+      loopoff = "Boucle off", rate = "Vitesse", mute = "Mute", solo = "Solo", hearall = "Tout entendre" },
     concert_n = "Concert %s / %s",
     none = "Aucun concert dans ce projet", building = "Construction du concert… %d s",
     open_one = "Ouvrir un concert (nouvel onglet) :", none_in = "Aucun concert dans %s",
@@ -61,12 +61,21 @@ local TXT = {
       outs_nowhere = "%s n'est envoyée nulle part", outs_muted = "%s est coupée (mute)", outs_none = "pas de piste CLICK",
       prompter = "Prompteur des téléphones", prompter_ok = "page et concert publiés", prompter_bad = "pas à jour : republier",
       regie = "Téléphones Régie", regie_ok = "vu il y a %d s", regie_none = "aucun téléphone en Régie pour l'instant",
+      mix = "Stems coupés", mix_some = "%s", mix_none = "aucun : tous les stems sont joués", mix_all = "tous les stems sont coupés",
     },
     -- mode répétition
     reh = "Répétition", reh_on = "RÉPÉTITION", reh_loop = "boucle : %s", reh_loop_range = "boucle : %s → %s",
     reh_noloop = "touche une section pour la faire boucler (2e section = plage)",
     loop_off = "Boucle off", reh_exit = "Quitter", rate = "%d %%",
     auto_off = "arrêt auto coupé (répétition)",
+    -- instruments (stems)
+    instruments = "Instruments (stems)", hear_all = "Tout entendre", back_profile = "Profil",
+    mix_none = "aucune piste d'instrument", solo_hint = "appui long = solo",
+    mix_played = "joué", mix_cut = "coupé", mix_solo = "solo",
+    live_title = "Joué en live", live_hint = "Coché = joué en vrai par le groupe : le stem est coupé",
+    live_exc = "Exceptions par morceau", live_exc_hint = "clic : stem / live / profil",
+    live_exc_stem = "stem", live_exc_live = "live", live_exc_def = "·",
+    live_saved = "profil enregistré", live_nosetlist = "Setlist introuvable : reconstruis le concert.",
   },
   en = {
     title = "ReaCue - Concert",
@@ -92,7 +101,7 @@ local TXT = {
     phone = "phone: %s ✓", phone_badpin = "phone: wrong PIN code",
     cmd = { toggle = "Play/Pause", play = "Play", pause = "Pause", stop = "Stop", prev = "Previous",
       next = "Next", home = "Start", song = "Song", seek = "Section", reh = "Rehearsal", loop = "Loop",
-      loopoff = "Loop off", rate = "Speed" },
+      loopoff = "Loop off", rate = "Speed", mute = "Mute", solo = "Solo", hearall = "Hear all" },
     concert_n = "Concert %s / %s",
     none = "No concert in this project", building = "Building the concert… %d s",
     open_one = "Open a concert (new tab):", none_in = "No concert in %s",
@@ -117,11 +126,19 @@ local TXT = {
       outs_nowhere = "%s is not routed anywhere", outs_muted = "%s is muted", outs_none = "no CLICK track",
       prompter = "Phones' prompter", prompter_ok = "page and concert published", prompter_bad = "out of date: republish",
       regie = "Stage control phones", regie_ok = "seen %d s ago", regie_none = "no Stage control phone yet",
+      mix = "Cut stems", mix_some = "%s", mix_none = "none: all stems are played", mix_all = "all stems are cut",
     },
     reh = "Rehearsal", reh_on = "REHEARSAL", reh_loop = "loop: %s", reh_loop_range = "loop: %s → %s",
     reh_noloop = "tap a section to loop it (2nd section = range)",
     loop_off = "Loop off", reh_exit = "Exit", rate = "%d %%",
     auto_off = "auto stop off (rehearsal)",
+    instruments = "Instruments (stems)", hear_all = "Hear everything", back_profile = "Profile",
+    mix_none = "no instrument track", solo_hint = "long press = solo",
+    mix_played = "playing", mix_cut = "muted", mix_solo = "solo",
+    live_title = "Played live", live_hint = "Ticked = played for real by the band: its stem is cut",
+    live_exc = "Per-song exceptions", live_exc_hint = "click: stem / live / profile",
+    live_exc_stem = "stem", live_exc_live = "live", live_exc_def = "·",
+    live_saved = "profile saved", live_nosetlist = "Setlist not found: rebuild the concert.",
   },
 }
 function L.lang() return R.lang() end
@@ -226,6 +243,13 @@ function L.concert_dir()
   local p = R.jfield(st, "projects_dir")
   if type(p) == "string" and p ~= "" then return (p:gsub("^~", L.home())) .. SEP .. "Concerts" end
   return L.home() .. SEP .. "Documents" .. SEP .. "REAPER Media" .. SEP .. "Concerts"
+end
+
+-- dossier des projets des morceaux : réglage projects_dir, sinon <Documents>/REAPER Media (comme concert.py)
+function L.projects_dir()
+  local p = R.jfield(settings_text(), "projects_dir")
+  if type(p) == "string" and p ~= "" then return (p:gsub("^~", L.home())) end
+  return L.home() .. SEP .. "Documents" .. SEP .. "REAPER Media"
 end
 
 function L.list_concerts()
@@ -667,6 +691,20 @@ function L.run_checks(c, opts)
     if pub_ok then add("prompter", "ok", ck.prompter, ck.prompter_ok)
     else add("prompter", "warn", ck.prompter, ck.prompter_bad, "publish") end
   end
+  -- stems coupés (information)
+  if c then
+    local cut, n = {}, 0
+    for _, g in ipairs(L.instr_tracks()) do
+      n = n + 1
+      local m = 0
+      for _, tr in ipairs(g.tracks) do m = math.max(m, L.track_mute_wanted(tr)) end
+      if m > 0 then cut[#cut + 1] = g.label end
+    end
+    if n > 0 then
+      local d = (#cut == 0) and ck.mix_none or ((#cut == n) and ck.mix_all or string.format(ck.mix_some, table.concat(cut, ", ")))
+      add("mix", "info", ck.mix, d)
+    end
+  end
   -- téléphones Régie (information)
   local now = opts.now or reaper.time_precise()
   if L.regie_seen and now - L.regie_seen < 600 then
@@ -724,7 +762,7 @@ local function music_tracks()
   return out
 end
 
-local function mute_music(on)
+local function mute_music(on)   -- (défini plus bas : L.set_track_mute tient compte de cet état)
   local R_ = L.reh
   if on then
     if R_.muted then return end
@@ -917,6 +955,12 @@ function L.remote_exec(c, cmd, arg)
   elseif cmd == "rate" then
     if not L.reh.on then L.set_rehearsal(true) end
     if not L.set_rate(arg) then return false end
+  elseif cmd == "mute" then
+    if not L.mix_toggle(c, arg) then return false end
+  elseif cmd == "solo" then
+    if not L.mix_solo(c, arg) then return false end
+  elseif cmd == "hearall" then
+    L.mix_hear_all(c, arg == "1")
   else
     return false
   end
@@ -951,6 +995,266 @@ function L.poll_seen(now)
     if last_seen_v ~= nil then L.regie_seen = now or reaper.time_precise() end
     last_seen_v = v
   end
+end
+
+-- ---------------------------------------------------------------------------------------
+-- Instruments (stems) : mute / solo par instrument et profil « joué en live » du concert.
+-- Profil enregistré dans <concert>.setlist.json : "live" = rôles joués en vrai (stems coupés),
+-- "live_exceptions" = {titre: {rôle: "live"|"stem"}}. Les choix manuels (mute, solo) valent pour le
+-- morceau en cours : en entrant dans un autre morceau, le profil (et ses exceptions) s'applique.
+-- ---------------------------------------------------------------------------------------
+L.ROLES = {          -- même ordre et mêmes noms que reacue_mcp/concert.py (ROLE_TRACKS_I18N)
+  { "vocals", "Chant", "Vocals", { 212, 83, 126 } },
+  { "drums", "Batterie", "Drums", { 186, 117, 23 } },
+  { "bass", "Basse", "Bass", { 24, 95, 165 } },
+  { "guitars", "Guitares", "Guitars", { 99, 153, 34 } },
+  { "lead_guitar", "Guitare solo", "Lead guitar", { 15, 110, 86 } },
+  { "keys", "Claviers", "Keys", { 127, 119, 221 } },
+  { "other", "Autres", "Other", { 136, 135, 128 } },
+  { "mix", "Mix", "Mix", { 95, 94, 90 } },
+}
+local ROLE_BY_NAME = {}
+for _, r in ipairs(L.ROLES) do ROLE_BY_NAME[r[2]:lower()] = r[1]; ROLE_BY_NAME[r[3]:lower()] = r[1] end
+-- pistes d'un morceau séparé par ReaCue (« Guitare », « Piano »…) : mêmes rôles
+for k, v in pairs({ guitare = "guitars", guitar = "guitars", piano = "keys", clavier = "keys", synth = "keys",
+                    batt = "drums", ["lead guitars"] = "lead_guitar" }) do
+  ROLE_BY_NAME[k] = v
+end
+function L.role_info(role)
+  for _, r in ipairs(L.ROLES) do if r[1] == role then return r end end
+  return nil
+end
+function L.role_label(role)
+  local r = L.role_info(role)
+  if not r then return role end
+  return L.lang() == "en" and r[3] or r[2]
+end
+-- rôle d'une piste commune du concert (« Basse », « Bass 2 »…) ou nil
+function L.role_of_track(name)
+  local n = (name or ""):gsub("%s+%d+$", ""):lower()
+  return ROLE_BY_NAME[n]
+end
+-- noms acceptés pour un rôle (commandes distantes) : rôle, nom FR ou EN
+function L.norm_role(x)
+  x = tostring(x or ""):lower()
+  for _, r in ipairs(L.ROLES) do
+    if x == r[1] or x == r[2]:lower() or x == r[3]:lower() then return r[1] end
+  end
+  return nil
+end
+
+-- pistes d'instruments présentes, dans l'ordre des rôles : {role, label, color, tracks}
+function L.instr_tracks()
+  local by = {}
+  for i = 0, (reaper.CountTracks and reaper.CountTracks(0) or 0) - 1 do
+    local tr = reaper.GetTrack(0, i)
+    local role = L.role_of_track(track_name(tr))
+    if role then by[role] = by[role] or {}; table.insert(by[role], tr) end
+  end
+  local out = {}
+  for _, r in ipairs(L.ROLES) do
+    if by[r[1]] then out[#out + 1] = { role = r[1], label = L.role_label(r[1]), color = r[4], tracks = by[r[1]] } end
+  end
+  return out
+end
+
+L.mix = { live = {}, exc = {}, manual = {}, solo = nil, hear_all = false, song = nil, src = nil, t = -1e9 }
+
+-- relit le profil dans la setlist du concert ; true s'il a changé
+function L.load_live(c, force)
+  local M = L.mix
+  local src = c and c.setlist and L.read(c.setlist) or nil
+  if not force and src == M.src then return false end
+  M.src = src
+  M.live, M.exc = {}, {}
+  local d = src and R.json_decode(src)
+  if type(d) == "table" then
+    for _, r in ipairs(type(d.live) == "table" and d.live or {}) do
+      local role = L.norm_role(r)
+      if role then M.live[role] = true end
+    end
+    if type(d.live_exceptions) == "table" then
+      for title, v in pairs(d.live_exceptions) do
+        if type(v) == "table" then
+          M.exc[title] = {}
+          for r, m in pairs(v) do
+            local role = L.norm_role(r)
+            if role and (m == "live" or m == "stem") then M.exc[title][role] = m end
+          end
+        end
+      end
+    end
+  end
+  return true
+end
+
+-- mode du profil pour le rôle dans le morceau i : "live" (stem coupé) ou "stem" (stem joué)
+function L.profile_mode(c, i, role)
+  local s = c and c.songs and c.songs[i]
+  local e = s and L.mix.exc[s.title]
+  if e and e[role] then return e[role] end
+  return L.mix.live[role] and "live" or "stem"
+end
+
+-- le stem du rôle doit-il s'entendre ?
+function L.mix_audible(c, i, role)
+  local M = L.mix
+  if M.hear_all then return true end
+  if M.solo then return role == M.solo end
+  if M.manual[role] ~= nil then return M.manual[role] end
+  return L.profile_mode(c, i, role) ~= "live"
+end
+
+-- mute voulu d'une piste (tient compte de la mesure de décompte de la répétition)
+function L.track_mute_wanted(tr)
+  if L.reh.muted then
+    for _, x in ipairs(L.reh.muted) do if x[1] == tr then return x[2] end end
+  end
+  return reaper.GetMediaTrackInfo_Value(tr, "B_MUTE")
+end
+
+-- pose le mute voulu ; pendant la mesure de décompte, les pistes restent coupées et l'état voulu est
+-- mémorisé pour être rétabli au début de la section
+function L.set_track_mute(tr, v)
+  if L.reh.muted then
+    for _, x in ipairs(L.reh.muted) do
+      if x[1] == tr then x[2] = v; return end
+    end
+  end
+  if reaper.GetMediaTrackInfo_Value(tr, "B_MUTE") ~= v then reaper.SetMediaTrackInfo_Value(tr, "B_MUTE", v) end
+end
+
+function L.mix_publish(c, i)
+  local M = L.mix
+  local parts = {}
+  for _, g in ipairs(L.instr_tracks()) do
+    parts[#parts + 1] = g.role .. "=" .. (L.mix_audible(c, i, g.role) and "1" or "0") ..
+      (L.profile_mode(c, i, g.role) == "live" and "L" or "")
+  end
+  reaper.SetExtState("ReaCue", "mix", table.concat(parts, ",") .. ";" .. (M.solo or "") .. ";" ..
+    (M.hear_all and "1" or "0") .. ";" .. tostring(i or 0), false)
+end
+
+function L.mix_apply(c, i)
+  if not c then return end
+  i = i or L.song_index(c, L.pos())
+  for _, g in ipairs(L.instr_tracks()) do
+    local v = L.mix_audible(c, i, g.role) and 0 or 1
+    for _, tr in ipairs(g.tracks) do L.set_track_mute(tr, v) end
+  end
+  L.mix_publish(c, i)
+end
+
+local function cur_song(c) return L.song_index(c, L.pos()) end
+
+function L.mix_toggle(c, role)
+  role = L.norm_role(role)
+  if not c or not role then return false end
+  local i = cur_song(c)
+  local now = L.mix_audible(c, i, role)
+  local M = L.mix
+  if M.hear_all or M.solo then           -- quitter « tout entendre » / solo en gardant ce qu'on entend
+    for _, g in ipairs(L.instr_tracks()) do M.manual[g.role] = L.mix_audible(c, i, g.role) end
+    M.hear_all, M.solo = false, nil
+  end
+  M.manual[role] = not now
+  L.mix_apply(c, i)
+  return true
+end
+
+function L.mix_solo(c, role)
+  role = L.norm_role(role)
+  if not c or not role then return false end
+  local M = L.mix
+  M.solo = (M.solo == role) and nil or role
+  M.hear_all = false
+  L.mix_apply(c)
+  return true
+end
+
+-- « Tout entendre » : tous les stems ; off = retour au profil (choix manuels effacés)
+function L.mix_hear_all(c, on)
+  local M = L.mix
+  M.hear_all = on and true or false
+  M.solo = nil
+  M.manual = {}
+  L.mix_apply(c)
+  return true
+end
+
+function L.mix_reset(c)
+  local M = L.mix
+  M.manual, M.solo, M.hear_all = {}, nil, false
+  L.mix_apply(c)
+end
+
+-- à chaque tour de boucle : entrée dans un autre morceau, profil modifié (Claude, autre fenêtre)
+function L.mix_tick(c, now)
+  if not c then return false end
+  local M = L.mix
+  local i = cur_song(c)
+  local changed = false
+  now = now or reaper.time_precise()
+  if now - M.t > 1.5 then
+    M.t = now
+    if L.load_live(c) then changed = true end
+  end
+  if i ~= M.song then
+    M.song = i
+    M.manual, M.solo = {}, nil
+    changed = true
+  end
+  if changed then L.mix_apply(c, i) end
+  return changed
+end
+
+-- édition du profil (fenêtre) : écrit la setlist (les autres champs sont gardés)
+local SETLIST_ORDER = { "name", "gap_s", "songs", "live", "live_exceptions" }
+local function save_profile(c)
+  local src = c and c.setlist and L.read(c.setlist)
+  local d = src and R.json_decode(src)
+  if type(d) ~= "table" then return false end
+  local live = R.json_array({})
+  for _, r in ipairs(L.ROLES) do if L.mix.live[r[1]] then live[#live + 1] = r[1] end end
+  d.live = live
+  local exc = {}
+  for title, v in pairs(L.mix.exc) do
+    local e, any = {}, false
+    for role, m in pairs(v) do
+      if (m == "live") ~= (L.mix.live[role] == true) then e[role] = m; any = true end
+    end
+    if any then exc[title] = e end
+  end
+  d.live_exceptions = exc
+  local txt = R.json_encode(d, "  ", SETLIST_ORDER)
+  if not R.write_atomic(c.setlist, txt) then return false end
+  L.mix.src = L.read(c.setlist)
+  return true
+end
+
+function L.live_toggle(c, role)
+  role = L.norm_role(role)
+  if not c or not role then return false end
+  L.load_live(c, true)
+  L.mix.live[role] = not L.mix.live[role] or nil
+  local ok = save_profile(c)
+  L.mix_apply(c)
+  return ok
+end
+
+-- exception du morceau k pour le rôle : nil (profil) → inverse du profil → … (cycle)
+function L.live_exc_cycle(c, k, role)
+  role = L.norm_role(role)
+  local s = c and c.songs[k]
+  if not s or not role then return false end
+  L.load_live(c, true)
+  local e = L.mix.exc[s.title] or {}
+  local base = L.mix.live[role] and "live" or "stem"
+  if e[role] == nil then e[role] = (base == "live") and "stem" or "live" else e[role] = nil end
+  L.mix.exc[s.title] = e
+  local ok = save_profile(c)
+  L.mix_apply(c)
+  return ok
 end
 
 function L._reset_remote() seen, seen_list = {}, {}; last_seen_v = nil; L.regie_seen = nil end

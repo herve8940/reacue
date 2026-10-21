@@ -375,14 +375,25 @@ async def set_sections(sections: list[dict]) -> dict:
     temps une grille à tempo constant (bar1_s = début de la mesure 1 dans le fichier de référence).
     Les noms de sections sont libres, en français ou en anglais (Verse, Chorus…).
     Mode concert : un élément {"concert": {"name": "Concert du 15/11", "songs": ["Song A", "Song B", …],
-    "gap_s": 4}} construit un projet concert à partir des projets déjà préparés de chaque morceau
-    (même effet que build_concert) ; le dernier morceau préparé n'est pas modifié.
+    "gap_s": 4, "live": ["drums", "bass"], "live_exceptions": {"Song B": {"bass": "stem"}}}} construit un
+    projet concert à partir des projets déjà préparés de chaque morceau (même effet que build_concert) ; le
+    dernier morceau préparé n'est pas modifié. « live » = instruments joués en vrai (leurs stems sont coupés).
+    Profil « joué en live » d'un concert existant, sans le reconstruire : un élément
+    {"concert_live": {"concert": "Concert du 15/11", "live": [...], "exceptions": {...}}} (même effet que
+    set_live_profile).
     """
     use_settings_lang()
     conc = next((d["concert"] for d in sections if isinstance(d, dict) and isinstance(d.get("concert"), dict)), None)
     if conc is not None:
         return await build_concert(conc.get("name") or "Concert", list(conc.get("songs") or []),
-                                   float(conc.get("gap_s", 4.0)))
+                                   float(conc.get("gap_s", 4.0)), conc.get("live"),
+                                   conc.get("live_exceptions") or conc.get("exceptions"))
+    prof = next((d["concert_live"] for d in sections if isinstance(d, dict)
+                 and isinstance(d.get("concert_live"), dict)), None)
+    if prof is not None:
+        return await set_live_profile(prof.get("concert") or prof.get("name") or "", prof.get("live"),
+                                      prof.get("exceptions") or prof.get("live_exceptions"),
+                                      bool(prof.get("replace_exceptions")))
     a, item, opts, items = _load()
     # option : {"prompteur_seul": true} = republier seulement le prompteur, sans toucher à REAPER
     only = any(isinstance(d, dict) and (d.get("prompteur_seul") or d.get("publish_only")) for d in sections)
@@ -534,7 +545,8 @@ def _spawn_concert_extras(setlist: Path):
 
 
 @mcp.tool()
-async def build_concert(name: str, songs: list[str], gap_s: float = 4.0) -> dict:
+async def build_concert(name: str, songs: list[str], gap_s: float = 4.0, live: list[str] | None = None,
+                        live_exceptions: dict | None = None) -> dict:
     """Mode concert : enchaîne plusieurs morceaux DÉJÀ PRÉPARÉS dans un seul projet REAPER.
 
     name : nom du concert (fichier <dossier des concerts>/<name>.RPP ; réglage concert_dir,
@@ -546,11 +558,15 @@ async def build_concert(name: str, songs: list[str], gap_s: float = 4.0) -> dict
     concert dans un nouvel onglet, arrête la lecture à la fin de chaque morceau et place le curseur au
     début du suivant (Espace relance). Le prompteur suit tout le concert ; accords, paroles et batterie de
     chaque morceau s'ajoutent en arrière-plan (quelques minutes la première fois).
+    live : instruments joués en vrai par le groupe (« Batterie », « bass »…) : leurs stems sont coupés sur
+    tout le concert ; live_exceptions : exceptions par morceau, ex. {"Song B": {"bass": "stem"}} (la basse
+    reste en stem sur ce morceau) ou {"Song C": ["keys"]} (inverse le profil pour ces instruments).
+    Sans live : le profil déjà enregistré pour ce concert est gardé (reconstruction).
     """
     use_settings_lang()
     from . import concert as conc
     try:
-        res = await asyncio.to_thread(conc.build_concert, name, songs, gap_s)
+        res = await asyncio.to_thread(conc.build_concert, name, songs, gap_s, None, True, live, live_exceptions)
     except (FileNotFoundError, ValueError) as e:
         return {"error": str(e)}
     out = res.summary()
@@ -561,6 +577,27 @@ async def build_concert(name: str, songs: list[str], gap_s: float = 4.0) -> dict
         out["warnings"].append(t("concert_extras_not_spawned", e=e))
     out["ouvrir"] = t("concert_open_hint")
     return out
+
+
+@mcp.tool()
+async def set_live_profile(concert: str, live: list[str] | None = None, exceptions: dict | None = None,
+                           replace_exceptions: bool = False) -> dict:
+    """Mode concert : choisit quels stems sont coupés (« joué en live ») SANS reconstruire le concert.
+
+    concert : nom du concert (ou chemin de son .RPP / .setlist.json).
+    live : instruments joués en vrai par le groupe (ex. ["Batterie", "Basse", "Guitares", "Chant"]) ; leurs
+    stems sont coupés ; None = garder le profil actuel ; [] = tous les stems joués.
+    exceptions : par morceau, ex. {"Song B": {"bass": "stem"}} (stem de basse gardé sur ce morceau),
+    {"Song C": {"keys": "live"}}, {"Song D": null} (retire les exceptions du morceau).
+    replace_exceptions : True = remplace toutes les exceptions au lieu de les compléter.
+    La fenêtre ReaCue (onglet Scène) applique le profil tout de suite ; il est gardé à la reconstruction.
+    """
+    use_settings_lang()
+    from . import concert as conc
+    try:
+        return await asyncio.to_thread(conc.set_live_profile, concert, live, exceptions, replace_exceptions)
+    except (FileNotFoundError, ValueError) as e:
+        return {"error": str(e)}
 
 
 def main():

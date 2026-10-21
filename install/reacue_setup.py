@@ -27,8 +27,11 @@ STARTUP_MARK = "-- ReaCue MCP"
 STARTUP_LINE = 'dofile(reaper.GetResourcePath() .. "/Scripts/ReaCue/ReaCue_Bridge.lua") ' + STARTUP_MARK
 SCRIPT_FILES = ("ReaCue_Bridge.lua", "ReaCue_run.lua", "ReaCue_Preparer.lua", "ReaCue_Republier_prompteur.lua",
                 "ReaCue_stems.lua", "ReaCue_Separer_stems.lua", "ReaCue_concert_lib.lua", "ReaCue_qrcode.lua",
-                "ReaCue_Concert.lua", "ReaCue_Morceau_suivant.lua", "ReaCue_Morceau_precedent.lua")
+                "ReaCue_Concert.lua", "ReaCue_Morceau_suivant.lua", "ReaCue_Morceau_precedent.lua",
+                "ReaCue.lua", "ReaCue_ui.lua", "ReaCue_tab_song.lua", "ReaCue_tab_concert.lua",
+                "ReaCue_tab_stage.lua", "ReaCue_tab_settings.lua")
 ACTIONS = (   # (identifiant de commande, fichier, nom FR, nom EN)
+    ("REACUE_MAIN", "ReaCue.lua", "ReaCue", "ReaCue"),
     ("REACUE_PREPARE", "ReaCue_Preparer.lua", "ReaCue - Préparer le morceau", "ReaCue - Prepare the song"),
     ("REACUE_PUBLISH", "ReaCue_Republier_prompteur.lua", "ReaCue - Republier le prompteur",
      "ReaCue - Republish the prompter"),
@@ -98,12 +101,15 @@ MSG = {
         "      “Web browser interface”, port 8080, OK.\n"
         "      Then, on the phones: http://<this computer's IP>:8080/prompteur.html"),
     "ip": ("Adresse(s) IP probable(s) de cet ordinateur : {ips}", "Likely IP address(es) of this computer: {ips}"),
-    "done": ("Installation terminée. Redémarre REAPER : le pont se lance tout seul, et les actions\n"
-             "« ReaCue - Préparer le morceau », « ReaCue - Republier le prompteur », « ReaCue - Séparer les stems »\n"
-             "et « ReaCue - Concert » (+ Morceau suivant / précédent) sont dans la liste des actions.",
-             "Installation complete. Restart REAPER: the bridge starts by itself, and the actions\n"
-             "“ReaCue - Prepare the song”, “ReaCue - Republish the prompter”, “ReaCue - Separate stems”\n"
-             "and “ReaCue - Concert” (+ Next / Previous song) are in the action list."),
+    "done": ("Installation terminée. Redémarre REAPER : le pont se lance tout seul, et l'action « ReaCue »\n"
+             "(fenêtre en 4 onglets : Morceau, Concert, Scène, Réglages) est dans la liste des actions — mets-la\n"
+             "dans la barre d'outils. Restent aussi, pour les raccourcis : « ReaCue - Préparer le morceau »,\n"
+             "« ReaCue - Republier le prompteur », « ReaCue - Séparer les stems », « ReaCue - Concert »\n"
+             "(+ Morceau suivant / précédent).",
+             "Installation complete. Restart REAPER: the bridge starts by itself, and the “ReaCue” action\n"
+             "(4-tab window: Song, Concert, Stage, Settings) is in the action list — put it in the toolbar.\n"
+             "Also there, for shortcuts: “ReaCue - Prepare the song”, “ReaCue - Republish the prompter”,\n"
+             "“ReaCue - Separate stems”, “ReaCue - Concert” (+ Next / Previous song)."),
     "uninstalled": ("Désinstallation terminée. Données conservées (réglages, dernier morceau) : {d}\n"
                     "(--purge pour les supprimer). Le dossier de ReaCue lui-même peut être supprimé à la main.",
                     "Uninstall complete. Data kept (settings, last song): {d}\n"

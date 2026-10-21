@@ -181,64 +181,78 @@ function S.import(R, item, p)
   return made
 end
 
-function S.run(script_dir)
-  local R = dofile(script_dir .. "/ReaCue_run.lua")
-  local title = S.tr(R, "title")
-  local function box(msg) reaper.ShowMessageBox(msg, title, 0) end
-
-  local item = S.pick_item()
-  if not item then box(S.tr(R, "no_item")) return end
+-- séparation sans fenêtre (fenêtre ReaCue) : renvoie un « job », ou nil + message
+--   job.ready = true : stems déjà séparés (import immédiat avec S.finish)
+function S.start(R, script_dir, item)
+  item = item or S.pick_item()
+  if not item then return nil, S.tr(R, "no_item") end
   local take = reaper.GetActiveTake(item)
   local file = take and source_file(take) or ""
-  if file == "" or not exists(file) then box(string.format(S.tr(R, "no_file"), file)) return end
-
+  if file == "" or not exists(file) then return nil, string.format(S.tr(R, "no_file"), file) end
   local model = S.model(R)
   local p = S.paths(file, model)
-  local function finish_import()
-    local made = S.import(R, item, p)
-    box(string.format(S.tr(R, "done"), model, table.concat(made, ", "), p.outdir))
-  end
-  if S.ready(p) then finish_import() return end
-
+  local job = { item = item, p = p, model = model, t0 = reaper.time_precise and reaper.time_precise() or os.clock() }
+  if S.ready(p) then job.ready = true return job end
   local windows = R.is_windows()
   local dir = R.install_dir(script_dir)
   local py = S.python(dir, windows)
-  if not exists(py) then box(string.format(S.tr(R, "not_installed"), py)) return end
-
+  if not exists(py) then return nil, string.format(S.tr(R, "not_installed"), py) end
   local st = read(p.status)
   if st and R.jfield(st, "state") == "running" and os.time() - (R.jfield(st, "time") or 0) < 3600 then
-    box(S.tr(R, "busy"))
-    return
+    return nil, S.tr(R, "busy")
   end
   reaper.RecursiveCreateDirectory(p.outroot, 0)
   os.remove(p.status)
   local line = S.command(R, dir, py, windows, file, p.outroot, model)
   if windows then
-    if reaper.ExecProcess(line, -1) == nil then box(string.format(S.tr(R, "launch_failed"), line)) return end
+    if reaper.ExecProcess(line, -1) == nil then return nil, string.format(S.tr(R, "launch_failed"), line) end
   else
     os.execute(line)
   end
+  return job
+end
 
-  local t0 = reaper.time_precise()
+-- état du job : "running", pct | "ready" | "error", message
+function S.poll(R, job)
+  local p = job.p
+  if job.ready then return "ready" end
+  local el = reaper.time_precise() - job.t0
+  local s = read(p.status)
+  local state = s and R.jfield(s, "state")
+  if state == "done" and S.ready(p) then job.ready = true return "ready" end
+  if state == "error" or state == "done" then
+    local lg = read(p.log) or ""
+    return "error", string.format(S.tr(R, "failed"), R.jfield(s, "message") or "?", lg:sub(-700), p.log)
+  end
+  if not s and el > 90 then return "error", string.format(S.tr(R, "no_start"), p.log) end
+  if el > 3600 then return "error", string.format(S.tr(R, "timeout"), p.log) end
+  return "running", S.progress(read(p.log))
+end
+
+-- import des stems séparés ; renvoie le message de fin
+function S.finish(R, job)
+  local made = S.import(R, job.item, job.p)
+  return string.format(S.tr(R, "done"), job.model, table.concat(made, ", "), job.p.outdir)
+end
+
+function S.run(script_dir)
+  local R = dofile(script_dir .. "/ReaCue_run.lua")
+  local title = S.tr(R, "title")
+  local function box(msg) reaper.ShowMessageBox(msg, title, 0) end
+  local job, err = S.start(R, script_dir)
+  if not job then box(err) return end
+  if job.ready then box(S.finish(R, job)) return end
   local win = true
   gfx.init(title, 500, 120)
   local function close() if win then gfx.quit(); win = false end end
   local function loop()
-    local el = reaper.time_precise() - t0
-    local s = read(p.status)
-    local state = s and R.jfield(s, "state")
-    if state == "done" and S.ready(p) then close() finish_import() return end
-    if state == "error" or (state == "done") then
-      close()
-      local lg = read(p.log) or ""
-      box(string.format(S.tr(R, "failed"), R.jfield(s, "message") or "?", lg:sub(-700), p.log))
-      return
-    end
-    if not s and el > 90 then close() box(string.format(S.tr(R, "no_start"), p.log)) return end
-    if el > 3600 then close() box(string.format(S.tr(R, "timeout"), p.log)) return end
+    local el = reaper.time_precise() - job.t0
+    local state, v = S.poll(R, job)
+    if state == "ready" then close() box(S.finish(R, job)) return end
+    if state == "error" then close() box(v) return end
     if win then
       if gfx.getchar() < 0 then win = false else
-        local pct = S.progress(read(p.log))
+        local pct = v or 0
         gfx.set(0.08, 0.09, 0.11, 1); gfx.rect(0, 0, gfx.w, gfx.h, 1)
         gfx.set(1, 1, 1, 1); gfx.setfont(1, "Arial", 20)
         gfx.x, gfx.y = 20, 18

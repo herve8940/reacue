@@ -586,14 +586,18 @@ class ConcertResult:
     songs: list[dict]
     warnings: list[str]
     song_srcs: list[SongSrc] = field(default_factory=list, repr=False)
+    live: list[str] = field(default_factory=list)
+    live_exceptions: dict = field(default_factory=dict)
 
     def summary(self) -> dict:
-        return {"concert": self.name, "projet": str(self.rpp), "setlist": str(self.setlist),
-                "morceaux": [{"#": d["n"], "titre": d["title"], "debut_s": round(d["start"], 2),
-                              "bpm": d["bpm"], "mesures": d["bars"], "sections": d["sections"],
-                              "fin_s": round(d["stop"], 2)} for d in self.songs],
-                "duree_s": round(self.songs[-1]["stop"], 1) if self.songs else 0,
-                "warnings": self.warnings}
+        out = {"concert": self.name, "projet": str(self.rpp), "setlist": str(self.setlist),
+               "morceaux": [{"#": d["n"], "titre": d["title"], "debut_s": round(d["start"], 2),
+                             "bpm": d["bpm"], "mesures": d["bars"], "sections": d["sections"],
+                             "fin_s": round(d["stop"], 2)} for d in self.songs],
+               "duree_s": round(self.songs[-1]["stop"], 1) if self.songs else 0,
+               "warnings": self.warnings}
+        out.update(live_summary(self.live, self.live_exceptions))
+        return out
 
 
 def _fingerprint(path) -> dict:
@@ -607,8 +611,12 @@ def _fingerprint(path) -> dict:
 
 
 def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | None = None,
-                  publish: bool = True) -> ConcertResult:
-    """Écrit le projet concert (et ses fichiers compagnons) ; phase rapide, sans analyse audio."""
+                  publish: bool = True, live=None, live_exceptions=None) -> ConcertResult:
+    """Écrit le projet concert (et ses fichiers compagnons) ; phase rapide, sans analyse audio.
+
+    live : instruments joués en vrai par le groupe (leurs stems sont coupés) ; live_exceptions :
+    exceptions par morceau ({"Titre": {"bass": "stem"}}). None = profil déjà enregistré dans la
+    setlist du concert (reconstruction), sinon aucun."""
     if not songs:
         raise ValueError(_t("concert_empty"))
     out_dir = Path(out_dir or concert_dir())
@@ -743,16 +751,25 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
     setlist = out_dir / f"{slug}.setlist.json"
     sidecar = out_dir / f"{slug}.concert.lua"
     prompter_file = out_dir / f"{slug}.prompteur.json"
+    # profil « joué en live » : donné, sinon celui déjà enregistré dans la setlist (reconstruction)
+    old = {}
+    if setlist.exists() and (live is None or live_exceptions is None):
+        try:
+            old = json.loads(setlist.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            old = {}
+    titles = [e["title"] for e in entries]
+    live_l = norm_live(old.get("live") if live is None else live)
+    exc = norm_exceptions(old.get("live_exceptions") if live_exceptions is None else live_exceptions, titles, live_l)
     tmp = rpp.with_suffix(".rpp-tmp")
     tmp.write_text(dump_rpp(root) + "\n", encoding="utf-8")
     os.replace(tmp, rpp)
-    setlist.write_text(json.dumps({"name": name, "gap_s": gap_s, "songs": entries}, ensure_ascii=False, indent=2),
-                       encoding="utf-8")
+    _write_json(setlist, {"name": name, "gap_s": gap_s, "songs": entries, "live": live_l, "live_exceptions": exc})
     side = {"version": 2, "name": name, "rpp": str(rpp), "setlist": str(setlist), "prompter": str(prompter_file),
             "built": int(time.time()), "songs": sidecar_songs}
     sidecar.write_text("-- ReaCue : données du concert (lues par ReaCue_Concert.lua) / concert data\nreturn " + to_lua(side) + "\n",
                        encoding="utf-8")
-    res = ConcertResult(name, rpp, setlist, sidecar, prompter_file, sidecar_songs, warnings, srcs)
+    res = ConcertResult(name, rpp, setlist, sidecar, prompter_file, sidecar_songs, warnings, srcs, live_l, exc)
     # prompteur : structure tout de suite ; accords, paroles, batterie ensuite (concert_extras)
     try:
         song_json = concert_prompter(res, extras=False)
@@ -884,7 +901,8 @@ def build_from_setlist(path, publish: bool = True) -> ConcertResult:
     d = load_setlist(path)
     out_dir = Path(path).expanduser().parent
     return build_concert(d.get("name") or Path(path).stem.replace(".setlist", ""), d["songs"],
-                         float(d.get("gap_s", 4.0)), out_dir=out_dir, publish=publish)
+                         float(d.get("gap_s", 4.0)), out_dir=out_dir, publish=publish,
+                         live=d.get("live") or [], live_exceptions=d.get("live_exceptions") or {})
 
 
 def extras_from_setlist(path, log=None) -> dict:
@@ -917,3 +935,166 @@ def _reload(setlist_path) -> ConcertResult:
         pos += s.next_start
     return ConcertResult(d.get("name") or slug, out_dir / f"{slug}.RPP", Path(setlist_path).expanduser(),
                          out_dir / f"{slug}.concert.lua", out_dir / f"{slug}.prompteur.json", side, warnings, srcs)
+
+
+# --------------------------------------------------------------------------- #
+# « Joué en live » : stems coupés instrument par instrument
+# --------------------------------------------------------------------------- #
+# rôles des pistes communes du concert ; noms acceptés (FR, EN, variantes)
+LIVE_ROLES = [r for r, _, _, _ in ROLE_TRACKS_I18N]
+_ROLE_ALIASES = {
+    "vocals": ("vocals", "vocal", "voice", "voix", "chant", "chanteur", "chanteuse", "vox", "singer"),
+    "drums": ("drums", "drum", "batterie", "batteur", "batt", "kit"),
+    "bass": ("bass", "basse", "bassiste"),
+    "guitars": ("guitars", "guitar", "guitares", "guitare", "guitare rythmique", "rhythm guitar", "rhythm gtr", "gtr",
+                "guitare rythm", "guitariste"),
+    "lead_guitar": ("lead guitar", "lead_guitar", "guitare solo", "lead", "solo guitar", "lead gtr", "guitare lead"),
+    "keys": ("keys", "claviers", "clavier", "piano", "synth", "keyboards", "keyboard", "orgue", "organ"),
+    "other": ("other", "autres", "autre", "others"),
+    "mix": ("mix",),
+}
+
+
+def norm_role(x) -> str:
+    """Rôle (« drums »…) à partir d'un nom FR/EN (« Batterie », « Lead guitar »…) ; ValueError sinon."""
+    n = _norm(x).replace("_", " ")
+    for role, names in _ROLE_ALIASES.items():
+        if n == role.replace("_", " ") or n in (_norm(a) for a in names):
+            return role
+    raise ValueError(_t("concert_live_role", r=x, roles=", ".join(LIVE_ROLES)))
+
+
+def norm_live(live) -> list[str]:
+    """Liste ordonnée et sans doublon des rôles joués en live."""
+    if not live:
+        return []
+    if isinstance(live, str):
+        live = [x for x in re.split(r"[,;/]+", live) if x.strip()]
+    got = {norm_role(x) for x in live}
+    return [r for r in LIVE_ROLES if r in got]
+
+
+def _norm_mode(v) -> str | None:
+    if v is True:
+        return "live"
+    if v is False:
+        return "stem"
+    if v is None:
+        return None
+    n = _norm(v)
+    if n in ("live", "l", "joue en live", "played live", "coupe", "muted", "mute", "cut", "off"):
+        return "live"
+    if n in ("stem", "s", "joue", "played", "on", "stem joue", "unmuted", "garde", "keep"):
+        return "stem"
+    if n in ("", "default", "defaut", "none", "auto", "profil", "profile"):
+        return None
+    raise ValueError(_t("concert_live_mode", v=v))
+
+
+def _song_key(k, titles: list[str]) -> str:
+    if isinstance(k, int) or (isinstance(k, str) and k.strip().isdigit()):
+        i = int(k)
+        if 1 <= i <= len(titles):
+            return titles[i - 1]
+    want = _norm(k)
+    for t_ in titles:
+        if _norm(t_) == want:
+            return t_
+    for t_ in titles:
+        if want and want in _norm(t_):
+            return t_
+    raise ValueError(_t("concert_live_song", s=k, songs=", ".join(titles)))
+
+
+def norm_exceptions(exc, titles: list[str], live: list[str] | None = None, base: dict | None = None) -> dict:
+    """{titre: {rôle: "live"|"stem"}} ; une liste de rôles = l'inverse du profil du concert pour ce morceau.
+    Les exceptions identiques au profil sont retirées. `base` : exceptions existantes à compléter."""
+    live = live or []
+    out = {k: dict(v) for k, v in (base or {}).items() if k in titles}
+    for k, v in (exc or {}).items():
+        try:
+            title = _song_key(k, titles)
+        except ValueError:
+            if base is None and not titles:
+                continue
+            raise
+        cur = out.setdefault(title, {})
+        if isinstance(v, (list, tuple, set, str)):
+            items = [v] if isinstance(v, str) else list(v)
+            for r in items:
+                role = norm_role(r)
+                cur[role] = "stem" if role in live else "live"
+        elif isinstance(v, dict):
+            for r, m in v.items():
+                role = norm_role(r)
+                mode = _norm_mode(m)
+                if mode is None:
+                    cur.pop(role, None)
+                else:
+                    cur[role] = mode
+        elif v is None:
+            out.pop(title, None)
+            continue
+        else:
+            raise ValueError(_t("concert_live_mode", v=v))
+    # retire ce qui ne change rien par rapport au profil
+    clean = {}
+    for title in titles:
+        d = {r: m for r, m in (out.get(title) or {}).items() if (m == "live") != (r in live)}
+        if d:
+            clean[title] = {r: d[r] for r in LIVE_ROLES if r in d}
+    return clean
+
+
+def live_summary(live: list[str], exc: dict) -> dict:
+    names = {r: n for r, n, _ in role_tracks()}
+    out = {"joue_en_live": [names.get(r, r) for r in live]}
+    if exc:
+        out["exceptions_par_morceau"] = {k: {names.get(r, r): m for r, m in v.items()} for k, v in exc.items()}
+    return out
+
+
+def _write_json(path: Path, data: dict):
+    tmp = Path(str(path) + ".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def setlist_path(name_or_path) -> Path:
+    """Fichier <nom>.setlist.json d'un concert (nom, chemin du setlist, du RPP ou du .concert.lua)."""
+    p = Path(str(name_or_path)).expanduser()
+    if p.suffix.lower() == ".json" and p.exists():
+        return p
+    if p.suffix.lower() in (".rpp", ".lua") and p.parent.exists():
+        stem = re.sub(r"\.concert$", "", p.stem)
+        cand = p.parent / f"{stem}.setlist.json"
+        if cand.exists():
+            return cand
+    cand = concert_dir() / f"{_slug(str(name_or_path))}.setlist.json"
+    if cand.exists():
+        return cand
+    want = _norm(name_or_path)
+    if concert_dir().exists():
+        for f in concert_dir().glob("*.setlist.json"):
+            if _norm(f.name[:-len(".setlist.json")]) == want:
+                return f
+    raise FileNotFoundError(_t("concert_not_found", name=name_or_path, d=concert_dir()))
+
+
+def set_live_profile(name_or_path, live=None, exceptions=None, replace_exceptions: bool = False) -> dict:
+    """Modifie le profil « joué en live » d'un concert existant SANS le reconstruire : la fenêtre
+    « ReaCue - Concert » relit la setlist et applique les coupures aussitôt."""
+    sp = setlist_path(name_or_path)
+    d = json.loads(sp.read_text(encoding="utf-8"))
+    titles = [e.get("title") if isinstance(e, dict) else _title_from(Path(str(e))) for e in d.get("songs") or []]
+    titles = [x for x in titles if x]
+    live_l = norm_live(d.get("live")) if live is None else norm_live(live)
+    base = {} if replace_exceptions else (d.get("live_exceptions") or {})
+    # exceptions existantes exprimées par rapport à l'ancien profil : on garde leur sens absolu
+    exc = norm_exceptions(exceptions or {}, titles, live_l, base=base)
+    d["live"], d["live_exceptions"] = live_l, exc
+    _write_json(sp, d)
+    out = {"concert": d.get("name") or sp.stem, "setlist": str(sp)}
+    out.update(live_summary(live_l, exc))
+    out["info"] = _t("concert_live_applied")
+    return out
