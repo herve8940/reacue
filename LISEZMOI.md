@@ -17,7 +17,7 @@ langage naturel avec Claude (serveur MCP).
 > **Nouveau sur ReaCue ? Suis le tutoriel pas à pas : [docs/TUTORIEL_fr.md](docs/TUTORIEL_fr.md)**
 > (anglais : [docs/TUTORIAL_en.md](docs/TUTORIAL_en.md)).
 
-> **État : 0.11.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
+> **État : 0.12.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
 
 | Batterie | Basse | Chant | Guitare |
@@ -66,7 +66,9 @@ Dans REAPER, à partir de l'audio déjà présent dans le projet :
   abonnement ni envoi en ligne — puis ReaCue prépare le morceau à partir des stems.
 - **Mode concert** : plusieurs morceaux préparés enchaînés dans un seul projet, arrêt automatique à la fin
   de chaque morceau, une fenêtre *ReaCue - Concert* pour piloter le concert, un **QR code** pour les
-  musiciens et une télécommande **Régie** sur téléphone (code PIN).
+  musiciens et une télécommande **Régie** sur téléphone (code PIN) ; un bouton **Vérifier** (contrôle
+  avant concert, avec corrections en un clic) et un mode **Répétition** : boucler une section ou une plage
+  avec une mesure de décompte avant chaque reprise, vitesse 100 à 70 %.
 
 Sur les téléphones et tablettes des musiciens (prompteur web) :
 
@@ -301,6 +303,24 @@ protection contre le rejeu). ⚠️ Le PIN évite les fausses manipulations, **p
 sur le même réseau peut joindre directement l'interface web de REAPER (`/_/…`). En concert, utilise un Wi-Fi
 réservé au groupe.
 
+**Vérifier (contrôle avant concert)** — le bouton **Vérifier** de la fenêtre Concert liste, avec une pastille
+verte / orange / rouge : fichiers audio lisibles (pas d'« OFFLINE »), fichiers des annonces présents,
+morceaux préparés (structure et tempo), concert à jour (aucun projet de morceau modifié depuis la
+construction — empreinte enregistrée à la construction), pont ReaCue, interface web de REAPER, adresse
+réseau, carte son active, sorties du click et des annonces (sorties matérielles existantes, piste non
+coupée), prompteur publié, téléphones Régie vus. Un bouton **Corriger** apparaît quand c'est possible :
+remettre les médias en ligne, reconstruire le concert, republier le prompteur. Disponible aussi sans concert
+ouvert (partie système seulement).
+
+**Mode répétition** — le bouton **Répétition** (fenêtre ou téléphone Régie) coupe l'arrêt automatique.
+Touche une section pour la **faire boucler** ; touche une 2e section du même morceau pour boucler toute la
+plage (ex. Couplet 2 → Refrain 2). Avant le début de la boucle et **avant chaque reprise, une mesure de
+décompte** est jouée avec le click et les annonces seuls (les autres pistes sont coupées pendant cette
+mesure), au tempo de cet endroit du morceau. **Vitesse** 100 / 90 / 80 / 70 % (hauteur préservée ; click,
+annonces et prompteur suivent). *Boucle off* arrête la boucle ; *Quitter* (ou sortir de la répétition depuis
+le téléphone) remet tout comme avant : vitesse 100 %, arrêt automatique, répétition et sélection de temps de
+REAPER.
+
 Pas à pas : [tutoriel, chapitre concert](docs/TUTORIEL_fr.md#16-mode-concert--plusieurs-morceaux-dans-un-projet).
 
 ## Paroles
@@ -420,6 +440,15 @@ nouvelle conversation.
   Précédent / Suivant / Début arrêtent la lecture et placent le curseur (relance avec Lecture) ;
   *Reconstruire* écrase les modifications faites directement dans le projet concert. Le PIN de la Régie
   n'est pas une barrière de sécurité.
+- **Boucle de répétition** : pilotée par la fenêtre Concert (pas par la boucle de REAPER), donc une reprise
+  saute avec la latence habituelle d'un déplacement dans REAPER (quelques millisecondes) ; les pistes des
+  instruments sont coupées pendant la mesure de décompte par la fenêtre (si REAPER est quitté pendant cette
+  mesure, enlève le mute à la main). Les vitesses sous 100 % utilisent la vitesse de lecture de REAPER avec
+  préservation de la hauteur (qualité selon le mode d'étirement du projet).
+- **Vérifier** : « concert à jour » compare chaque projet de morceau à l'empreinte prise à la construction du
+  concert — enregistrer un projet de morceau sans changement musical peut quand même le marquer comme
+  modifié ; les médias hors ligne sont repérés par le fichier et sa fréquence d'échantillonnage (REAPER ne
+  donne pas directement l'état OFFLINE).
 
 ## Dépannage / FAQ
 

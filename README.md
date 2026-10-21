@@ -18,7 +18,7 @@ language with Claude (MCP server).
 > **New to ReaCue? Follow the step-by-step tutorial: [docs/TUTORIAL_en.md](docs/TUTORIAL_en.md)**
 > (French: [docs/TUTORIEL_fr.md](docs/TUTORIEL_fr.md)).
 
-> **Status: 0.11.0 beta.** Developed and used on macOS. Windows support is new and has **not yet been
+> **Status: 0.12.0 beta.** Developed and used on macOS. Windows support is new and has **not yet been
 > tested on a real machine** — feedback welcome.
 
 | Drums | Bass | Vocals | Guitar |
@@ -67,7 +67,8 @@ In REAPER, from the audio already in your project:
   subscription and no upload — then ReaCue prepares the song from the stems.
 - **Concert mode**: several prepared songs chained in one project, automatic stop at the end of each song,
   a *ReaCue - Concert* window to drive the show, a **QR code** for the musicians and a **Stage control**
-  remote on a phone (PIN code).
+  remote on a phone (PIN code); a **Check** button (pre-show check with one-click fixes) and a
+  **Rehearsal** mode: loop a section or a range with a one-bar count-in before each repeat, 100–70 % speed.
 
 On the musicians' phones and tablets (web prompter):
 
@@ -294,6 +295,22 @@ with the PIN button, remembered on the phone). Commands go through REAPER's web 
 ⚠️ The PIN prevents mistakes, **not attacks**: anyone on the same network can reach REAPER's web interface
 (`/_/…`) directly. Use a Wi-Fi reserved for the band at gigs.
 
+**Check (pre-show check)** — the **Check** button of the Concert window lists, with a green / orange / red
+dot: audio files readable (no “OFFLINE”), spoken cue files present, songs prepared (structure and tempo),
+concert up to date (no song project changed since the concert was built — fingerprint stored at build
+time), ReaCue bridge, REAPER web interface, network address, audio device running, click and cue outputs
+(hardware outputs that exist, track not muted), prompter published, Stage control phones seen. A **Fix**
+button appears when possible: set all media online, rebuild the concert, republish the prompter. Also
+available with no concert open (system part only).
+
+**Rehearsal mode** — the **Rehearsal** button (window or Stage control phone) turns the automatic stop off.
+Tap a section to **loop** it; tap a second section of the same song to loop the whole range (e.g. Verse 2 →
+Chorus 2). Before the loop starts and **before each repeat, one bar of count-in** is played with the click
+and the spoken cues only (the other tracks are muted during that bar), at the tempo of that point of the
+song. **Speed** 100 / 90 / 80 / 70 % (pitch preserved; click, cues and prompter follow). *Loop off* stops
+looping; *Exit* (or leaving rehearsal from the phone) restores everything: speed 100 %, automatic stop,
+REAPER's repeat and time selection as they were.
+
 Step by step: [tutorial, concert chapter](docs/TUTORIAL_en.md#16-concert-mode-several-songs-in-one-project).
 
 ## Lyrics
@@ -412,6 +429,13 @@ tools are loaded when a conversation starts: after updating ReaCue, start a new 
 - **Concert mode**: the automatic stop and the phone remote need the *ReaCue - Concert* window open;
   Previous / Next / Start stop playback and place the cursor (press Play again); *Rebuild* overwrites
   changes made directly in the concert project. The Stage control PIN is not a security barrier.
+- **Rehearsal loop**: driven by the Concert window (not REAPER's own loop), so a repeat jumps back with
+  REAPER's usual seek latency (a few milliseconds); the instrument tracks are muted during the count-in bar
+  by the window (if REAPER quits during that bar, unmute them by hand). Speeds below 100 % use REAPER's
+  playrate with pitch preservation (quality depends on the stretch mode of the project).
+- **Check**: “concert up to date” compares each song project with the fingerprint taken when the concert
+  was built — saving a song project without musical changes can still mark it as changed; offline media are
+  detected from the file and its sample rate (REAPER does not expose the OFFLINE flag directly).
 
 ## Troubleshooting / FAQ
 

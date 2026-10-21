@@ -567,16 +567,66 @@ the PIN: **PIN** button of the Concert window (4 digits).
 
 Changes made directly in the concert project are **overwritten** by the rebuild.
 
+### 16.7 Check before playing
+
+Before the soundcheck or the show, click **Check** in the Concert window.
+
+1. A list appears, with a summary at the top: **All set ✓** (green), **N thing(s) to watch** (orange) or
+   **N problem(s)** (red).
+2. Each line has a dot and a short detail:
+
+| Line | What is checked | If it is not green |
+|---|---|---|
+| Audio files | every file of the concert is readable (not “OFFLINE”) | **Fix** sets all media online; otherwise see Troubleshooting (OFFLINE) |
+| Spoken cues | the cue files are present | **Fix** rebuilds the concert |
+| Prepared songs | each song has a structure and a tempo | prepare the song in its project, save, rebuild |
+| Concert up to date | no song project changed since the build | **Fix** rebuilds the concert |
+| ReaCue bridge | REAPER answers ReaCue | restart REAPER |
+| Web interface | the prompter is served (port) | step 6 |
+| Network address | the computer has an address (for the QR) | connect it to the band's Wi-Fi |
+| Audio device | REAPER plays on an audio device | *Preferences → Audio → Device* |
+| Click and cue outputs | the outputs chosen for CLICK / VOICE exist, tracks not muted | plug the right audio device or change `click_hw_output` (step 14) |
+| Phones' prompter | the page and the concert are published | **Fix** republishes them |
+| Stage control phones | a Stage control phone was seen recently | (information only) |
+
+3. **Check again** runs the list again; **Close** (or Esc) goes back to the Concert window.
+
+> With no concert open, **Check** only covers the system part (bridge, web interface, address, audio
+> device).
+
 ---
 
 ## 17. At rehearsal
+
+### 17.1 The concert's rehearsal mode (loop and slow-down)
+
+In an open concert, with the **ReaCue - Concert** window:
+
+1. Click **Rehearsal** (or, on the Stage control phone, tap **Rehearsal**). An orange **REHEARSAL** banner
+   appears; the automatic stop between songs is off.
+2. **Loop a section**: tap its pill (in the window or on the phone). Playback starts **one bar before** the
+   section: during that bar you only hear the **click and the spoken cues** (“one two three four”), then the
+   section plays, and at its end it **starts again with the same count-in bar**, endlessly.
+3. **Loop several sections**: tap a 2nd section of the same song (e.g. *Verse 2* then *Chorus 2*): the loop
+   goes from the start of one to the end of the other. Looped sections are underlined in orange. A 3rd tap
+   starts a single-section loop again.
+4. **Slow down**: buttons **100 %**, **90 %**, **80 %**, **70 %**. The pitch does not change; the click, the
+   cues and the prompter follow.
+5. **Loop off** stops looping (playback goes on). **Exit** (in the window) or **Rehearsal ✓** (on the phone)
+   leaves the mode: speed 100 %, automatic stop back on, REAPER settings restored.
+
+> During the count-in bar, the instrument tracks are muted and then restored automatically. If you stop
+> playback during that bar, they are restored too.
+
+### 17.2 Rehearsing a single song (no concert)
 
 - Open the song's project, put the cursor at the very beginning (**Home**), press **Space**.
 - The musicians hear (or see on the prompter) the count-in, then the cues before each section.
 - To restart at a section: **click in the ruler** at the start of its region, then **Space**. The prompter
   follows.
 - To loop a part: click the region (region lane at the top) to select it, then turn repeat on (**R**, or
-  the loop button of the transport).
+  the loop button of the transport). (The count-in bar before each repeat only exists in the concert's
+  rehearsal mode, 17.1: a one-song concert is enough.)
 - Only REAPER needs to run during rehearsal: ReaCue and Claude are not needed.
 
 ---
@@ -596,7 +646,9 @@ Changes made directly in the concert project are **overwritten** by the rebuild.
 | A song of the concert has no sections | Its project was saved before the preparation | Open its project, *Prepare*, save, then *Setlist → Rebuild the concert* |
 | Phone (Stage control): “Open the ReaCue - Concert window…” | Concert window closed | Run the **ReaCue - Concert** action on the computer |
 | Stage control: “Wrong PIN code” | Wrong code | Type the code shown by the **PIN** button of the Concert window |
-| Playback no longer stops between songs | Concert window closed | Open **ReaCue - Concert** again (even docked) |
+| Playback no longer stops between songs | Concert window closed, or rehearsal mode on | Open **ReaCue - Concert** again (even docked); otherwise **Exit** rehearsal |
+| **Check** shows red | See the line concerned | Table of step 16.7; **Fix** when the button is offered |
+| After a rehearsal, some tracks stay muted | REAPER was closed during the count-in bar | Unmute the tracks (**M** button); the window normally restores them by itself |
 | Logs | — | Preparation: `ReaCueMCP/cli.log` (REAPER resource folder); separation: `…-stems/demucs.log` next to the song |
 
 ---
@@ -618,5 +670,7 @@ Changes made directly in the concert project are **overwritten** by the rebuild.
 1. Each song prepared **and saved** in its own project.
 2. Claude: “Build a concert “Saturday” with: …” (or the command line, step 16.1).
 3. REAPER: **ReaCue - Concert** → click the concert (new tab).
-4. **QR** → the musicians scan it; the person in charge picks **Stage control** and types the PIN.
-5. **Space** for each song; playback stops by itself at the end of each one.
+4. **Check** → everything should be green (otherwise **Fix**).
+5. **QR** → the musicians scan it; the person in charge picks **Stage control** and types the PIN.
+6. **Space** for each song; playback stops by itself at the end of each one.
+7. At rehearsal: **Rehearsal**, then a section to loop it (2nd section = range), speed if needed.

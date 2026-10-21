@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.12.0-beta — 2026-10
+
+### Added / Ajouts
+- **Check / Vérifier** (pre-show check) in the *ReaCue - Concert* window: audio files readable (not offline),
+  spoken cue files present, songs prepared (structure and tempo), concert up to date (fingerprint — size and
+  Adler-32 — of each song project stored at build time and compared), ReaCue bridge, REAPER web interface,
+  network address, audio device running, click / cue outputs (existing hardware outputs, not muted, routed
+  somewhere), prompter published, Stage control phones seen (the Stage control page writes
+  `ReaCue/remote_seen` every few seconds). Green / orange / red summary; **Fix** buttons: set all media online,
+  rebuild the concert, republish the prompter. Also available with no concert open (system part).
+  Contrôle avant concert avec corrections en un clic.
+- **Rehearsal mode / Mode répétition** (window and Stage control phone): automatic stop off; tap a section to
+  **loop** it, a 2nd section of the same song to loop the range; **one bar of count-in** (click and spoken
+  cues only, the other tracks muted during that bar) before the loop starts and before each repeat, at the
+  tempo of that point (bar length from REAPER's tempo map); speed 100 / 90 / 80 / 70 % (master playrate,
+  pitch preserved); *Loop off*; leaving the mode restores speed, automatic stop, REAPER's repeat, time
+  selection and preserve-pitch option. Remote commands `reh`, `loop`, `loopoff`, `rate`; state published in
+  `ReaCue/rehearsal` for the phones.
+  Boucle avec une mesure de décompte avant chaque reprise, ralenti.
+- Tests: `tests/test_check_rehearsal.py` (checks with offline / missing media, missing outputs, stale or old
+  concert, unprepared song, fixes, window check view FR/EN; loop on a section and a range, count-in bar at the
+  right tempo, muting, restart, stop during the count-in, speed, exit, remote commands, no auto stop in
+  rehearsal), Stage control page extended (rehearsal, loop, speed, `remote_seen`) in FR and EN.
+
+### Changed / Modifications
+- Concert sidecar `.concert.lua` version 2: build time and a fingerprint of each song project.
+- Concert window: tool row on its own line (status, then Check / Rehearsal / Setlist / PIN / QR); text
+  truncation now cuts whole UTF-8 characters.
+- `ReaCue_run.lua` exposes `bridge_alive`.
+- Package version `0.12.0b1`.
+
 ## 0.11.0-beta — 2026-10
 
 ### Added / Ajouts

@@ -581,15 +581,67 @@ Pour changer le PIN : bouton **PIN** de la fenêtre Concert (4 chiffres).
 
 Les modifications faites directement dans le projet concert sont **écrasées** par la reconstruction.
 
+### 16.7 Vérifier avant de jouer
+
+Avant la balance ou le concert, clique sur **Vérifier** dans la fenêtre Concert.
+
+1. Une liste s'affiche, avec un résumé en haut : **Tout est prêt ✓** (vert), **N point(s) à surveiller**
+   (orange) ou **N problème(s)** (rouge).
+2. Chaque ligne a une pastille et un détail court :
+
+| Ligne | Ce qui est vérifié | Si ce n'est pas vert |
+|---|---|---|
+| Fichiers audio | chaque fichier du concert est lisible (pas « OFFLINE ») | **Corriger** remet les médias en ligne ; sinon voir Dépannage (OFFLINE) |
+| Annonces vocales | les fichiers des annonces sont présents | **Corriger** reconstruit le concert |
+| Morceaux préparés | chaque morceau a une structure et un tempo | prépare le morceau dans son projet, enregistre, reconstruis |
+| Concert à jour | aucun projet de morceau n'a changé depuis la construction | **Corriger** reconstruit le concert |
+| Pont ReaCue | REAPER répond à ReaCue | redémarre REAPER |
+| Interface web | le prompteur est servi (port) | étape 6 |
+| Adresse réseau | l'ordinateur a une adresse (pour le QR) | connecte-le au Wi-Fi du groupe |
+| Carte son | REAPER joue sur une carte son | *Préférences → Audio → Device* |
+| Sorties click et annonces | les sorties choisies pour CLICK / VOIX existent, pistes non coupées | branche la bonne carte son ou change `click_hw_output` (étape 14) |
+| Prompteur des téléphones | la page et le concert sont publiés | **Corriger** les republie |
+| Téléphones Régie | un téléphone en Régie a été vu récemment | (information seulement) |
+
+3. **Revérifier** relance la liste ; **Fermer** (ou Échap) revient à la fenêtre Concert.
+
+> Sans concert ouvert, **Vérifier** contrôle seulement la partie système (pont, interface web, adresse,
+> carte son).
+
 ---
 
 ## 17. En répétition
+
+### 17.1 Le mode répétition du concert (boucle et ralenti)
+
+Dans un concert ouvert, avec la fenêtre **ReaCue - Concert** :
+
+1. Clique sur **Répétition** (ou, sur le téléphone en Régie, touche **Répétition**). Un bandeau orange
+   **RÉPÉTITION** s'affiche ; l'arrêt automatique entre les morceaux est coupé.
+2. **Boucler une section** : touche sa pastille (dans la fenêtre ou sur le téléphone). La lecture part
+   **une mesure avant** la section : pendant cette mesure, on n'entend que le **click et les annonces**
+   (« one two three four »), puis la section joue, et à la fin elle **recommence avec la même mesure de
+   décompte**, sans fin.
+3. **Boucler plusieurs sections** : touche une 2e section du même morceau (par ex. *Couplet 2* puis
+   *Refrain 2*) : la boucle va du début de l'une à la fin de l'autre. Les sections bouclées sont soulignées en
+   orange. Un 3e appui recommence une boucle simple.
+4. **Ralentir** : boutons **100 %**, **90 %**, **80 %**, **70 %**. La hauteur ne change pas ; le click, les
+   annonces et le prompteur suivent.
+5. **Boucle off** arrête la boucle (la lecture continue). **Quitter** (dans la fenêtre) ou **Répétition ✓**
+   (sur le téléphone) sort du mode : vitesse 100 %, arrêt automatique réactivé, réglages de REAPER remis
+   comme avant.
+
+> Pendant la mesure de décompte, les pistes des instruments sont coupées puis remises toutes seules. Si
+> tu arrêtes la lecture pendant cette mesure, elles sont remises aussi.
+
+### 17.2 Répéter un morceau seul (sans concert)
 
 - Ouvre le projet du morceau, place le curseur au tout début (**Home**), appuie sur **Espace**.
 - Les musiciens entendent (ou voient sur le prompteur) le décompte, puis les annonces avant chaque section.
 - Pour reprendre à une section : **clic dans la règle** au début de sa région, puis **Espace**. Le prompteur suit.
 - Pour boucler une partie : clique sur la région (barre des régions, en haut) pour la sélectionner, puis
-  active la répétition (**R**, ou le bouton de boucle du transport).
+  active la répétition (**R**, ou le bouton de boucle du transport). (La mesure de décompte avant chaque
+  reprise n'existe que dans le mode répétition du concert, 17.1 : un concert d'un seul morceau suffit.)
 - Seul REAPER doit tourner pendant la répétition : ReaCue et Claude ne sont pas nécessaires.
 
 ---
@@ -609,7 +661,9 @@ Les modifications faites directement dans le projet concert sont **écrasées** 
 | Un morceau du concert n'a pas de sections | Son projet a été enregistré avant la préparation | Ouvre son projet, *Préparer*, enregistre, puis *Setlist → Reconstruire le concert* |
 | Téléphone (Régie) : « Ouvre la fenêtre ReaCue - Concert… » | Fenêtre Concert fermée | Lance l'action **ReaCue - Concert** sur l'ordinateur |
 | Régie : « Code PIN incorrect » | Mauvais code | Tape le code affiché par le bouton **PIN** de la fenêtre Concert |
-| La lecture ne s'arrête plus entre les morceaux | Fenêtre Concert fermée | Rouvre **ReaCue - Concert** (même ancrée en bas) |
+| La lecture ne s'arrête plus entre les morceaux | Fenêtre Concert fermée, ou mode répétition actif | Rouvre **ReaCue - Concert** (même ancrée en bas) ; sinon **Quitter** la répétition |
+| **Vérifier** affiche du rouge | Voir la ligne concernée | Tableau de l'étape 16.7 ; **Corriger** quand le bouton est proposé |
+| Après une répétition, des pistes restent muettes | REAPER fermé pendant la mesure de décompte | Enlève le mute des pistes (bouton **M**) ; la fenêtre les remet d'habitude toute seule |
 | Journaux | — | Préparation et concert : `ReaCueMCP/cli.log` (dossier des ressources REAPER) ; séparation : `…-stems/demucs.log` à côté du morceau |
 
 ---
@@ -631,5 +685,7 @@ Les modifications faites directement dans le projet concert sont **écrasées** 
 1. Chaque morceau préparé **et enregistré** dans son projet.
 2. Claude : « Construis un concert “Samedi” avec : … » (ou la ligne de commande, étape 16.1).
 3. REAPER : **ReaCue - Concert** → clic sur le concert (nouvel onglet).
-4. **QR** → les musiciens scannent ; la personne qui pilote choisit **Régie** et tape le PIN.
-5. **Espace** à chaque morceau ; la lecture s'arrête toute seule à la fin de chacun.
+4. **Vérifier** → tout doit être vert (sinon **Corriger**).
+5. **QR** → les musiciens scannent ; la personne qui pilote choisit **Régie** et tape le PIN.
+6. **Espace** à chaque morceau ; la lecture s'arrête toute seule à la fin de chacun.
+7. En répétition : **Répétition**, puis une section pour la boucler (2e section = plage), vitesse au besoin.
