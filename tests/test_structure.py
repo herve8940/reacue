@@ -416,18 +416,18 @@ def test_lua_settings_structure_and_installed(tmp_path):
 
 
 # --------------------------------------------------------------------------- cas réel
-# « Un jour en France » : 105,12 BPM, mesure 1 à 0,6668 s dans le fichier ; segments bruts de SongFormer
+# Cas réel (une chanson française, titre non cité) : 105,12 BPM, mesure 1 à 0,6668 s dans le fichier ; segments bruts de SongFormer
 # (Mac 16 Go, fenêtre 420 s). Frontières attendues exactement aux mesures 9/17/25/33/41/49/57/73.
-UJEF_BAR = 4 * 60 / 105.12
-UJEF_DB = [0.6668 + UJEF_BAR * i for i in range(85)]
-UJEF = [(0.0, 18.72, "intro"), (18.72, 37.08, "verse"), (37.08, 55.32, "verse"), (55.32, 73.56, "inst"),
+REAL105_BAR = 4 * 60 / 105.12
+REAL105_DB = [0.6668 + REAL105_BAR * i for i in range(85)]
+REAL105 = [(0.0, 18.72, "intro"), (18.72, 37.08, "verse"), (37.08, 55.32, "verse"), (55.32, 73.56, "inst"),
         (73.56, 91.80, "verse"), (91.80, 110.04, "bridge"), (110.04, 128.41, "chorus"),
         (128.41, 164.89, "inst"), (164.89, 190.93, "outro"), (190.93, 192.01, "silence")]
 
 
-def test_real_case_un_jour_en_france():
-    segs = [{"start": a, "end": b, "label": l} for a, b, l in UJEF]
-    out = ST.sections_from_segments(segs, UJEF_DB)
+def test_real_case_105_bpm():
+    segs = [{"start": a, "end": b, "label": l} for a, b, l in REAL105]
+    out = ST.sections_from_segments(segs, REAL105_DB)
     assert [s["start_bar"] for s in out] == [1, 9, 17, 25, 33, 41, 49, 57, 73]
     assert [s["name"] for s in out] == ["Intro", "Couplet 1", "Couplet 2", "Instrumental", "Couplet 3", "Pont",
                                         "Refrain 1", "Instrumental", "Outro"]
@@ -441,7 +441,7 @@ def test_real_case_un_jour_en_france():
     voc = [0.8] * 84
     for i in list(range(24, 32)) + list(range(56, 72)):
         voc[i] = 0.0
-    out = ST.sections_from_segments(segs, UJEF_DB, {"guitar_db": g, "lead": True, "vocal": voc})
+    out = ST.sections_from_segments(segs, REAL105_DB, {"guitar_db": g, "lead": True, "vocal": voc})
     assert out[7]["name"] == "Solo" and out[3]["name"] == "Instrumental"
 
 
@@ -546,5 +546,5 @@ def test_doubts_moved_and_unsure():
     # 8,45 -> 9 (0-based 8) : entre deux mesures ; 23,2 -> 24 (carrure) : déplacée ; 34,6 -> 35 : entre deux
     assert d == {9: "unsure", 25: "moved", 36: "unsure"}, d
     # cas réel : aucune frontière douteuse
-    real = [{"start": a, "end": b, "label": l} for a, b, l in UJEF]
-    assert ST.doubts(real, UJEF_DB, ST.sections_from_segments(real, UJEF_DB)) == []
+    real = [{"start": a, "end": b, "label": l} for a, b, l in REAL105]
+    assert ST.doubts(real, REAL105_DB, ST.sections_from_segments(real, REAL105_DB)) == []

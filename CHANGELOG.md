@@ -3,6 +3,43 @@
 ## 0.12.0-beta — 2026-10
 
 ### Added / Ajouts
+- **SongFormer by default / SongFormer par défaut**: the main installers (macOS / Windows) offer the
+  structure analysis by default at step 6/6 (`[O/n]` / `[Y/n]`, Enter = yes); the explicit licence
+  acceptance “J'accepte” / “I accept” is still required. New `reacue_structure.py reuse`, run by the
+  structure installers before the test: models already on the computer are **copied or hard-linked** instead
+  of downloaded again — SongFormer checkpoints from `~/Documents/ReaCue-labo/SongFormer/src/SongFormer/ckpts`
+  (or `REACUE_REUSE_DIRS`, checked against SongFormer's `md5sum.txt`) and the default Hugging Face cache
+  (`~/.cache/huggingface/hub`, `$HF_HOME`, `$XDG_CACHE_HOME`, `%USERPROFILE%\.cache\huggingface\hub`: MuQ,
+  wav2vec2-conformer; only complete snapshots); sources are never changed or deleted. Clear fallback message
+  « Analyse SongFormer impossible : … → structure ReaCue utilisée ». Snapping: two consecutive parts of the
+  same kind stay separate when both are ≥ 8 bars (8 + 8 = two verses); Instrumental / Solo / Intro / Outro
+  no longer numbered. Doubtful section starts (`moved` ≥ ¾ bar, `unsure` 0.3–0.75 bar) passed to the window.
+  Real-case test (a French song at 105.12 BPM, boundaries on bars 9/17/25/33/41/49/57/73).
+- **Easier ReaCue window / Fenêtre ReaCue plus intuitive** (FR / EN):
+  - Song tab: a **big contextual button** follows the song's state (« Séparer les stems » → « Analyser et
+    préparer » → « Prêt ✓ », « Appliquer les modifications » after an edit) with secondary « Re-préparer »,
+    « Réanalyser depuis zéro », « Mettre à jour les téléphones »;
+  - **« Tout faire » / “Do everything”** (`reaper/ReaCue_flow.lua`): split stems if needed, analyse and
+    prepare, update the phones, save; checklist with state and time, *Stop* (after the current step),
+    *Resume* at the failed step; offered right after « + Nouveau morceau »;
+  - **status pills**: Stems · Structure (SongFormer | ReaCue | manuelle, kept in the project) · Tempo ·
+    Accords · Batterie · Paroles N lignes · Prompteur publié · Enregistré — a click does the useful action;
+  - **structure band**: one coloured box per section (width ∝ bars), orange = to check (length not 4/8/16,
+    boundary moved by snapping or between two bars), hover details, click = select and listen; *Renommer*,
+    ±1 bar, *Fusionner →*, *Couper en deux*, *Supprimer*, **Annuler / Rétablir** (history), *Appliquer*;
+  - **help line** at the bottom for the element under the mouse; **errors explained** (`reaper/ReaCue_guide.lua`):
+    cause, what to do and an action button (start the bridge, set media online, run an installer, save, open
+    the log, REAPER preferences); *Vérifier*: *Corriger* also for the bridge and the web interface;
+  - Concert tab: **batch preparation** « Préparer tous les morceaux non préparés » / « Préparer la sélection »
+    (tick boxes): one song after the other in the background (opened in a tab, *Tout faire*, saved, tab
+    closed), global progress, stop;
+  - **first-launch assistant** (`reaper/ReaCue_assistant.lua`, also *Réglages → Vérifier l'installation*):
+    bridge, web interface and port, IP, program, stems, SongFormer, projects folder, each with a fix button;
+  - Settings: **simple view** + **Réglages avancés** (PIN, cue lead, count language / voice / speed, volumes,
+    tempo, separation model, folders); new `count_rate` control;
+  - plain words everywhere (window, messages, prompter page, docs): « Analyser et préparer », « Mettre à jour
+    les téléphones », « Réanalyser depuis zéro »… REAPER action names are unchanged (shortcuts kept).
+  - Tutorials FR / EN rewritten around « + Nouveau morceau » → « Tout faire »; new screenshots.
 - **Licences, responsibilities and disclaimers / Licences, responsabilités et avertissements**:
   new `THIRD_PARTY_NOTICES.md` (every third-party component and downloaded model, code and weights licences,
   checked on 22/10/2026: SongFormer CC BY 4.0, **MuQ weights CC BY-NC 4.0 — non-commercial**, MusicFM MSD

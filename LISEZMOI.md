@@ -41,7 +41,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [Installation](#installation)
 - [Activer l'interface web de REAPER (prompteur)](#activer-linterface-web-de-reaper-prompteur)
 - [Séparation de stems (facultatif)](#séparation-de-stems-facultatif)
-- [Analyse de structure (SongFormer, facultatif)](#analyse-de-structure-songformer-facultatif)
+- [Analyse de structure (SongFormer, par défaut)](#analyse-de-structure-songformer-par-défaut)
 - [La fenêtre ReaCue](#la-fenêtre-reacue)
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
@@ -133,7 +133,11 @@ Sur les téléphones et tablettes des musiciens (prompteur web) :
 4. Réponds aux questions : langue (`fr` / `en`), déclaration de ReaCue dans Claude Desktop (facultatif,
    réponds *non* si tu n'utilises pas Claude) et installation de la **séparation de stems** (facultatif,
    environ 1 Go à télécharger, 5 à 15 minutes ; voir [Séparation de stems](#séparation-de-stems-facultatif)).
-5. Lance REAPER. Le pont démarre tout seul et les actions sont disponibles dans *Actions → Show action list* :
+   Dernière question : l'**analyse de structure SongFormer**, proposée par défaut (*Entrée* = oui) ; il faut
+   ensuite taper **`J'accepte`** pour accepter les licences des modèles (usage non commercial). Les modèles
+   déjà présents sur l'ordinateur sont réutilisés ([détails](#analyse-de-structure-songformer-par-défaut)).
+5. Lance REAPER. Le pont démarre tout seul et les actions sont disponibles dans *Actions → Show action list*
+   (au premier lancement, la fenêtre ReaCue ouvre un assistant qui vérifie l'installation) :
    - **ReaCue** — la fenêtre principale (onglets Morceau, Concert, Scène, Réglages) : **ajoute celle-ci à
      une barre d'outils** (clic droit sur une barre → *Customize toolbar* → *Add*), elle suffit au quotidien ;
    - **ReaCue - Concert** — la même fenêtre, ouverte sur l'onglet Scène ;
@@ -217,7 +221,7 @@ Détails :
 - Mac Intel : PyTorch n'est plus publié pour les Mac Intel après la version 2.2.2 ; l'installateur choisit
   automatiquement les bonnes versions.
 
-## Analyse de structure (SongFormer, facultatif)
+## Analyse de structure (SongFormer, par défaut)
 
 ReaCue trouve tout seul les sections d'un morceau (couplet, refrain, pont…). Pour des frontières et des
 noms plus justes, il peut utiliser [SongFormer](https://github.com/ASLP-lab/SongFormer), un modèle d'IA
@@ -225,7 +229,7 @@ d'analyse de structure musicale, entièrement sur ton ordinateur (rien n'est env
 garde sa grille** (tempo, mesures, count-in) : SongFormer dit seulement où sont les sections et ce qu'elles
 sont ; chaque frontière est ensuite calée sur la mesure la plus proche de la grille de ReaCue.
 
-**Installation** (une fois) : réponds *oui* à la question de l'installateur sur l'analyse de structure,
+**Installation** (une fois) : l'installateur la propose **par défaut** (étape 6/6, *Entrée* = oui) ;
 ou plus tard double-clic sur **`Install ReaCue Structure.command`** (macOS) / **`Install ReaCue
 Structure.bat`** (Windows). Avant tout téléchargement, l'installateur affiche les licences des modèles et
 n'installe que si tu tapes exactement **`J'accepte`** (`I accept` en anglais) ; sinon rien n'est installé.
@@ -236,8 +240,16 @@ ReaCue, télécharge SongFormer et ses deux dépendances (MuQ, MusicFM) à des v
 SongFormer), fait un court essai et affiche `STRUCTURE_OK` avec la vitesse de ton ordinateur. Environ
 **3 Go** à télécharger, 10 à 40 minutes. L'environnement de ReaCue lui-même n'est pas touché.
 
-**Utilisation** : rien à faire. *Préparer* et *Réanalyser* (fenêtre, actions, Claude) utilisent SongFormer
-automatiquement s'il est installé ; l'onglet affiche **« Analyse de structure (SongFormer)… N s »** pendant
+**Modèles déjà téléchargés** : avant de télécharger, l'installateur cherche les modèles déjà présents sur
+l'ordinateur — une autre copie de SongFormer (par exemple `~/Documents/ReaCue-labo/SongFormer/src/SongFormer/ckpts`,
+fichiers vérifiés avec le `md5sum.txt` de SongFormer) et le cache Hugging Face par défaut
+(`~/.cache/huggingface/hub` sur macOS / Linux, `%USERPROFILE%\.cache\huggingface\hub` sur Windows :
+MuQ et wav2vec2-conformer). Ils sont **copiés** (ou liés, sans place en plus sur le même disque) vers
+`structure/` ; les originaux ne sont jamais modifiés ni supprimés. Seul ce qui manque est téléchargé.
+Autres dossiers à fouiller : `REACUE_REUSE_DIRS` (séparés par `:` ou `;`).
+
+**Utilisation** : rien à faire. *Analyser et préparer*, *Tout faire* et *Réanalyser depuis zéro* (fenêtre,
+actions, Claude) utilisent SongFormer automatiquement dès qu'il est installé ; l'onglet affiche **« Analyse de structure (SongFormer)… N s »** pendant
 ce temps et le résultat indique « Sections détectées par SongFormer ». Le résultat est mémorisé par morceau
 (`.reacue/<morceau>_structure.json` à côté de l'audio) : préparer à nouveau le morceau est immédiat, tant
 que le fichier audio ne change pas.
@@ -248,11 +260,17 @@ Comment les sections sont construites :
 |---|---|
 | Entrée | le mix, ou la somme des stems (calés comme pour l'analyse) |
 | Frontières | calées sur la mesure la plus proche ; une carrure de 4 mesures depuis la frontière précédente l'emporte si elle est à ≤ 1 mesure |
-| Petits morceaux | segments de moins de 2 mesures fusionnés avec un voisin ; deux parties consécutives de même type fusionnées si elles font ≤ 16 mesures au total |
+| Petits morceaux | segments de moins de 2 mesures fusionnés avec un voisin ; deux parties consécutives de même type fusionnées si l'une fait moins de 8 mesures et le tout ≤ 16 (8 + 8 = deux couplets) |
 | Silence | ignoré au début et à la fin |
-| Noms | Intro, Couplet N, Pré-refrain N, Refrain N, Pont, Instrumental, Outro (français ou anglais, numérotés) ; une partie *instrumentale* devient **Solo** quand la guitare (stem lead s'il existe) est nettement plus forte que d'habitude et la voix faible ; même type = même lettre |
+| Noms | Intro, Couplet N, Pré-refrain N, Refrain N, Pont, Instrumental, Outro (français ou anglais ; couplets, pré-refrains et refrains numérotés) ; une partie *instrumentale* devient **Solo** quand la guitare (stem lead s'il existe) est nettement plus forte que d'habitude et la voix faible ; même type = même lettre |
 | Priorité | les régions modifiées à la main dans REAPER, et `set_sections` de Claude, passent toujours avant toute analyse |
-| Repli | SongFormer non installé, réglage « ReaCue seul », erreur ou délai dépassé (30 min) → détection de ReaCue, avec un avertissement |
+| À vérifier | dans la fenêtre, une section est en **orange** si sa longueur n'est pas 4, 8 ou 16 mesures, ou si SongFormer avait placé sa frontière à ¾ de mesure ou plus de la mesure retenue (« déplacée par le calage ») ou entre deux mesures |
+| Repli | SongFormer non installé, réglage « ReaCue seul » → détection de ReaCue ; erreur ou délai dépassé (30 min) → « Analyse SongFormer impossible : … → structure ReaCue utilisée » |
+
+Exemple réel (une chanson française à 105,12 BPM, Mac 16 Go) : frontières de SongFormer calées exactement
+aux mesures 9 / 17 / 25 / 33 / 41 / 49 / 57 / 73 → Intro, Couplet 1, Couplet 2, Instrumental, Couplet 3,
+Pont, Refrain 1, Instrumental (Solo avec les stems), Outro. Première fois : environ 40 min de
+téléchargement et chargement des modèles, puis environ 7 min d'analyse (fenêtre 420 s).
 
 Réglage **Détection de structure** dans l'onglet **Réglages** : *auto (SongFormer)* (par défaut :
 SongFormer s'il est installé) ou *ReaCue seul* ; la ligne en dessous indique si SongFormer est installé.
@@ -281,34 +299,57 @@ Clic droit : ancrer / détacher — ancrée en bas, elle devient une barre de tr
 est ouverte, quel que soit l'onglet, elle assure aussi l'arrêt automatique du concert, la boucle de
 répétition, la télécommande Régie et le profil « joué en live ».
 
-| Morceau | Concert |
+En bas, une **ligne d'aide** explique l'élément survolé. Une erreur affiche sa **cause**, **que faire** et
+un bouton qui le fait (*Démarrer le pont*, *Corriger* pour un fichier hors ligne, *Installer*,
+*Enregistrer*, *Ouvrir le journal*…). Au **premier lancement**, un assistant vérifie l'installation
+(pont, interface web et port, adresse IP, programme, stems, structure, dossier des projets) avec un bouton
+pour chaque point manquant ; on le retrouve dans *Réglages → Vérifier l'installation*.
+
+| Morceau | Tout faire |
 |---|---|
-| <img src="docs/images/window_song_fr.png" width="380"> | <img src="docs/images/window_concert_fr.png" width="380"> |
+| <img src="docs/images/window_song_fr.png" width="380"> | <img src="docs/images/window_doall_fr.png" width="380"> |
+| **Structure (édition)** | **Concert — préparation en lot** |
+| <img src="docs/images/window_structure_fr.png" width="380"> | <img src="docs/images/window_batch_fr.png" width="380"> |
 | **Scène** | **Réglages** |
 | <img src="docs/images/window_stage_fr.png" width="380"> | <img src="docs/images/window_settings_fr.png" width="380"> |
+| **Assistant** | **Réglages avancés** |
+| <img src="docs/images/window_assistant_fr.png" width="380"> | <img src="docs/images/window_settings_advanced_fr.png" width="380"> |
 
 *(Morceaux de démonstration inventés.)*
 
-- **Morceau** — le projet ouvert : état (préparé, tempo, mesures, tonalité, enregistré ou non) et
-  **+ Nouveau morceau** (un fichier ou un dossier de stems, copiés dans le dossier des projets, nouvel onglet).
-  Après *Séparer stems*, *Préparer* ou *Appliquer* réussis depuis la fenêtre, le projet du morceau est
-  enregistré automatiquement.
-  **1. Préparer** : *Séparer stems* (un seul MP3/WAV), *Préparer*, *Réanalyser* (recalcule la structure,
-  après confirmation), *Republier* (prompteur) ; l'avancement s'affiche dans l'onglet.
-  **2. Structure** : les sections avec leur première mesure et leur longueur (en orange si ce n'est pas 4, 8
-  ou 16 mesures) ; clic sur un nom = y aller et écouter ; *Nom* renomme, ◀ ▶ déplacent le début d'une mesure
-  (la section précédente suit), ✕ supprime, *+ Section au curseur* en ajoute une ; puis **Appliquer**
-  (= *Préparer*, qui reprend tes régions modifiées).
-  **3. Compléments** : fichier de paroles trouvé (nombre de lignes, *Ouvrir le dossier*), accords / batterie
-  publiés pour le prompteur, **Ajouter à un concert** (setlist nouvelle ou existante).
+- **Morceau** — le projet ouvert.
+  - Un **grand bouton** donne l'étape suivante : **Séparer les stems** (un seul MP3/WAV) → **Analyser et
+    préparer** → **Prêt ✓** (clic : onglet Scène) ; après une modification de la structure : **Appliquer
+    les modifications**. À côté, **Tout faire** enchaîne séparer les stems (si besoin), analyser et préparer,
+    mettre à jour les téléphones et enregistrer le projet : une liste montre chaque étape (déjà fait, en
+    cours avec sa durée, réussie, en échec), *Arrêter* s'arrête après l'étape en cours, *Reprendre* repart de
+    l'étape en échec. *Tout faire* est proposé juste après **+ Nouveau morceau**.
+  - Boutons secondaires : *Re-préparer* (garde ta structure), *Réanalyser depuis zéro* (après
+    confirmation), *Mettre à jour les téléphones* (paroles, accords, batterie, structure).
+  - **Pastilles d'état** : Stems · Structure (*SongFormer*, *ReaCue* ou *manuelle*) · Tempo · Accords ·
+    Batterie · Paroles (N lignes) · Prompteur publié · Enregistré. Un clic fait l'action utile (séparer,
+    installer SongFormer, mettre à jour les téléphones, ouvrir le dossier des paroles, QR code, enregistrer).
+  - **Structure** : une **bande colorée** (une case par section, largeur proportionnelle aux mesures,
+    couleurs de ReaCue, **orange = à vérifier**, survol = détail) puis la liste (première mesure, longueur).
+    Clic sur une case ou un nom = la choisir et l'écouter. Pour la section choisie : *Renommer*, ◀ ▶
+    (début ± 1 mesure), *Fusionner →* (avec la suivante), *Couper en deux*, *Supprimer* ; *+ Section au
+    curseur* ; **Annuler / Rétablir** (historique) ; puis **Appliquer**.
+  - *Ouvrir le dossier*, **Ajouter à un concert**. Après une réussite lancée depuis la fenêtre, le projet du
+    morceau est enregistré automatiquement.
 - **Concert** — les projets de morceaux du dossier des projets (✓ préparé, orange = à préparer), **+** en
   ajoute un à la setlist ; réordonner (▲ ▼), retirer (✕), *Renommer* ; **Construire** (ou *Reconstruire*) le
   concert, l'*Ouvrir* dans un nouvel onglet, *Joué en live…* ; les concerts existants (*Modifier*, *Ouvrir*).
+  **Préparer tous les morceaux non préparés** (ou *Préparer la sélection* avec les cases cochées) : en
+  arrière-plan, un morceau après l'autre (ouvert dans un onglet, *Tout faire*, enregistré, onglet refermé),
+  avec la progression ; *Arrêter* s'arrête après le morceau en cours.
 - **Scène** — pilotage du concert : morceau x/N, transport, sections, **instruments**, morceau suivant,
-  *Vérifier*, *Répétition*, *Setlist*, *PIN*, *QR*. Avec un morceau seul ouvert (sans concert) : transport
-  simple (Début, Lecture, Stop), sections, instruments et boucle de répétition.
-- **Réglages** — `reacue_settings.json` sans éditer le fichier (langue, décompte, annonces, voix, sorties,
-  volumes, tempo, séparation, dossiers, PIN) ; s'applique à la prochaine préparation ; version installée.
+  *Vérifier* (avec *Corriger*, aussi pour le pont et l'interface web), *Répétition*, *Setlist*, *PIN*, *QR*.
+  Avec un morceau seul ouvert (sans concert) : transport simple (Début, Lecture, Stop), sections,
+  instruments et boucle de répétition.
+- **Réglages** — vue **simple** (langue, décompte, annonces, voix, sorties click + voix, détection de
+  structure, licences) et **Réglages avancés** (PIN, annonce avant la section, langue, voix et débit du
+  décompte, volumes, tempo, modèle de séparation, dossiers). *Vérifier l'installation* rouvre l'assistant.
+  S'applique à la prochaine préparation.
 
 ## Utilisation
 
@@ -317,22 +358,26 @@ répétition, la télécommande Régie et le profil « joué en live ».
    `<dossier des projets>/<Titre>/`, ouvre un nouvel onglet avec un fichier par piste et enregistre
    `<Titre>/<Titre>.RPP` (un morceau existant n'est jamais écrasé). À la main, ça marche aussi : un stem par
    piste, tous calés au même départ (glisser-déposer). Un seul MP3/WAV marche avec moins de détails — mieux
-   vaut le séparer d'abord avec **Séparer stems** (voir plus haut).
+   vaut le séparer d'abord avec **Séparer les stems** (voir plus haut ; *Tout faire* le fait tout seul).
    - Le rôle de chaque stem est lu dans le **nom du fichier** : `drum`/`batterie`/`kick`/`perc`,
      `bass`/`basse`, `guitar`/`guitare`/`gtr` (`lead`/`solo` = guitare solo), `vocal`/`voice`/`vox`/`chant`/`voix` ;
      tout le reste compte comme claviers/autre.
    - Facultatif : la tonalité et le tempo dans le nom des fichiers (ex. `Demo Song-A minor-112bpm-drums.wav`)
      aident les accords et le choix entre tempo double et moitié.
-2. Dans l'onglet **Morceau** de la fenêtre ReaCue, clique **Préparer** (ou lance l'action **ReaCue -
-   Préparer le morceau**). L'avancement s'affiche dans l'onglet (de 20 s à 1 min environ) ; le résultat s'affiche à la fin : tempo, structure (mesures et longueurs), ce qui a été publié.
-3. Vérifie la structure (régions) et écoute. Pour la corriger, utilise la liste **Structure** de l'onglet
-   Morceau (renommer, déplacer d'une mesure, ajouter, supprimer, puis *Appliquer*) ou **modifie les régions
-   à la main dans REAPER**, puis relance *Préparer* : voir
-   [Corriger la structure](#corriger-la-structure). Relancer *Préparer* sur le même projet **garde la
+2. Dans l'onglet **Morceau** de la fenêtre ReaCue, clique **Tout faire** (ou le grand bouton, étape par
+   étape : *Séparer les stems* puis *Analyser et préparer* ; action **ReaCue - Préparer le morceau**).
+   L'avancement s'affiche dans l'onglet (de 20 s à quelques minutes ; plus la première fois avec
+   SongFormer) ; à la fin : tempo, structure (mesures et longueurs), ce qui a été publié (*Résumé*).
+3. Vérifie la structure (bande colorée : les cases orange d'abord) et écoute. Pour la corriger : outils de
+   la section choisie (renommer, déplacer d'une mesure, fusionner, couper, supprimer, ajouter, *Annuler*),
+   puis **Appliquer** — ou **modifie les régions à la main dans REAPER**, puis *Appliquer* / *Re-préparer* :
+   voir [Corriger la structure](#corriger-la-structure). *Re-préparer* sur le même projet **garde la
    structure validée** (ou reprend tes régions modifiées) et reconstruit tout (click, annonces, prompteur),
    en appliquant le fichier de réglages s'il a été modifié entre-temps.
-4. Après avoir ajouté ou modifié un fichier de paroles, clique **Republier** (action **ReaCue - Republier le prompteur**) (rien
-   n'est modifié dans le projet REAPER).
+4. Après avoir ajouté ou modifié un fichier de paroles, clique **Mettre à jour les téléphones** (action
+   **ReaCue - Republier le prompteur**) (rien n'est modifié dans le projet REAPER).
+
+Plusieurs morceaux à préparer ? Onglet **Concert** → **Préparer tous les morceaux non préparés**.
 
 Chaque préparation **remplace** les régions, marqueurs, la carte de tempo et les pistes CLICK / CUES / VOIX
 du projet (un seul *Annuler* revient en arrière). Prévois un projet par morceau.
@@ -341,7 +386,7 @@ du projet (un seul *Annuler* revient en arrière). Prévois un projet par morcea
 
 Deux méthodes, qu'on peut mélanger :
 
-- **À la main dans REAPER, puis *Préparer*.** Double-clique sur une région dans la barre des régions (en haut
+- **À la main dans REAPER, puis *Appliquer* (ou *Re-préparer*).** Double-clique sur une région dans la barre des régions (en haut
   de la fenêtre) pour changer son nom ou son début ; ajoutes-en une avec une sélection de temps et *Markers →
   Insert region from time selection* (Maj+R) ; supprimes-en une avec clic droit → *Remove region* ; ou fais
   simplement glisser ses bords, puis lance
@@ -362,8 +407,8 @@ Deux méthodes, qu'on peut mélanger :
 - **Avec Claude** (mode facultatif, plus bas) : « le refrain 1 commence mesure 37 », « renomme la section 6
   en Solo ».
 
-*Republier le prompteur* ne reprend **pas** les régions modifiées (le prompteur doit rester d'accord avec les
-annonces et le click déjà dans REAPER) : un avertissement demande de lancer *Préparer*.
+*Mettre à jour les téléphones* ne reprend **pas** les régions modifiées (le prompteur doit rester d'accord avec
+les annonces et le click déjà dans REAPER) : un avertissement demande de cliquer *Appliquer*.
 
 ## Mode concert
 
@@ -487,14 +532,14 @@ seulement des numéros de ligne et des positions sur la grille :
   `null` = ligne jamais affichée.
 - Si **chaque** ligne a son ancre (ou `null`), le calage automatique n'est pas utilisé du tout.
 
-Lance ensuite *Republier le prompteur*.
+Clique ensuite *Mettre à jour les téléphones* (onglet Morceau).
 
 ## Réglages
 
 Le plus simple : l'onglet **Réglages** de la fenêtre ReaCue (écrit tout de suite, les autres clés du fichier
 sont gardées). Fichier : `<ressources REAPER>/ReaCueMCP/reacue_settings.json` (créé par l'installateur ;
-modifiable aussi avec n'importe quel éditeur de texte ; une clé absente prend sa valeur par défaut). Pris en compte au prochain
-*Préparer*, y compris pour un morceau déjà préparé (sa structure validée est gardée). Le réglage `language`
+modifiable aussi avec n'importe quel éditeur de texte ; une clé absente prend sa valeur par défaut). Pris en compte à la prochaine
+préparation (*Analyser et préparer*, *Re-préparer*, *Tout faire*), y compris pour un morceau déjà préparé (sa structure validée est gardée). Le réglage `language`
 nomme les sections des morceaux nouvellement analysés ; les noms de sections que tu as validés restent tels quels.
 
 | Clé | Défaut | Rôle |
@@ -551,7 +596,7 @@ affiner avec Claude, ou l'inverse.
 Les régions modifiées à la main dans REAPER sont reprises par `prepare_song` (morceau déjà préparé ;
 `reanalyse=true`, `bpm_hint` ou `beats_per_bar` forcent une analyse complète), `update_options` et
 `rename_section`. Sur un morceau déjà préparé dont les régions n'ont pas été modifiées, `prepare_song` refait
-une analyse (le bouton *Préparer*, lui, garde la structure). `set_sections` et `set_grid` imposent la structure donnée et remplacent ces régions. Les
+une analyse (le bouton *Re-préparer*, lui, garde la structure). `set_sections` et `set_grid` imposent la structure donnée et remplacent ces régions. Les
 outils de Claude sont chargés au début d'une conversation : après une mise à jour de ReaCue, ouvre une
 nouvelle conversation.
 
