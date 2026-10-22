@@ -281,6 +281,14 @@ function M.python(dir, windows)
   return dir .. "/.venv/bin/python"
 end
 
+-- analyse de structure SongFormer (composant optionnel : Install ReaCue Structure) installée ?
+function M.structure_installed(dir, windows)
+  if windows == nil then windows = is_windows() end
+  local py = windows and (dir .. "\\.venv-structure\\Scripts\\python.exe") or (dir .. "/.venv-structure/bin/python")
+  local sep = windows and "\\" or "/"
+  return exists(py) and exists(dir .. sep .. "reacue_structure.py")
+end
+
 -- guillemets shell POSIX : 'a'\''b'
 function M.shq(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
 
@@ -311,6 +319,8 @@ local function bridge_alive()
 end
 
 M.bridge_alive = bridge_alive
+-- durée maximale d'une commande (analyse de structure SongFormer comprise, sur CPU lent)
+M.TIMEOUT = 2400
 
 -- lance la CLI en arrière-plan sans fenêtre (fenêtre ReaCue) : renvoie true, ou false + message
 function M.start(cmd, script_dir, need_bridge)
@@ -338,7 +348,7 @@ end
 function M.status()
   local s = read(STATUS)
   if not s then return nil end
-  return jfield(s, "state"), jfield(s, "message"), jfield(s, "cmd")
+  return jfield(s, "state"), jfield(s, "message"), jfield(s, "cmd"), jfield(s, "step")
 end
 
 function M.run(cmd, label, script_dir)
@@ -356,12 +366,13 @@ function M.run(cmd, label, script_dir)
   end
   local function loop()
     local el = reaper.time_precise() - t0
-    local state, msg = M.status()
+    local state, msg, _, step = M.status()
     if state == "done" or state == "error" then
       finish(msg or (state == "done" and M.tr("done") or M.tr("error")))
       return
     end
-    if el > 900 then finish(string.format(M.tr("timeout"), log)) return end
+    if step and step ~= "" then label = step end
+    if el > M.TIMEOUT then finish(string.format(M.tr("timeout"), log)) return end
     if win then
       if gfx.getchar() < 0 then win = false else
         gfx.set(0.08, 0.09, 0.11, 1); gfx.rect(0, 0, gfx.w, gfx.h, 1)

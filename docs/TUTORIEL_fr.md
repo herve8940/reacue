@@ -110,14 +110,18 @@ les actions ReaCue que si REAPER est **fermé**.
 | `Langue / Language [fr/en]` | `fr` puis Entrée |
 | `Déclarer ReaCue dans Claude Desktop … ? [o/N]` | `n` si tu n'utilises pas Claude Desktop (tu pourras le faire plus tard) |
 | `Installer la séparation de stems … ? [o/N]` | `o` si tu as des morceaux en MP3 seulement (environ 1 Go à télécharger, 5 à 15 minutes) ; sinon `n` |
+| `Installer l'analyse de structure … ? [o/N]` | `o` pour de meilleures sections avec SongFormer (IA, environ 3 Go à télécharger, 10 à 40 minutes, 8 Go de RAM conseillés, **usage non commercial**) ; sinon `n` |
 
-**Tu dois voir** défiler 5 étapes (`== 1/5 Vérifications` … `== 5/5 Séparation de stems`) :
+**Tu dois voir** défiler 6 étapes (`== 1/6 Vérifications` … `== 6/6 Analyse de structure`) :
 
 - à la fin de l'étape 4 : une ligne `Adresse(s) IP probable(s) de cet ordinateur : …` → **note cette
   adresse** (ex. `192.168.1.20`), elle servira pour les téléphones ; puis `Installation terminée. Redémarre
   REAPER…` (ReaCue est installé) ;
 - à l'étape 5, si tu as répondu `o` : le téléchargement de PyTorch et Demucs, deux lignes `modèle … prêt`,
-  deux lignes `vitesse … environ N min pour un morceau de 4 min`, puis `Séparation de stems installée`.
+  deux lignes `vitesse … environ N min pour un morceau de 4 min`, puis `Séparation de stems installée` ;
+- à l'étape 6, si tu as répondu `o` : le téléchargement de SongFormer, MuQ et MusicFM, puis de PyTorch, des
+  modèles (environ 2 Go), une ligne `vitesse : environ N min pour un morceau de 4 min`, `STRUCTURE_OK` et
+  `Analyse de structure installée`.
 
 Appuie sur Entrée pour fermer la fenêtre.
 
@@ -129,6 +133,7 @@ Appuie sur Entrée pour fermer la fenêtre.
 | `installation de uv impossible (internet ?)` | Vérifie la connexion internet, relance l'installateur |
 | `REAPER est ouvert : les actions ne peuvent pas être enregistrées` | Pas grave : quitte REAPER et relance l'installateur, ou charge les actions à la main (étape 5) |
 | `séparation de stems non installée` | Le reste de ReaCue marche. Réessaie plus tard avec `Install ReaCue Stems.command` / `.bat` |
+| `analyse de structure non installée` | ReaCue garde sa propre détection. Réessaie plus tard avec `Install ReaCue Structure.command` / `.bat` (il reprend là où il s'est arrêté) |
 
 > L'installateur peut être relancé autant de fois que tu veux : il répare l'installation et garde tes réglages.
 
@@ -322,6 +327,12 @@ l'action sur le même MP3, l'import est immédiat (pas de nouvelle séparation).
 - trois nouvelles pistes : **CUES**, **VOIX**, **CLICK** ;
 - l'audio décalé de 2 mesures pour laisser la place au décompte.
 
+> **Avec SongFormer** (analyse de structure installée) : la première préparation d'un morceau prend
+> quelques minutes de plus ; l'onglet affiche **« Analyse de structure (SongFormer)… N s »**, puis le
+> résultat indique « Sections détectées par SongFormer ». Les préparations suivantes du même morceau sont
+> immédiates (résultat mémorisé). Pour comparer avec la détection de ReaCue : *Réglages* → *Détection de
+> structure* → **ReaCue seul**, puis *Réanalyser*.
+
 Appuie sur **Espace** : tu entends 2 mesures de click avec « one two three four », puis le morceau, le click
 et les annonces.
 
@@ -475,6 +486,7 @@ Exemples courants :
 | Click plus fort | *Volume du click* : ▶ | `"click_volume": 0.8` |
 | Click et voix seulement dans les in-ears (sorties 3/4), pas en façade | *Sortie click + voix* : **sorties 3/4**, *Aussi en façade* : **non** | `"click_hw_output": 2` et `"click_to_master": false` |
 | Séparation en 4 stems au lieu de 6 | *Séparation de stems* : **4 stems** | `"stems_model": "htdemucs"` |
+| Sections par ReaCue seul (sans SongFormer) | *Détection de structure* : **ReaCue seul** | `"structure_engine": "reacue"` |
 
 L'onglet montre aussi la **version installée**. Les réglages sont dans le fichier **`reacue_settings.json`**
 (dossier des ressources de REAPER, menu *Options → Show REAPER resource path in explorer/finder* → dossier

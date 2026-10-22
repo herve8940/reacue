@@ -20,6 +20,7 @@ from . import prompter
 from . import chords
 from . import lyrics
 from . import drums
+from . import structure
 from .regions import regions_to_sections, same_structure
 
 mcp = FastMCP(
@@ -334,9 +335,15 @@ async def prepare_song(
             stem_warn.append(t("stem_rates"))
         item["title"] = _common_title(files)
         analysis = await asyncio.to_thread(analyze_stems, stems, beats_per_bar, 4, bpm_hint)
+        ri = reference_index(files)
+        structure_input = [stems[ri]] + [s for i, s in enumerate(stems) if i != ri]
     else:
         item["title"] = Path(item["file"]).stem
         analysis = await asyncio.to_thread(analyze, item["file"], beats_per_bar, 4, bpm_hint)
+        structure_input = None
+    # sections par SongFormer (composant optionnel) ; sinon / en cas d'échec : détection de ReaCue
+    analysis, structure_info = await asyncio.to_thread(structure.apply_engine, analysis, structure_input,
+                                                       item.get("title"))
     localize_analysis(analysis)
     opts = _new_options(count_in_bars=count_in_bars, tempo_mode=tempo_mode, click=click,
                         click_to_master=click_to_master, click_hw_output=click_hw_output,
@@ -345,6 +352,7 @@ async def prepare_song(
                         voice_count_each=voice_count_each, voice_name=voice_name)
     summary = await _apply(analysis, item, opts, items)
     summary["file"] = item["file"]
+    summary["structure_engine"] = structure_info
     summary["warnings"] = stem_warn + summary["warnings"]
     return summary
 

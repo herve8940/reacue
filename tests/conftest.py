@@ -14,6 +14,8 @@ sys.path.insert(0, str(ROOT / "install"))
 
 _RES = Path(tempfile.mkdtemp(prefix="reacue_res_"))
 os.environ["REAPER_RESOURCE_PATH"] = str(_RES)
+# jamais le vrai SongFormer pendant les tests (même s'il est installé à côté du dépôt)
+os.environ["REACUE_STRUCTURE_ENGINE"] = "reacue"
 
 import pytest  # noqa: E402
 

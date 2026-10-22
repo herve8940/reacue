@@ -29,6 +29,7 @@ DEFAULTS: dict = {
     "tempo_mode": "auto",        # auto | constant | beatmap
     "count_rate": 240,           # débit du décompte (mots/min)
     "stems_model": "htdemucs_6s",  # séparation de stems (action REAPER) : htdemucs_6s (6 stems) | htdemucs (4)
+    "structure_engine": "auto",  # sections : "auto" (SongFormer s'il est installé, sinon ReaCue) | "reacue"
     "projects_dir": None,        # mode concert : dossier des projets des morceaux ; None = <Documents>/REAPER Media
     "concert_dir": None,         # mode concert : dossier des concerts ; None = <dossier des projets>/Concerts
 }
@@ -56,6 +57,8 @@ def load_settings(path: Path | None = None) -> dict:
     out["language"] = lang if lang in LANGS else "fr"
     cl = str(out.get("count_lang") or "en").lower()[:2]
     out["count_lang"] = cl if cl in LANGS else "en"
+    se = str(out.get("structure_engine") or "auto").lower()
+    out["structure_engine"] = se if se in ("auto", "reacue") else "auto"
     return out
 
 

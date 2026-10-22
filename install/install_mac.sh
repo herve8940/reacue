@@ -3,6 +3,7 @@
 # Lancé par « Install ReaCue.command » (double-clic) ; ou : bash install/install_mac.sh [fr|en]
 # Relançable sans risque (idempotent). Internet n'est nécessaire que pendant l'installation.
 # REACUE_STEMS=yes|no : installer ou non la séparation de stems sans poser la question.
+# REACUE_STRUCTURE=yes|no : idem pour l'analyse de structure (SongFormer).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
@@ -31,7 +32,7 @@ fail() {
 REAPER_DIR="${REAPER_RESOURCE_PATH:-$HOME/Library/Application Support/REAPER}"
 
 echo
-t "== 1/5 Vérifications" "== 1/5 Checks"
+t "== 1/6 Vérifications" "== 1/6 Checks"
 [ "$(uname -s)" = "Darwin" ] || fail "ce script est pour macOS." "this script is for macOS."
 if [ ! -d "$REAPER_DIR" ]; then
   fail "dossier REAPER introuvable ($REAPER_DIR). Lance REAPER une fois, ferme-le, puis relance l'installation." \
@@ -41,7 +42,7 @@ echo "  REAPER : $REAPER_DIR"
 echo "  ReaCue : $HERE"
 
 echo
-t "== 2/5 uv (gestionnaire Python d'Astral)" "== 2/5 uv (Astral's Python manager)"
+t "== 2/6 uv (gestionnaire Python d'Astral)" "== 2/6 uv (Astral's Python manager)"
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 if ! command -v uv >/dev/null 2>&1; then
   t "  installation de uv (https://astral.sh/uv)…" "  installing uv (https://astral.sh/uv)…"
@@ -51,7 +52,7 @@ fi
 echo "  $(uv --version)"
 
 echo
-t "== 3/5 Environnement Python 3.12 (.venv) et dépendances" "== 3/5 Python 3.12 environment (.venv) and dependencies"
+t "== 3/6 Environnement Python 3.12 (.venv) et dépendances" "== 3/6 Python 3.12 environment (.venv) and dependencies"
 rm -rf .venv
 uv venv .venv --python 3.12 || fail "création du .venv impossible." "could not create .venv."
 # --no-build : paquets précompilés uniquement (pas de compilateur nécessaire)
@@ -62,12 +63,12 @@ uv pip install --no-build --python .venv/bin/python -r requirements.txt \
 command -v say >/dev/null 2>&1 || t "  ! commande say absente : pas d'annonces vocales." "  ! say command missing: no spoken cues."
 
 echo
-t "== 4/5 Configuration de REAPER" "== 4/5 REAPER configuration"
+t "== 4/6 Configuration de REAPER" "== 4/6 REAPER configuration"
 REAPER_RESOURCE_PATH="$REAPER_DIR" .venv/bin/python install/reacue_setup.py install --lang "$L" --install-dir "$HERE" \
   --reaper-dir "$REAPER_DIR" ${REACUE_MCP:+--mcp "$REACUE_MCP"} || fail "configuration incomplète." "configuration incomplete."
 
 echo
-t "== 5/5 Séparation de stems (optionnel)" "== 5/5 Stem separation (optional)"
+t "== 5/6 Séparation de stems (optionnel)" "== 5/6 Stem separation (optional)"
 STEMS="${REACUE_STEMS:-ask}"
 if [ "$STEMS" = ask ] && [ -x .venv-demucs/bin/python ]; then
   STEMS=yes     # déjà installée : mise à jour
@@ -89,4 +90,29 @@ if [ "$STEMS" = yes ]; then
 else
   t "  Non installée. Plus tard : double-clic sur « Install ReaCue Stems.command »." \
     "  Not installed. Later: double-click “Install ReaCue Stems.command”."
+fi
+
+echo
+t "== 6/6 Analyse de structure (optionnel)" "== 6/6 Structure analysis (optional)"
+STRUCT="${REACUE_STRUCTURE:-ask}"
+if [ "$STRUCT" = ask ] && [ -x .venv-structure/bin/python ]; then
+  STRUCT=yes    # déjà installée : mise à jour
+fi
+if [ "$STRUCT" = ask ]; then
+  t "  Détecte couplets, refrains, ponts… avec SongFormer (IA, en local). Usage non commercial (licence des poids MuQ)." \
+    "  Detects verses, choruses, bridges… with SongFormer (AI, local). Non-commercial use (MuQ weights licence)."
+  read -r -p "$(t '  Installer l'"'"'analyse de structure (environ 3 Go à télécharger, 10 à 40 min, 8 Go de RAM conseillés) ? [o/N] ' \
+                  '  Install structure analysis (about 3 GB to download, 10 to 40 min, 8 GB RAM recommended)? [y/N] ')" A || true
+  case "$(echo "${A:-n}" | tr '[:upper:]' '[:lower:]')" in
+    o*|y*) STRUCT=yes ;;
+    *) STRUCT=no ;;
+  esac
+fi
+if [ "$STRUCT" = yes ]; then
+  bash install/install_structure_mac.sh "$L" \
+    || t "  ! analyse de structure non installée (ReaCue garde sa détection). Réessaie avec « Install ReaCue Structure.command »." \
+         "  ! structure analysis not installed (ReaCue keeps its own detection). Try again with “Install ReaCue Structure.command”."
+else
+  t "  Non installée. Plus tard : double-clic sur « Install ReaCue Structure.command »." \
+    "  Not installed. Later: double-click “Install ReaCue Structure.command”."
 fi

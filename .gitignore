@@ -53,3 +53,8 @@ desktop.ini
 # Séparation de stems / Stem separation
 .venv-demucs/
 demucs_status.json
+
+# Analyse de structure (SongFormer, téléchargé par l'installateur) / Structure analysis
+.venv-structure/
+/structure/
+.reacue/

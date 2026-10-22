@@ -45,7 +45,7 @@ SETTINGS_DEFAULTS = {
     "count_in_bars": 2, "cue_lead_bars": 2, "voice_cues": True, "voice_count_in": True,
     "voice_count_each": True, "voice_volume": 0.8, "click_volume": 0.5, "click_to_master": True,
     "click_hw_output": None, "tempo_mode": "auto", "count_rate": 240, "stems_model": "htdemucs_6s",
-    "projects_dir": None, "concert_dir": None,
+    "structure_engine": "auto", "projects_dir": None, "concert_dir": None,
 }
 
 MSG = {
@@ -119,6 +119,8 @@ MSG = {
     "stems_kept": ("Séparation de stems conservée : {d} (--purge pour la supprimer ; modèles Demucs dans le "
                    "cache de PyTorch : {c})",
                    "Stem separation kept: {d} (--purge to delete it; Demucs models in the PyTorch cache: {c})"),
+    "structure_kept": ("Analyse de structure conservée : {d} (--purge pour la supprimer, modèles compris)",
+                       "Structure analysis kept: {d} (--purge to delete it, models included)"),
 }
 
 LANG = "fr"
@@ -176,6 +178,13 @@ def torch_hub_dir(env: dict | None = None, home: Path | None = None) -> Path:
     if env.get("TORCH_HOME"):
         return Path(env["TORCH_HOME"]) / "hub"
     return Path(env.get("XDG_CACHE_HOME") or home / ".cache") / "torch" / "hub"
+
+
+def structure_python(install_dir: Path, platform: str | None = None) -> Path:
+    """Python de l'analyse de structure (SongFormer) / structure analysis Python."""
+    if (platform or sys.platform).startswith("win"):
+        return Path(install_dir) / ".venv-structure" / "Scripts" / "python.exe"
+    return Path(install_dir) / ".venv-structure" / "bin" / "python"
 
 
 def stems_python(install_dir: Path, platform: str | None = None, windowed: bool = False) -> Path:
@@ -494,10 +503,13 @@ def do_uninstall(args) -> int:
     if remove_mcp(cfg):
         say("mcp_removed", f=cfg)
     stems_env = None
+    struct_dirs = []
     try:
         inst = (rdir / "ReaCueMCP" / "reacue_install.txt").read_text(encoding="utf-8").strip()
         if inst and (Path(inst) / ".venv-demucs").is_dir():
             stems_env = Path(inst) / ".venv-demucs"
+        if inst:
+            struct_dirs = [Path(inst) / n for n in (".venv-structure", "structure") if (Path(inst) / n).is_dir()]
     except OSError:
         pass
     for p in (rdir / "ReaCueMCP" / "reacue_install.txt", rdir / "reaper_www_root" / "prompteur.html",
@@ -515,6 +527,12 @@ def do_uninstall(args) -> int:
             say("purged", d=stems_env)
         else:
             say("stems_kept", d=stems_env, c=torch_hub_dir())
+    for d in struct_dirs:
+        if args.purge:
+            shutil.rmtree(d, ignore_errors=True)
+            say("purged", d=d)
+        else:
+            say("structure_kept", d=d)
     print()
     print(msg("uninstalled", d=data))
     return 0
@@ -534,6 +552,7 @@ def do_status(args) -> int:
         "web_ports": web_ports(rdir / "reaper.ini"),
     }
     info["stems"] = bool(info["install_dir"]) and stems_python(Path(info["install_dir"])).exists()
+    info["structure"] = bool(info["install_dir"]) and structure_python(Path(info["install_dir"])).exists()
     print(json.dumps(info, indent=2, ensure_ascii=False))
     return 0
 

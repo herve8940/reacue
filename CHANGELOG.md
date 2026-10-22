@@ -3,6 +3,24 @@
 ## 0.12.0-beta — 2026-10
 
 ### Added / Ajouts
+- **Structure analysis with SongFormer (optional) / Analyse de structure avec SongFormer (facultative)**:
+  new optional component installed by the main installer (new step 6/6, `REACUE_STRUCTURE=yes|no` /
+  `-Structure yes|no|ask`) or by **`Install ReaCue Structure.command` / `.bat`**
+  (`install/install_structure_mac.sh`, `install/install_structure_windows.ps1`): separate `.venv-structure`
+  with versions pinned per platform (`requirements-structure.txt`; Intel Mac: torch 2.2.2), SongFormer, MuQ
+  and MusicFM downloaded at fixed commits into `structure/`, models downloaded once (`HF_HOME` inside the
+  install folder), `STRUCTURE_OK` check with the speed; no weights in the repository. Launcher
+  `reacue_structure.py` (mix or sum of stems → JSON segments; window 420 s with ≥ 15 GB of RAM, else 120 s;
+  status file read by REAPER). `reacue_mcp/structure.py`: *Prepare* / *Re-analyse* / `prepare_song` use it
+  when installed and keep ReaCue's grid — boundaries snapped to the nearest bar (4-bar phrase preferred
+  within 1 bar), pieces < 2 bars merged, silence at the ends ignored, FR/EN numbered names, *inst* → Solo
+  when the guitar stands out and the voice is low, letters per group; cache per song
+  `.reacue/<song>_structure.json` invalidated when the audio changes; any failure → ReaCue's detection with a
+  warning; hand-edited regions and `set_sections` keep priority. Progress “Structure analysis…” in the Song
+  tab; setting **Structure detection** (`structure_engine`: `auto` / `reacue`) with the installed status in
+  the Settings tab. Uninstall keeps it unless `--purge`; `status` reports `structure`. Bench:
+  `tools/struct_eval.py --songformer` compares ReaCue v3 and SongFormer + snapping. Licences: SongFormer
+  CC BY 4.0 (arXiv:2510.02797); **MuQ weights CC BY-NC 4.0 → non-commercial use**; MusicFM code MIT.
 - **“+ New song” / « + Nouveau morceau »** (Song tab header, under the Concert tab's song list): one file
   (MP3, WAV, AIFF, FLAC, OGG, M4A) or a folder of stems (REAPER's file dialog: pick one stem and its folder is
   used; with js_ReaScriptAPI, `JS_Dialog_BrowseForFolder`). Title suggested from the name (no “-Bass-”, key,

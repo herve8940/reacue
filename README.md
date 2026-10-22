@@ -37,6 +37,7 @@ language with Claude (MCP server).
 - [Installation](#installation)
 - [Enable REAPER's web interface (prompter)](#enable-reapers-web-interface-prompter)
 - [Stem separation (optional)](#stem-separation-optional)
+- [Structure analysis (SongFormer, optional)](#structure-analysis-songformer-optional)
 - [The ReaCue window](#the-reacue-window)
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
@@ -204,6 +205,56 @@ Details:
   that relies on a lead-guitar stem is not available.
 - Mac Intel: PyTorch stopped supporting Intel Macs after version 2.2.2; the installer pins the right
   versions automatically.
+
+## Structure analysis (SongFormer, optional)
+
+ReaCue finds the sections of a song (verse, chorus, bridge…) on its own. For better section boundaries and
+names, it can use [SongFormer](https://github.com/ASLP-lab/SongFormer), a music structure AI model,
+entirely on your computer (nothing is uploaded). **ReaCue keeps its own grid** (tempo, bars, count-in):
+SongFormer only says where the sections are and what they are; each boundary is then snapped to the
+nearest bar of ReaCue's grid.
+
+**Install** (once): answer *yes* to the structure analysis question of the installer, or later
+double-click **`Install ReaCue Structure.command`** (macOS) / **`Install ReaCue Structure.bat`** (Windows).
+It creates a separate Python environment `.venv-structure` in the ReaCue folder, downloads SongFormer and
+its two dependencies (MuQ, MusicFM) at fixed versions into `structure/`, downloads the models once (into
+`structure/hf` and SongFormer's own folder), runs a short test and shows `STRUCTURE_OK` with the speed of
+your computer. About **3 GB** to download, 10 to 40 minutes. ReaCue's own environment is not touched.
+
+**Use**: nothing to do. *Prepare* and *Re-analyse* (window, actions, Claude) use SongFormer automatically
+when it is installed; the tab shows **“Structure analysis (SongFormer)… N s”** meanwhile, and the result
+says “Sections detected by SongFormer”. The result is remembered per song (`.reacue/<song>_structure.json`
+next to the audio), so preparing the song again is immediate, until the audio file changes.
+
+How the sections are built:
+
+| Step | Rule |
+|---|---|
+| Input | the mix, or the sum of the stems (aligned like the analysis) |
+| Boundaries | snapped to the nearest bar; a 4-bar phrase from the previous boundary wins if it is ≤ 1 bar away |
+| Short pieces | segments shorter than 2 bars are merged with a neighbour; two consecutive parts of the same kind are merged when they total ≤ 16 bars |
+| Silence | ignored at the start and at the end |
+| Names | Intro, Verse N, Pre-chorus N, Chorus N, Bridge, Instrumental, Outro (French or English, numbered); an *instrumental* part becomes **Solo** when the guitar (lead stem if present) is clearly louder than usual and the voice is low; same kind = same letter |
+| Priority | regions you edited by hand in REAPER, and Claude's `set_sections`, still win over any analysis |
+| Fallback | SongFormer not installed, setting “ReaCue only”, error or timeout (30 min) → ReaCue's own detection, with a warning |
+
+Setting **Structure detection** in the **Settings** tab: *auto (SongFormer)* (default: SongFormer when
+installed) or *ReaCue only*; the line below says whether SongFormer is installed. Key `structure_engine`
+(`"auto"` / `"reacue"`).
+
+Memory and time:
+
+- The model looks at the song in windows of **420 s** (its trained setting) when the computer has
+  **15 GB of RAM or more**, otherwise **120 s** (a little less accurate, about 4 GB of memory). With 420 s
+  it needs **6 GB or more** of free memory. 8 GB of RAM in total is the recommended minimum.
+- On the processor (no graphics card needed): **several minutes per song** on an Intel Mac (the installer
+  prints an estimate); faster on Apple Silicon or with an NVIDIA graphics card. Only the first preparation
+  of a song pays this price (then the cache is used).
+
+**Licences — non-commercial use only.** SongFormer's code is CC BY 4.0, but it relies on the **MuQ**
+model whose **weights are licensed CC BY-NC 4.0 (non-commercial)**; the analysis is therefore for
+personal / non-commercial use. See [Credits and licence](#credits-and-licence). The repository contains no
+model weights: they are downloaded by the installer from their authors.
 
 ## The ReaCue window
 
@@ -429,6 +480,7 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `click_hw_output` | `null` | hardware output index (0 = outputs 1/2, 2 = 3/4…) |
 | `tempo_mode` | `"auto"` | `auto`, `constant` (one tempo) or `beatmap` (one tempo per bar) |
 | `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems) or `"htdemucs"` (4 stems) |
+| `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
 | `projects_dir` | `null` | concert mode: folder searched for song projects by name; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | concert mode: folder of the concerts; `null` = `<projects folder>/Concerts` |
 
@@ -591,6 +643,14 @@ ReaCue by Hervé Naessens. MIT licence, see [LICENSE](LICENSE).
 
 Stem separation by [Demucs](https://github.com/facebookresearch/demucs) (Alexandre Défossez, Meta AI, MIT
 licence) on [PyTorch](https://pytorch.org/).
+
+Structure analysis (optional) by [SongFormer](https://github.com/ASLP-lab/SongFormer) (ASLP-lab, code
+and checkpoint CC BY 4.0; paper: *SongFormer: Scaling Music Structure Analysis with Heterogeneous
+Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), which uses
+[MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab; code MIT, **weights MuQ-large-msd-iter
+CC BY-NC 4.0, non-commercial**) and [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
+ByteDance; code MIT; the licence of its MSD checkpoint is not stated by its authors). Downloaded by the
+installer at fixed versions, never included in this repository.
 
 QR codes by [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach and contributors,
 3-clause BSD licence; the licence header is kept in `reaper/ReaCue_qrcode.lua`).

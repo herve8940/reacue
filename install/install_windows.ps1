@@ -1,12 +1,13 @@
 ﻿# Installation de ReaCue sous Windows / ReaCue installer for Windows.
 # Lancé par « Install ReaCue.bat » (double-clic) ; ou :
-#   powershell -ExecutionPolicy Bypass -File install\install_windows.ps1 [-Lang fr|en] [-Mcp yes|no|ask] [-Stems yes|no|ask]
+#   powershell -ExecutionPolicy Bypass -File install\install_windows.ps1 [-Lang fr|en] [-Mcp yes|no|ask] [-Stems yes|no|ask] [-Structure yes|no|ask]
 # Relançable sans risque (idempotent). Internet n'est nécessaire que pendant l'installation.
 # Fichier enregistré en UTF-8 avec BOM (sinon Windows PowerShell 5.1 lit les accents en ANSI).
 param(
   [string]$Lang = "",
   [ValidateSet("yes", "no", "ask")][string]$Mcp = "ask",
   [ValidateSet("yes", "no", "ask")][string]$Stems = "ask",
+  [ValidateSet("yes", "no", "ask")][string]$Structure = "ask",
   [string]$ReaperDir = ""
 )
 $ErrorActionPreference = "Stop"
@@ -34,7 +35,7 @@ if (-not $ReaperDir) {
 }
 
 Write-Host ""
-Write-Host (T "== 1/5 Vérifications" "== 1/5 Checks")
+Write-Host (T "== 1/6 Vérifications" "== 1/6 Checks")
 if (-not (Test-Path -LiteralPath $ReaperDir -PathType Container)) {
   Fail "dossier REAPER introuvable ($ReaperDir). Lance REAPER une fois, ferme-le, puis relance l'installation (REAPER portable : -ReaperDir <dossier>)." `
        "REAPER folder not found ($ReaperDir). Start REAPER once, close it, then run the installer again (portable REAPER: -ReaperDir <folder>)."
@@ -43,7 +44,7 @@ Write-Host "  REAPER : $ReaperDir"
 Write-Host "  ReaCue : $Here"
 
 Write-Host ""
-Write-Host (T "== 2/5 uv (gestionnaire Python d'Astral)" "== 2/5 uv (Astral's Python manager)")
+Write-Host (T "== 2/6 uv (gestionnaire Python d'Astral)" "== 2/6 uv (Astral's Python manager)")
 $env:Path = (Join-Path $env:USERPROFILE ".local\bin") + ";" + (Join-Path $env:USERPROFILE ".cargo\bin") + ";" + $env:Path
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
   Write-Host (T "  installation de uv (https://astral.sh/uv)…" "  installing uv (https://astral.sh/uv)…")
@@ -57,7 +58,7 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 Write-Host ("  " + (uv --version))
 
 Write-Host ""
-Write-Host (T "== 3/5 Environnement Python 3.12 (.venv) et dépendances" "== 3/5 Python 3.12 environment (.venv) and dependencies")
+Write-Host (T "== 3/6 Environnement Python 3.12 (.venv) et dépendances" "== 3/6 Python 3.12 environment (.venv) and dependencies")
 if (Test-Path -LiteralPath ".venv") { Remove-Item -LiteralPath ".venv" -Recurse -Force }
 & uv venv .venv --python 3.12
 if ($LASTEXITCODE -ne 0) { Fail "création du .venv impossible." "could not create .venv." }
@@ -69,13 +70,13 @@ if ($LASTEXITCODE -ne 0) { Fail "installation des dépendances impossible (voir 
 if ($LASTEXITCODE -ne 0) { Fail "dépendances incomplètes." "incomplete dependencies." }
 
 Write-Host ""
-Write-Host (T "== 4/5 Configuration de REAPER" "== 4/5 REAPER configuration")
+Write-Host (T "== 4/6 Configuration de REAPER" "== 4/6 REAPER configuration")
 $env:REAPER_RESOURCE_PATH = $ReaperDir
 & $Py (Join-Path $Here "install\reacue_setup.py") install --lang $L --install-dir $Here --reaper-dir $ReaperDir --mcp $Mcp
 if ($LASTEXITCODE -ne 0) { Fail "configuration incomplète." "configuration incomplete." }
 
 Write-Host ""
-Write-Host (T "== 5/5 Séparation de stems (optionnel)" "== 5/5 Stem separation (optional)")
+Write-Host (T "== 5/6 Séparation de stems (optionnel)" "== 5/6 Stem separation (optional)")
 if ($Stems -eq "ask" -and (Test-Path -LiteralPath (Join-Path $Here ".venv-demucs\Scripts\python.exe"))) {
   $Stems = "yes"   # déjà installée : mise à jour
 }
@@ -91,5 +92,24 @@ if ($Stems -eq "yes") {
   }
 } else {
   Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Stems.bat »." "  Not installed. Later: double-click “Install ReaCue Stems.bat”.")
+}
+
+Write-Host ""
+Write-Host (T "== 6/6 Analyse de structure (optionnel)" "== 6/6 Structure analysis (optional)")
+if ($Structure -eq "ask" -and (Test-Path -LiteralPath (Join-Path $Here ".venv-structure\Scripts\python.exe"))) {
+  $Structure = "yes"   # déjà installée : mise à jour
+}
+if ($Structure -eq "ask") {
+  Write-Host (T "  Détecte couplets, refrains, ponts… avec SongFormer (IA, en local). Usage non commercial (licence des poids MuQ)." "  Detects verses, choruses, bridges… with SongFormer (AI, local). Non-commercial use (MuQ weights licence).")
+  $A = Read-Host (T "  Installer l'analyse de structure (environ 3 Go à télécharger, 10 à 40 min, 8 Go de RAM conseillés) ? [o/N]" "  Install structure analysis (about 3 GB to download, 10 to 40 min, 8 GB RAM recommended)? [y/N]")
+  $Structure = if ($A -and ($A.ToLower().StartsWith("o") -or $A.ToLower().StartsWith("y"))) { "yes" } else { "no" }
+}
+if ($Structure -eq "yes") {
+  & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Here "install\install_structure_windows.ps1") -Lang $L
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host (T "  ! analyse de structure non installée (ReaCue garde sa détection). Réessaie avec « Install ReaCue Structure.bat »." "  ! structure analysis not installed (ReaCue keeps its own detection). Try again with “Install ReaCue Structure.bat”.") -ForegroundColor Yellow
+  }
+} else {
+  Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Structure.bat »." "  Not installed. Later: double-click “Install ReaCue Structure.bat”.")
 }
 exit 0

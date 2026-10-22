@@ -39,7 +39,7 @@ SECTION_EN = {
     "Pont": "Bridge", "Solo": "Solo", "Break": "Break", "Outro": "Outro", "Interlude": "Interlude",
     "Main Riff": "Main Riff", "Riff": "Riff", "Section": "Section",
     "Intro guitare": "Guitar intro", "Intro basse": "Bass intro", "Intro claviers": "Keys intro",
-    "Intro voix": "Vocal intro", "Bridge": "Bridge",
+    "Intro voix": "Vocal intro", "Bridge": "Bridge", "Instrumental": "Instrumental",
 }
 SECTION_FR = {v: k for k, v in SECTION_EN.items() if k != "Bridge"}
 SECTION_FR["Bridge"] = "Pont"
@@ -284,6 +284,17 @@ MSG = {
                           "In REAPER: “ReaCue - Concert” action → choose the concert (new tab)."),
     "cli_running": ("Analyse et préparation en cours…", "Analysis and preparation in progress…"),
     "cli_unknown": ("commande inconnue : {cmd}", "unknown command: {cmd}"),
+    # analyse de structure (SongFormer, composant optionnel)
+    "structure_running": ("Analyse de structure (SongFormer)… {s} s",
+                          "Structure analysis (SongFormer)… {s} s"),
+    "structure_timeout": ("SongFormer n'a pas répondu en {min} min", "SongFormer did not answer within {min} min"),
+    "structure_empty": ("SongFormer n'a trouvé aucune section", "SongFormer found no section"),
+    "structure_used": ("Sections détectées par SongFormer ({s} s), calées sur la grille de ReaCue.",
+                       "Sections detected by SongFormer ({s} s), aligned on ReaCue's grid."),
+    "structure_used_cached": ("Sections détectées par SongFormer (résultat mémorisé), calées sur la grille de ReaCue.",
+                              "Sections detected by SongFormer (cached result), aligned on ReaCue's grid."),
+    "structure_failed": ("Analyse de structure SongFormer impossible ({e}) : détection de ReaCue utilisée.",
+                         "SongFormer structure analysis failed ({e}): ReaCue's detection used instead."),
 }
 
 

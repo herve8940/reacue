@@ -108,14 +108,17 @@ actions while REAPER is **closed**.
 | `Langue / Language [fr/en]` | `en` then Enter |
 | `Register ReaCue in Claude Desktop …? [y/N]` | `n` if you don't use Claude Desktop (you can do it later) |
 | `Install stem separation …? [y/N]` | `y` if you have songs as MP3 only (about 1 GB to download, 5 to 15 minutes); otherwise `n` |
+| `Install structure analysis …? [y/N]` | `y` for better sections with SongFormer (AI, about 3 GB to download, 10 to 40 minutes, 8 GB of RAM recommended, **non-commercial use**); otherwise `n` |
 
-**You should see** 5 steps scroll by (`== 1/5 Checks` … `== 5/5 Stem separation`):
+**You should see** 6 steps scroll by (`== 1/6 Checks` … `== 6/6 Structure analysis`):
 
 - at the end of step 4: a line `Likely IP address(es) of this computer: …` → **write this address down**
   (e.g. `192.168.1.20`), you will need it for the phones; then `Installation complete. Restart REAPER…`
   (ReaCue is installed);
 - in step 5, if you answered `y`: PyTorch and Demucs being downloaded, two `model … ready` lines, two
-  `speed … about N min for a 4-minute song` lines, then `Stem separation installed`.
+  `speed … about N min for a 4-minute song` lines, then `Stem separation installed`;
+- in step 6, if you answered `y`: SongFormer, MuQ and MusicFM being downloaded, then PyTorch, the models
+  (about 2 GB), a line `speed: about N min for a 4-minute song`, `STRUCTURE_OK` and `Structure analysis installed`.
 
 Press Enter to close the window.
 
@@ -127,6 +130,7 @@ Press Enter to close the window.
 | `could not install uv (internet?)` | Check the internet connection, run the installer again |
 | `REAPER is running: the actions cannot be registered` | No problem: quit REAPER and run the installer again, or load the actions by hand (step 5) |
 | `stem separation not installed` | The rest of ReaCue works. Try again later with `Install ReaCue Stems.command` / `.bat` |
+| `structure analysis not installed` | ReaCue keeps its own detection. Try again later with `Install ReaCue Structure.command` / `.bat` (it resumes where it stopped) |
 
 > You can run the installer as many times as you like: it repairs the installation and keeps your settings.
 
@@ -316,6 +320,12 @@ on the same MP3, the import is immediate (no new separation).
 - three new tracks: **CUES**, **VOICE**, **CLICK**;
 - the audio moved by 2 bars to make room for the count-in.
 
+> **With SongFormer** (structure analysis installed): the first preparation of a song takes a few
+> minutes more; the tab shows **“Structure analysis (SongFormer)… N s”**, then the result says “Sections
+> detected by SongFormer”. The next preparations of the same song are immediate (result remembered). To
+> compare with ReaCue's own detection: *Settings* → *Structure detection* → **ReaCue only**, then
+> *Re-analyse*.
+
 Press **Space**: you hear 2 bars of click with “one two three four”, then the song, the click and the cues.
 
 > Save the project (**Cmd+S** / **Ctrl+S**).
@@ -459,6 +469,7 @@ Common examples:
 | A louder click | *Click volume*: ▶ | `"click_volume": 0.8` |
 | Click and voice only in the in-ears (outputs 3/4), not front of house | *Click + voice output*: **outputs 3/4**, *Also to front of house*: **no** | `"click_hw_output": 2` and `"click_to_master": false` |
 | 4 stems instead of 6 | *Stem separation*: **4 stems** | `"stems_model": "htdemucs"` |
+| Sections by ReaCue only (not SongFormer) | *Structure detection*: **ReaCue only** | `"structure_engine": "reacue"` |
 
 The tab also shows the **installed version**. The settings live in the file **`reacue_settings.json`**
 (REAPER's resource folder, menu *Options → Show REAPER resource path in explorer/finder* → folder

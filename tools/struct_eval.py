@@ -9,6 +9,12 @@ tools/struct_eval_songs.json ; voir tools/struct_eval_songs.example.json pour le
     python3 tools/struct_eval.py --full     # + analyse complète (chargement, grille) chronométrée
     python3 tools/struct_eval.py -v         # détail des structures
     python3 tools/struct_eval.py nom1 nom2  # seulement ces morceaux
+    python3 tools/struct_eval.py --songformer   # compare ReaCue v3 à SongFormer + calage sur la grille
+
+--songformer : lit pour chaque morceau le résultat JSON de SongFormer (segments en secondes, temps du
+fichier / du stem de référence) : clé "songformer" du morceau (chemin), sinon le cache de ReaCue
+(<dossier>/.reacue/*_structure.json), sinon <dossier>/songformer_result.json. Les segments sont calés
+sur la même grille que ReaCue v3 (reacue_mcp.structure.sections_from_segments) puis notés pareil.
 
 Format d'un morceau : {"kind": "stems" | "mp3", "path": dossier des stems ou fichier,
 "bpm": tempo exact ou null (grille automatique), "bar1": début de la mesure 1 (s), "n_bars": …,
@@ -34,6 +40,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from reacue_mcp import analysis as A  # noqa: E402
 from reacue_mcp.i18n import section_kind  # noqa: E402
+from reacue_mcp import structure as ST  # noqa: E402
 
 
 def _arg(name, default):
@@ -242,6 +249,36 @@ def show(secs, truth=None):
             print("    vérité non trouvée exacte :", ", ".join(miss))
 
 
+# --------------------------------------------------------------------------- SongFormer
+def sf_result_path(cfg) -> Path | None:
+    """Résultat SongFormer d'un morceau (voir --songformer)."""
+    if cfg.get("songformer"):
+        p = Path(cfg["songformer"]).expanduser()
+        return p if p.is_file() else None
+    base = Path(cfg.get("path") or "")
+    folder = base if base.is_dir() else base.parent
+    for d in (folder, folder.parent):
+        hits = sorted((d / ".reacue").glob("*_structure.json")) if (d / ".reacue").is_dir() else []
+        if hits:
+            return hits[0]
+        if (d / "songformer_result.json").is_file():
+            return d / "songformer_result.json"
+    return None
+
+
+def sf_segments(path: Path) -> list[dict]:
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
+    return d["segments"] if isinstance(d, dict) else d
+
+
+def sf_sections(segments, downbeats, n_bars) -> list:
+    """Segments SongFormer -> Sections ReaCue calées sur la grille (0-based, comme A._sections)."""
+    db = [float(x) for x in list(downbeats)[:n_bars + 1]]
+    named = ST.sections_from_segments(segments, db)
+    starts = [x["start_bar"] - 1 for x in named] + [n_bars]
+    return [A.Section(a, b, x["label"], x["name"], 0.0) for x, a, b in zip(named, starts[:-1], starts[1:])]
+
+
 SEC = A._sections
 EXTRA = 2
 PERTURB = (-2, -1, 1, 2)       # écarts de longueur testés (mesures en fin de morceau)
@@ -273,7 +310,8 @@ def main():
     refeat, full, verbose = "--refeat" in args, "--full" in args, "-v" in args
     skip_vals = {_arg("--songs", None), _arg("--cache", None)}
     only = [a for a in args if not a.startswith("-") and a not in skip_vals]
-    rows, glob_scores = [], []
+    use_sf = "--songformer" in args
+    rows, glob_scores, sf_rows = [], [], []
     for key, cfg0 in SONGS.items():
         if only and key not in only:
             continue
@@ -310,6 +348,20 @@ def main():
         if not all(plaus):
             print(f"  !! {key} : plausibilité KO (section max {max(lens)}, {len(secs)} sections "
                   f"pour {n_bars} mesures)")
+        if use_sf:
+            sp_ = sf_result_path(cfg)
+            if sp_ is None:
+                sf_rows.append((key, None, None))
+            else:
+                sfs = sf_sections(sf_segments(sp_), db, n_bars)
+                if verbose:
+                    print(f"  -- SongFormer + calage ({sp_.name})")
+                    show(sfs, cfg["truth"])
+                if cfg["truth"]:
+                    sf_rows.append((key, score(cfg["truth"], n_bars, secs)["global"],
+                                    score(cfg["truth"], n_bars, sfs)["global"]))
+                else:
+                    sf_rows.append((key, None, len(sfs)))
         if cfg["truth"]:
             sc = score(cfg["truth"], n_bars, secs)
             if pert:
@@ -335,6 +387,19 @@ def main():
         else:
             print(f"{key:11s} | (pas de vérité) {sc['n_est']} sections, {sc['odd']} hors carrure de 4"
                   f"{'':14s}| {tf:5.1f}  {ts:5.2f} {tfs}")
+    if use_sf:
+        print("\nmorceau     | ReaCue v3 | SongFormer + calage   (global = (F±1 + noms/mesure)/2)")
+        both = []
+        for key, v3, sf in sf_rows:
+            if v3 is None and sf is None:
+                print(f"{key:11s} | (pas de résultat SongFormer)")
+            elif v3 is None:
+                print(f"{key:11s} | (pas de vérité) {sf} sections SongFormer")
+            else:
+                both.append((v3, sf))
+                print(f"{key:11s} |   {v3:.3f}   |   {sf:.3f}  {'+' if sf > v3 else ('=' if sf == v3 else '-')}")
+        if both:
+            print(f"MOYENNE     |   {np.mean([b[0] for b in both]):.3f}   |   {np.mean([b[1] for b in both]):.3f}")
     if glob_scores:
         print(f"\nSCORE GLOBAL (moyenne sur les longueurs perturbées de (F±1 + noms/mesure)/2) : "
               f"{np.mean(glob_scores):.3f}")

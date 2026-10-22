@@ -180,11 +180,17 @@ local function poll_job()
     end
     return
   end
-  local state, msg, cmd = R.status()
+  local state, msg, cmd, step = R.status()
   if (state == "done" or state == "error") and (cmd == nil or cmd == j.cmd) then
     ctx.job = nil
     if j.on_done then j.on_done(state, msg) end
-  elseif now - j.t0 > 900 then
+  elseif state == "running" and step and step ~= "" and (cmd == nil or cmd == j.cmd) then
+    j.label = step                               -- étape en cours (« Analyse de structure… »)
+    if now - j.t0 > (R.TIMEOUT or 2400) then
+      ctx.job = nil
+      if j.on_done then j.on_done("error", string.format(R.tr("timeout"), "cli.log")) end
+    end
+  elseif now - j.t0 > (R.TIMEOUT or 2400) then
     ctx.job = nil
     if j.on_done then j.on_done("error", string.format(R.tr("timeout"), "cli.log")) end
   end

@@ -47,6 +47,9 @@ def _message(res: dict, title: str) -> str:
         lines.append(t("cli_tempo", bpm=res["bpm"], sig=res.get("signature", ""), bars=res.get("bars", "?"))
                      + (t("cli_alt", alt=res["alt_bpm"]) if res.get("alt_bpm") else ""))
     secs = res.get("sections") or []
+    se = res.get("structure_engine") or {}
+    if se.get("message"):
+        lines.append(se["message"])
     if secs:
         lines.append("")
         lines.append(t("cli_structure"))
@@ -191,6 +194,8 @@ def main(argv=None):
             return 1
     titles = {"prepare": t("cli_prepared"), "publish": t("cli_published_title")}
     _status("running", cmd=args.cmd, step=t("cli_running"))
+    from . import structure
+    structure.PROGRESS = lambda msg: _status("running", cmd=args.cmd, step=msg)
     try:
         res = asyncio.run(_run(args.cmd, args))
         ok = not res.get("error")

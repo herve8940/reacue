@@ -36,6 +36,7 @@ langage naturel avec Claude (serveur MCP).
 - [Installation](#installation)
 - [Activer l'interface web de REAPER (prompteur)](#activer-linterface-web-de-reaper-prompteur)
 - [Séparation de stems (facultatif)](#séparation-de-stems-facultatif)
+- [Analyse de structure (SongFormer, facultatif)](#analyse-de-structure-songformer-facultatif)
 - [La fenêtre ReaCue](#la-fenêtre-reacue)
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
@@ -209,6 +210,59 @@ Détails :
   des solos, qui s'appuie sur un stem de guitare lead, n'est donc pas disponible.
 - Mac Intel : PyTorch n'est plus publié pour les Mac Intel après la version 2.2.2 ; l'installateur choisit
   automatiquement les bonnes versions.
+
+## Analyse de structure (SongFormer, facultatif)
+
+ReaCue trouve tout seul les sections d'un morceau (couplet, refrain, pont…). Pour des frontières et des
+noms plus justes, il peut utiliser [SongFormer](https://github.com/ASLP-lab/SongFormer), un modèle d'IA
+d'analyse de structure musicale, entièrement sur ton ordinateur (rien n'est envoyé en ligne). **ReaCue
+garde sa grille** (tempo, mesures, count-in) : SongFormer dit seulement où sont les sections et ce qu'elles
+sont ; chaque frontière est ensuite calée sur la mesure la plus proche de la grille de ReaCue.
+
+**Installation** (une fois) : réponds *oui* à la question de l'installateur sur l'analyse de structure,
+ou plus tard double-clic sur **`Install ReaCue Structure.command`** (macOS) / **`Install ReaCue
+Structure.bat`** (Windows). Cela crée un environnement Python séparé `.venv-structure` dans le dossier de
+ReaCue, télécharge SongFormer et ses deux dépendances (MuQ, MusicFM) à des versions figées dans
+`structure/`, télécharge les modèles une fois pour toutes (dans `structure/hf` et le dossier de
+SongFormer), fait un court essai et affiche `STRUCTURE_OK` avec la vitesse de ton ordinateur. Environ
+**3 Go** à télécharger, 10 à 40 minutes. L'environnement de ReaCue lui-même n'est pas touché.
+
+**Utilisation** : rien à faire. *Préparer* et *Réanalyser* (fenêtre, actions, Claude) utilisent SongFormer
+automatiquement s'il est installé ; l'onglet affiche **« Analyse de structure (SongFormer)… N s »** pendant
+ce temps et le résultat indique « Sections détectées par SongFormer ». Le résultat est mémorisé par morceau
+(`.reacue/<morceau>_structure.json` à côté de l'audio) : préparer à nouveau le morceau est immédiat, tant
+que le fichier audio ne change pas.
+
+Comment les sections sont construites :
+
+| Étape | Règle |
+|---|---|
+| Entrée | le mix, ou la somme des stems (calés comme pour l'analyse) |
+| Frontières | calées sur la mesure la plus proche ; une carrure de 4 mesures depuis la frontière précédente l'emporte si elle est à ≤ 1 mesure |
+| Petits morceaux | segments de moins de 2 mesures fusionnés avec un voisin ; deux parties consécutives de même type fusionnées si elles font ≤ 16 mesures au total |
+| Silence | ignoré au début et à la fin |
+| Noms | Intro, Couplet N, Pré-refrain N, Refrain N, Pont, Instrumental, Outro (français ou anglais, numérotés) ; une partie *instrumentale* devient **Solo** quand la guitare (stem lead s'il existe) est nettement plus forte que d'habitude et la voix faible ; même type = même lettre |
+| Priorité | les régions modifiées à la main dans REAPER, et `set_sections` de Claude, passent toujours avant toute analyse |
+| Repli | SongFormer non installé, réglage « ReaCue seul », erreur ou délai dépassé (30 min) → détection de ReaCue, avec un avertissement |
+
+Réglage **Détection de structure** dans l'onglet **Réglages** : *auto (SongFormer)* (par défaut :
+SongFormer s'il est installé) ou *ReaCue seul* ; la ligne en dessous indique si SongFormer est installé.
+Clé `structure_engine` (`"auto"` / `"reacue"`).
+
+Mémoire et durée :
+
+- Le modèle regarde le morceau par fenêtres de **420 s** (son réglage d'entraînement) si l'ordinateur a
+  **15 Go de RAM ou plus**, sinon **120 s** (un peu moins précis, environ 4 Go de mémoire). En 420 s il lui
+  faut **6 Go ou plus** de mémoire libre. 8 Go de RAM au total est le minimum conseillé.
+- Sur le processeur (aucune carte graphique nécessaire) : **plusieurs minutes par morceau** sur un Mac
+  Intel (l'installateur affiche une estimation) ; plus rapide sur Apple Silicon ou avec une carte NVIDIA.
+  Seule la première préparation d'un morceau coûte ce temps (ensuite le cache sert).
+
+**Licences — usage non commercial uniquement.** Le code de SongFormer est sous CC BY 4.0, mais il
+s'appuie sur le modèle **MuQ** dont les **poids sont sous licence CC BY-NC 4.0 (non commerciale)** :
+l'analyse est donc réservée à un usage personnel / non commercial. Voir [Crédits et
+licence](#crédits-et-licence). Le dépôt ne contient aucun poids de modèle : l'installateur les télécharge
+chez leurs auteurs.
 
 ## La fenêtre ReaCue
 
@@ -449,6 +503,7 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `click_hw_output` | `null` | sortie physique (0 = sorties 1/2, 2 = 3/4…) |
 | `tempo_mode` | `"auto"` | `auto`, `constant` (un seul tempo) ou `beatmap` (un tempo par mesure) |
 | `stems_model` | `"htdemucs_6s"` | modèle de séparation de stems : `"htdemucs_6s"` (6 stems) ou `"htdemucs"` (4 stems) |
+| `structure_engine` | `"auto"` | sections : `"auto"` (SongFormer s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
 | `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
 
@@ -620,6 +675,14 @@ ReaCue par Hervé Naessens. Licence MIT, voir [LICENSE](LICENSE).
 
 Séparation de stems par [Demucs](https://github.com/facebookresearch/demucs) (Alexandre Défossez, Meta AI,
 licence MIT) sur [PyTorch](https://pytorch.org/).
+
+Analyse de structure (facultative) par [SongFormer](https://github.com/ASLP-lab/SongFormer) (ASLP-lab,
+code et modèle CC BY 4.0 ; article : *SongFormer: Scaling Music Structure Analysis with Heterogeneous
+Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), qui utilise
+[MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab ; code MIT, **poids MuQ-large-msd-iter
+CC BY-NC 4.0, non commerciaux**) et [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
+ByteDance ; code MIT ; la licence de son modèle MSD n'est pas indiquée par ses auteurs). Téléchargés par
+l'installateur à des versions figées, jamais inclus dans ce dépôt.
 
 QR codes par [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach et contributeurs,
 licence BSD 3 clauses ; l'en-tête de licence est conservé dans `reaper/ReaCue_qrcode.lua`).

@@ -12,6 +12,8 @@ return function(ctx)
       to_master = "Aussi en façade", click_vol = "Volume du click", voice_vol = "Volume des voix",
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixe", tempo_beatmap = "variable",
       stems = "Séparation de stems", stems6 = "6 stems", stems4 = "4 stems",
+      structure = "Détection de structure", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue seul",
+      structure_on = "SongFormer installé", structure_off = "SongFormer non installé : détection de ReaCue (Install ReaCue Structure)",
       projects_dir = "Dossier des projets", concert_dir = "Dossier des concerts", default = "par défaut",
       dir_title = "ReaCue - Dossier", dir_field = "Dossier (vide = par défaut) :",
       pin = "Code PIN de la Régie", on = "oui", off = "non",
@@ -27,6 +29,8 @@ return function(ctx)
       to_master = "Also to front of house", click_vol = "Click volume", voice_vol = "Voice volume",
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixed", tempo_beatmap = "variable",
       stems = "Stem separation", stems6 = "6 stems", stems4 = "4 stems",
+      structure = "Structure detection", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue only",
+      structure_on = "SongFormer installed", structure_off = "SongFormer not installed: ReaCue's detection (Install ReaCue Structure)",
       projects_dir = "Projects folder", concert_dir = "Concerts folder", default = "default",
       dir_title = "ReaCue - Folder", dir_field = "Folder (empty = default):",
       pin = "Stage control PIN code", on = "yes", off = "no",
@@ -40,7 +44,7 @@ return function(ctx)
     language = "fr", announce_voice = nil, count_voice = nil, count_lang = "en", count_in_bars = 2, cue_lead_bars = 2,
     voice_cues = true, voice_count_in = true, voice_count_each = true, voice_volume = 0.8, click_volume = 0.5,
     click_to_master = true, click_hw_output = nil, tempo_mode = "auto", stems_model = "htdemucs_6s",
-    projects_dir = nil, concert_dir = nil,
+    structure_engine = "auto", projects_dir = nil, concert_dir = nil,
   }
   local data = nil
   local voices = nil
@@ -67,7 +71,7 @@ return function(ctx)
     if v == nil then data[k] = nil end
     local order = { "language", "announce_voice", "count_voice", "count_lang", "count_in_bars", "cue_lead_bars",
       "voice_cues", "voice_count_in", "voice_count_each", "voice_volume", "click_volume", "click_to_master",
-      "click_hw_output", "tempo_mode", "count_rate", "stems_model", "projects_dir", "concert_dir" }
+      "click_hw_output", "tempo_mode", "count_rate", "stems_model", "structure_engine", "projects_dir", "concert_dir" }
     reaper.RecursiveCreateDirectory(reaper.GetResourcePath() .. SEP .. "ReaCueMCP", 0)
     local ok = R.write_atomic(path(), R.json_encode(data, "  ", order) .. "\n")
     saved_t = reaper.time_precise()
@@ -254,6 +258,14 @@ return function(ctx)
     v, ch = seg("stems", cx, y, cw, { { "htdemucs_6s", t("stems6") }, { "htdemucs", t("stems4") } }, get("stems_model"))
     if ch then M.set("stems_model", v) end
     y = y + row
+    label(t("structure"), x, y, w)
+    v, ch = seg("structure", cx, y, cw, { { "auto", t("structure_auto") }, { "reacue", t("structure_reacue") } },
+      get("structure_engine"), 11)
+    if ch then M.set("structure_engine", v) end
+    y = y + row - 6
+    local inst = R.structure_installed and R.structure_installed(R.install_dir(ctx.dir))
+    U.text(U.fit(inst and t("structure_on") or t("structure_off"), cw, 11), cx, y, 11, inst and U.ACCENT or U.MUTED)
+    y = y + 18
     for _, k in ipairs({ "projects_dir", "concert_dir" }) do
       label(t(k), x, y, w)
       local cur = get(k)
