@@ -1,2 +1,2 @@
 """ReaCue : préparation de morceaux pour le live dans REAPER (click, régions, annonces, prompteur)."""
-__version__ = "0.11.0b1"
+__version__ = "1.0.0"

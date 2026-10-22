@@ -22,6 +22,8 @@ command -v uv >/dev/null 2>&1 || fail "uv introuvable : installe d'abord ReaCue 
 t "  Machine : $(uname -m) — séparation de stems (Demucs) dans $HERE/.venv-demucs" \
   "  Machine: $(uname -m) — stem separation (Demucs) in $HERE/.venv-demucs"
 
+t "  Licence : Demucs (Meta / A. Défossez) est sous licence MIT ; ses modèles sont téléchargés depuis Meta. Détails : THIRD_PARTY_NOTICES.md" \
+  "  Licence: Demucs (Meta / A. Défossez) is MIT-licensed; its models are downloaded from Meta. Details: THIRD_PARTY_NOTICES.md"
 if [ ! -x .venv-demucs/bin/python ]; then
   uv venv .venv-demucs --python 3.12 || fail "création de .venv-demucs impossible." "could not create .venv-demucs."
 fi

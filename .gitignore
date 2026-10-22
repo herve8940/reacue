@@ -53,3 +53,18 @@ desktop.ini
 # Séparation de stems / Stem separation
 .venv-demucs/
 demucs_status.json
+
+# Analyse de structure (SongFormer, téléchargé par l'installateur) / Structure analysis
+.venv-structure/
+/structure/
+.reacue/
+
+# Poids de modèles : jamais dans le dépôt (téléchargés par l'utilisateur) / Model weights: never in the repository
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.th
+ckpts/
+huggingface/

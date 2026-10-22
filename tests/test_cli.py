@@ -182,3 +182,21 @@ def test_old_session_without_settings_snapshot_untouched(env, lang, bridge_dir):
     (bridge_dir / "last_session.json").write_text(json.dumps(sess), encoding="utf-8")
     lang("fr", count_in_bars=1, announce_voice="Amélie")
     assert cli._changed_settings(server) == {}
+
+
+def test_prepare_structure_progress_and_message(env, lang, bridge_dir, resdir, monkeypatch):
+    """« Analyse de structure… » visible dans REAPER pendant l'analyse, puis rappelée dans le résumé."""
+    from reacue_mcp import structure
+    lang("fr")
+    seen = {}
+
+    def fake_engine(a, stems=None, title=None, **kw):
+        structure.PROGRESS(i18n.t("structure_running", s=12))
+        seen["step"] = status(bridge_dir).get("step")
+        seen["stems"] = [s["file"] for s in stems]
+        return a, {"engine": "songformer", "cached": False, "message": i18n.t("structure_used", s=12)}
+    monkeypatch.setattr(server.structure, "apply_engine", fake_engine)
+    assert cli.main(["prepare", "--resource-dir", str(resdir)]) == 0
+    assert seen["step"].startswith("Analyse de structure (SongFormer)") and status(bridge_dir)["state"] == "done"
+    assert seen["stems"][0].endswith("Demo-drums.wav") and len(seen["stems"]) == 2
+    assert "Sections détectées par SongFormer" in status(bridge_dir)["message"]

@@ -1,0 +1,32 @@
+# ReaCue — analyse de structure (SongFormer), environnement SÉPARÉ .venv-structure / separate environment.
+# Installé par install/install_structure_mac.sh et install/install_structure_windows.ps1 (Python 3.11).
+# MuQ (dépendance de SongFormer) est installé ensuite depuis son dépôt figé, sans ses dépendances.
+# Mac Intel : PyTorch n'existe plus pour Mac Intel après 2.2.2 (numpy < 2) — versions testées le 22/10/2026
+torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+torchaudio==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+torchvision==0.17.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+# Mac Apple Silicon, Windows, Linux : versions de SongFormer
+torch==2.4.0 ; sys_platform != "darwin" or platform_machine != "x86_64"
+torchaudio==2.4.0 ; sys_platform != "darwin" or platform_machine != "x86_64"
+torchvision==0.19.0 ; sys_platform != "darwin" or platform_machine != "x86_64"
+numpy<2
+scipy<1.14
+librosa
+numba==0.62.1
+llvmlite==0.45.1
+soundfile
+omegaconf
+hydra-core
+einops
+x-transformers==2.4.14
+x-clip==0.14.4
+ema-pytorch==0.7.7
+transformers==4.51.1
+nnAudio==0.3.3
+easydict
+safetensors
+huggingface-hub
+pandas
+matplotlib
+requests
+tqdm

@@ -1,5 +1,169 @@
 # Changelog
 
+## 1.0.0 — 2026-10-22
+
+First stable release / Première version stable. Contents of the 0.12.0 development cycle below.
+Première version stable : contenu du cycle 0.12.0 ci-dessous.
+
+
+### Added / Ajouts
+- **SongFormer by default / SongFormer par défaut**: the main installers (macOS / Windows) offer the
+  structure analysis by default at step 6/6 (`[O/n]` / `[Y/n]`, Enter = yes); the explicit licence
+  acceptance “J'accepte” / “I accept” is still required. New `reacue_structure.py reuse`, run by the
+  structure installers before the test: models already on the computer are **copied or hard-linked** instead
+  of downloaded again — SongFormer checkpoints from `~/Documents/ReaCue-labo/SongFormer/src/SongFormer/ckpts`
+  (or `REACUE_REUSE_DIRS`, checked against SongFormer's `md5sum.txt`) and the default Hugging Face cache
+  (`~/.cache/huggingface/hub`, `$HF_HOME`, `$XDG_CACHE_HOME`, `%USERPROFILE%\.cache\huggingface\hub`: MuQ,
+  wav2vec2-conformer; only complete snapshots); sources are never changed or deleted. Clear fallback message
+  « Analyse SongFormer impossible : … → structure ReaCue utilisée ». Snapping: two consecutive parts of the
+  same kind stay separate when both are ≥ 8 bars (8 + 8 = two verses); Instrumental / Solo / Intro / Outro
+  no longer numbered. Doubtful section starts (`moved` ≥ ¾ bar, `unsure` 0.3–0.75 bar) passed to the window.
+  Real-case test (a French song at 105.12 BPM, boundaries on bars 9/17/25/33/41/49/57/73).
+- **Easier ReaCue window / Fenêtre ReaCue plus intuitive** (FR / EN):
+  - Song tab: a **big contextual button** follows the song's state (« Séparer les stems » → « Analyser et
+    préparer » → « Prêt ✓ », « Appliquer les modifications » after an edit) with secondary « Re-préparer »,
+    « Réanalyser depuis zéro », « Mettre à jour les téléphones »;
+  - **« Tout faire » / “Do everything”** (`reaper/ReaCue_flow.lua`): split stems if needed, analyse and
+    prepare, update the phones, save; checklist with state and time, *Stop* (after the current step),
+    *Resume* at the failed step; offered right after « + Nouveau morceau »;
+  - **status pills**: Stems · Structure (SongFormer | ReaCue | manuelle, kept in the project) · Tempo ·
+    Accords · Batterie · Paroles N lignes · Prompteur publié · Enregistré — a click does the useful action;
+  - **structure band**: one coloured box per section (width ∝ bars), orange = to check (length not 4/8/16,
+    boundary moved by snapping or between two bars), hover details, click = select and listen; *Renommer*,
+    ±1 bar, *Fusionner →*, *Couper en deux*, *Supprimer*, **Annuler / Rétablir** (history), *Appliquer*;
+  - **help line** at the bottom for the element under the mouse; **errors explained** (`reaper/ReaCue_guide.lua`):
+    cause, what to do and an action button (start the bridge, set media online, run an installer, save, open
+    the log, REAPER preferences); *Vérifier*: *Corriger* also for the bridge and the web interface;
+  - Concert tab: **batch preparation** « Préparer tous les morceaux non préparés » / « Préparer la sélection »
+    (tick boxes): one song after the other in the background (opened in a tab, *Tout faire*, saved, tab
+    closed), global progress, stop;
+  - **first-launch assistant** (`reaper/ReaCue_assistant.lua`, also *Réglages → Vérifier l'installation*):
+    bridge, web interface and port, IP, program, stems, SongFormer, projects folder, each with a fix button;
+  - Settings: **simple view** + **Réglages avancés** (PIN, cue lead, count language / voice / speed, volumes,
+    tempo, separation model, folders); new `count_rate` control;
+  - plain words everywhere (window, messages, prompter page, docs): « Analyser et préparer », « Mettre à jour
+    les téléphones », « Réanalyser depuis zéro »… REAPER action names are unchanged (shortcuts kept).
+  - Tutorials FR / EN rewritten around « + Nouveau morceau » → « Tout faire »; new screenshots.
+- **Licences, responsibilities and disclaimers / Licences, responsabilités et avertissements**:
+  new `THIRD_PARTY_NOTICES.md` (every third-party component and downloaded model, code and weights licences,
+  checked on 22/10/2026: SongFormer CC BY 4.0, **MuQ weights CC BY-NC 4.0 — non-commercial**, MusicFM MSD
+  checkpoint licence not clearly stated, Demucs MIT, luaqrcode BSD-3, Python packages from PyPI…), new
+  `CITATION.cff` (ReaCue + SongFormer, MuQ, MusicFM, Demucs), new section in README / LISEZMOI linked from the
+  top (MIT “as is”, no weights redistributed, non-commercial structure analysis, user responsible for the
+  rights on audio/stems/lyrics, trademarks: not affiliated with Cockos / Anthropic, not legal advice).
+  The structure installers (macOS / Windows, main installer step 6/6 and `Install ReaCue Structure`) show the
+  licence summary and install **only if the user types exactly “J'accepte” / “I accept”** (typographic
+  apostrophe accepted); unattended: `REACUE_STRUCTURE_ACCEPT=yes`; acceptance remembered in
+  `structure/.licenses_accepted`. Stem installers show a short licence note (Demucs MIT). Settings tab:
+  **Licences** button (opens `THIRD_PARTY_NOTICES.md`, or the GitHub page) and “non-commercial use only”
+  under *Structure detection*. `.gitignore`: model weight files (`*.safetensors`, `*.pt`, `*.pth`,
+  `*.ckpt`, `*.onnx`, `*.th`, `ckpts/`). Tests `tests/test_licences.py` (refusal, typed and environment
+  acceptance, memory, PowerShell, internal links, no weights tracked).
+- **Structure analysis with SongFormer (optional) / Analyse de structure avec SongFormer (facultative)**:
+  new optional component installed by the main installer (new step 6/6, `REACUE_STRUCTURE=yes|no` /
+  `-Structure yes|no|ask`) or by **`Install ReaCue Structure.command` / `.bat`**
+  (`install/install_structure_mac.sh`, `install/install_structure_windows.ps1`): separate `.venv-structure`
+  with versions pinned per platform (`requirements-structure.txt`; Intel Mac: torch 2.2.2), SongFormer, MuQ
+  and MusicFM downloaded at fixed commits into `structure/`, models downloaded once (`HF_HOME` inside the
+  install folder), `STRUCTURE_OK` check with the speed; no weights in the repository. Launcher
+  `reacue_structure.py` (mix or sum of stems → JSON segments; window 420 s with ≥ 15 GB of RAM, else 120 s;
+  status file read by REAPER). `reacue_mcp/structure.py`: *Prepare* / *Re-analyse* / `prepare_song` use it
+  when installed and keep ReaCue's grid — boundaries snapped to the nearest bar (4-bar phrase preferred
+  within 1 bar), pieces < 2 bars merged, silence at the ends ignored, FR/EN numbered names, *inst* → Solo
+  when the guitar stands out and the voice is low, letters per group; cache per song
+  `.reacue/<song>_structure.json` invalidated when the audio changes; any failure → ReaCue's detection with a
+  warning; hand-edited regions and `set_sections` keep priority. Progress “Structure analysis…” in the Song
+  tab; setting **Structure detection** (`structure_engine`: `auto` / `reacue`) with the installed status in
+  the Settings tab. Uninstall keeps it unless `--purge`; `status` reports `structure`. Bench:
+  `tools/struct_eval.py --songformer` compares ReaCue v3 and SongFormer + snapping. Licences: SongFormer
+  CC BY 4.0 (arXiv:2510.02797); **MuQ weights CC BY-NC 4.0 → non-commercial use**; MusicFM code MIT.
+- **“+ New song” / « + Nouveau morceau »** (Song tab header, under the Concert tab's song list): one file
+  (MP3, WAV, AIFF, FLAC, OGG, M4A) or a folder of stems (REAPER's file dialog: pick one stem and its folder is
+  used; with js_ReaScriptAPI, `JS_Dialog_BrowseForFolder`). Title suggested from the name (no “-Bass-”, key,
+  BPM, “441hz”, “Official … Video”), confirmed, never overwrites an existing song. Files copied (block by
+  block in the background, size checked) to `<projects folder>/<Title>/` with their original names, new
+  project tab, one file per track at 0 s, project saved as `<Title>/<Title>.RPP`, then the Song tab shows the
+  next step (*Split stems* for a single file, otherwise *Prepare*). New `reaper/ReaCue_newsong.lua`.
+  Claude: new tool `new_song(files, title)` (`reacue_mcp/newsong.py`: same copy and project file).
+  Ajouter un nouveau morceau (MP3 ou stems) depuis la fenêtre.
+- **Automatic save of the song's project** after a successful *Split stems*, *Prepare*, *Apply* or
+  *Re-analyse* started from the window (never a concert project); “saved ✓” / “not saved” in the Song tab.
+  Concert tab: click a song's name to open it in a new tab.
+- **The ReaCue window / la fenêtre ReaCue** (new main action **ReaCue**, `reaper/ReaCue.lua`): one window with
+  four tabs — **Song** (status; *Split stems*, *Prepare*, *Re-analyse*, *Republish* with the progress in the
+  tab; structure list with first bar and length, odd lengths in orange, click = go and listen, rename, move
+  the start by ±1 bar, delete, add at cursor, each with an Undo point, then *Apply*; lyrics file and line
+  count, *Open folder*, chords / drums published; *Add to a concert*), **Concert** (song projects of the
+  projects folder with prepared ✓ / to prepare, setlist editor with +, reorder, remove, rename and total
+  duration, *Build* / *Rebuild* in the background then open in a new tab, *Open*, *Played live…*, existing
+  concerts), **Stage** (the former Concert window plus the instruments, rehearsal, Check, QR, PIN; a simple
+  transport for a single song with sections, instruments, rehearsal loop and Stage control; message and
+  shortcuts when nothing is open), **Settings** (`reacue_settings.json` written atomically, other keys kept:
+  language, count-in, cue lead, count language, cues, voices from the system list, click output, front of
+  house, volumes, tempo mode, separation model, folders, PIN; installed version). The tab is chosen
+  automatically (concert → Stage, song → Song, otherwise the last one). Docked low: compact transport bar.
+  The background jobs (automatic stop, rehearsal loop, Stage control, live profile) run on every tab. The
+  action **ReaCue - Concert** opens the same window on the Stage tab (a second action hands over to the
+  window already open instead of opening another one). FR/EN everywhere. Lua split into modules:
+  `ReaCue_ui.lua` (drawing, buttons, long press, confirmations) and `ReaCue_tab_song.lua`,
+  `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_settings.lua`.
+  Une seule fenêtre en quatre onglets pour préparer, composer le concert, jouer et régler.
+- **Instruments: mute, solo, “played live” / Instruments : couper, solo, « joué en live »**: a row of
+  Mute/Solo buttons for the concert's instrument tracks (Vocals, Drums, Bass, Guitars, Lead guitar, Keys,
+  Other, Mix; never CLICK / VOICE / CUES): click = mute / unmute (double tap during playback outside
+  rehearsal), long press = solo, *Hear everything*; manual choices last until the next song. A **“played
+  live” profile** saved with the concert (`live`, `live_exceptions` in `<name>.setlist.json`, kept on
+  rebuild) mutes the stems the band plays for real, with **per-song exceptions** (stem / live), applied when
+  each song starts and re-read when the file changes (no rebuild). The rehearsal count-in bar keeps the
+  chosen state. State published in `ReaCue/mix` (`role=1|0[L],…;solo;hear-all;song`). Check view: “Muted
+  stems” information line. Stage control: same buttons (commands `mute|role`, `solo|role`, `hearall|1/0`,
+  PIN). Prompter: each musician sees “your stem is muted / playing”. Claude: `build_concert(…, live=[…],
+  live_exceptions={…})`, `set_sections([{"concert": {…, "live": …}}])`, new tool
+  `set_live_profile(concert, live, exceptions, replace_exceptions)` and
+  `set_sections([{"concert_live": {…}}])` to change an existing concert's profile without rebuilding.
+- Tests: `tests/test_reacue_window.py` (tabs, automatic tab and hand-over between the two actions, Song tab:
+  Prepare / Re-analyse commands and progress, rename / move / delete / add a region, lyrics count, add to a
+  concert; Concert tab: scan, +, reorder, rename, Build command then open in a new tab, live profile kept;
+  Settings tab: values written, other keys kept, language switch; instruments: profile, exceptions, solo,
+  hear everything, remote commands with PIN, profile edited by Python and by the window, Check line,
+  rehearsal count-in bar; Lua JSON round trip; FR and EN; renders the tabs to PNG with
+  `REACUE_SHOTS=<folder>`), `tests/test_concert.py` (live profile kept on rebuild, edited without rebuild,
+  MCP), Stage control page extended (instruments, “your stem” note per role).
+- **Check / Vérifier** (pre-show check) in the *ReaCue - Concert* window: audio files readable (not offline),
+  spoken cue files present, songs prepared (structure and tempo), concert up to date (fingerprint — size and
+  Adler-32 — of each song project stored at build time and compared), ReaCue bridge, REAPER web interface,
+  network address, audio device running, click / cue outputs (existing hardware outputs, not muted, routed
+  somewhere), prompter published, Stage control phones seen (the Stage control page writes
+  `ReaCue/remote_seen` every few seconds). Green / orange / red summary; **Fix** buttons: set all media online,
+  rebuild the concert, republish the prompter. Also available with no concert open (system part).
+  Contrôle avant concert avec corrections en un clic.
+- **Rehearsal mode / Mode répétition** (window and Stage control phone): automatic stop off; tap a section to
+  **loop** it, a 2nd section of the same song to loop the range; **one bar of count-in** (click and spoken
+  cues only, the other tracks muted during that bar) before the loop starts and before each repeat, at the
+  tempo of that point (bar length from REAPER's tempo map); speed 100 / 90 / 80 / 70 % (master playrate,
+  pitch preserved); *Loop off*; leaving the mode restores speed, automatic stop, REAPER's repeat, time
+  selection and preserve-pitch option. Remote commands `reh`, `loop`, `loopoff`, `rate`; state published in
+  `ReaCue/rehearsal` for the phones.
+  Boucle avec une mesure de décompte avant chaque reprise, ralenti.
+- Tests: `tests/test_check_rehearsal.py` (checks with offline / missing media, missing outputs, stale or old
+  concert, unprepared song, fixes, window check view FR/EN; loop on a section and a range, count-in bar at the
+  right tempo, muting, restart, stop during the count-in, speed, exit, remote commands, no auto stop in
+  rehearsal), Stage control page extended (rehearsal, loop, speed, `remote_seen`) in FR and EN.
+
+### Changed / Modifications
+- Concert sidecar `.concert.lua` version 2: build time and a fingerprint of each song project.
+- Concert window: tool row on its own line (status, then Check / Rehearsal / Setlist / PIN / QR); text
+  truncation now cuts whole UTF-8 characters.
+- `ReaCue_run.lua` exposes `bridge_alive`, a small JSON encoder / decoder, atomic writes and a
+  start / status API for background CLI jobs; `ReaCue_stems.lua` exposes start / poll / finish (progress shown
+  inside the ReaCue window).
+- Installers register the **ReaCue** action (first) and copy the new Lua modules.
+- Settings: the click output menu now offers outputs 1/2 as well.
+- Stage control page and docs: “ReaCue - Concert window” is now “the ReaCue window (Stage tab)”.
+- Docs: README / LISEZMOI and both tutorials reorganised around the window tabs, with screenshots of a
+  made-up concert.
+- Package version `1.0.0`.
+
 ## 0.11.0-beta — 2026-10
 
 ### Added / Ajouts

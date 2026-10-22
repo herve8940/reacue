@@ -17,7 +17,7 @@ import concert_demo as D  # noqa: E402
 from reacue_mcp import concert as C, i18n  # noqa: E402
 
 FAKE = r"""
-state = {play=0, pos=0, cursor=0, stopped=0, played=0, paused=0, cmds={}, ext={}, persist={}, opened=nil,
+state = {play=0, pos=0, cursor=0, stopped=0, played=0, paused=0, cmds={}, ext={assistant_seen="1"}, persist={}, opened=nil,
          ops={}, color={0,0,0,1}, font={14,0}, dock=0, execs={}, seeks={}, t=1000.0, inputs=nil, shell={}}
 reaper = {
   EnumProjects=function(i, s) return 1, PROJFILE end,
@@ -46,6 +46,36 @@ reaper = {
   ColorFromNative=function(c) return (c>>16)&255, (c>>8)&255, c&255 end,
   TimeMap2_timeToBeats=function(p, t) local m=0; for k=1,#BARS do if BARS[k] <= t + 1e-9 then m=k-1 end end; return 0, m, 4, 0, 4 end,
 }
+-- pistes, items, carte son, boucle/vitesse (contrôle avant concert, mode répétition)
+TRACKS, ITEMS, AUDIO_ON, NOUT = {}, {}, 1, 2
+state.toggles, state.rep, state.sel, state.rate, state.mutelog = {}, 1, {12, 20}, 1.0, {}
+reaper.CountTracks=function() return #TRACKS end
+reaper.GetTrack=function(p, i) return TRACKS[i+1] end
+reaper.GetTrackName=function(tr) return true, tr.name end
+reaper.GetMediaTrackInfo_Value=function(tr, k) if k=="B_MUTE" then return tr.mute or 0 elseif k=="B_MAINSEND" then return tr.main or 1 end return 0 end
+reaper.SetMediaTrackInfo_Value=function(tr, k, v) if k=="B_MUTE" then tr.mute=v; table.insert(state.mutelog, {tr.name, v}) end end
+reaper.GetTrackNumSends=function(tr, c) return #(tr.sends or {}) end
+reaper.GetTrackSendInfo_Value=function(tr, c, i, k) return tr.sends[i+1] end
+reaper.CountMediaItems=function() return #ITEMS end
+reaper.GetMediaItem=function(p, i) return ITEMS[i+1] end
+reaper.GetActiveTake=function(it) return it end
+reaper.TakeIsMIDI=function(t) return t.midi or false end
+reaper.GetMediaItemTake_Source=function(t) return t end
+reaper.GetMediaSourceParent=function(s) return nil end
+reaper.GetMediaSourceFileName=function(s, b) return s.file or "" end
+reaper.GetMediaSourceSampleRate=function(s) return s.sr or 44100 end
+reaper.GetMediaItem_Track=function(it) return TRACKS[it.track] end
+reaper.Audio_IsRunning=function() return AUDIO_ON end
+reaper.GetAudioDeviceInfo=function(k, b) return true, "Fake Device" end
+reaper.GetNumAudioOutputs=function() return NOUT end
+reaper.GetSetRepeat=function(v) if v >= 0 then state.rep=v end return state.rep end
+reaper.GetSet_LoopTimeRange=function(set, loop, a, b, auto) if set then state.sel={a, b} end return state.sel[1], state.sel[2] end
+reaper.GetToggleCommandState=function(c) return state.toggles[c] or 0 end
+reaper.Master_GetPlayRate=function() return state.rate end
+reaper.CSurf_OnPlayRateChange=function(r) state.rate=r end
+reaper.TimeMap2_beatsToTime=function(p, tpos, m) return BARS[m+1] end
+local _moc = reaper.Main_OnCommand
+reaper.Main_OnCommand=function(c, f) if c==40671 then state.toggles[c] = 1 - (state.toggles[c] or 0) end; _moc(c, f) end
 os.execute = function(cmd) table.insert(state.shell, cmd); return true end
 local function op(...) table.insert(state.ops, {...}) end
 gfx = setmetatable({w=540,h=300,mouse_x=0,mouse_y=0,mouse_cap=0,x=0,y=0}, {__index=function(t,k)
@@ -281,17 +311,22 @@ def test_window_detached(concert, lang):
     nxt = "Ensuite : 3 · Third Demo" if lang == "fr" else "Next: 3 · Third Demo"
     assert any(t.startswith(nxt) for t in T), T
     assert any(("mesure" if lang == "fr" else "bar") in t and "BPM" in t for t in T), T
-    bw = (gx.w - 28 - 32) / 5
-    bx = lambda k: 14 + k * (bw + 8) + bw / 2
-    frame(L, g, (bx(2), 140)); assert st.play == 1                     # Lecture
+    # transport : libellés des boutons (fenêtre ReaCue, onglet Scène)
+    lab = (lambda fr, en: fr if lang == "fr" else en)
+    def press(label):
+        xy = find_text(g, label); assert xy, (label, texts(g))
+        frame(L, g, (xy[0] + 2, xy[1] - 12))
+    press(lab("Lecture", "Play")); assert st.play == 1                  # Lecture
     st.pos = st.cursor
     frame(L, g)
     assert ("Pause" in texts(g)) and (("Lecture" if lang == "fr" else "Playing") in texts(g))
-    frame(L, g, (bx(3), 140)); assert st.play == 1                     # Stop : 1er appui = armé
+    press("Stop"); assert st.play == 1                                  # Stop : 1er appui = armé
     assert ("encore ?" if lang == "fr" else "again?") in texts(g)
     st.t += 0.5
-    frame(L, g, (bx(3), 140)); assert st.play == 0                     # 2e appui : stop
-    frame(L, g, (bx(4), 140))                                          # à l'arrêt : Suivant en un appui
+    xy = find_text(g, "encore ?" if lang == "fr" else "again?"); frame(L, g, (xy[0] + 2, xy[1] - 12))
+    assert st.play == 0                                                  # 2e appui : stop
+    frame(L, g)
+    press(lab("Suivant", "Next"))                                        # à l'arrêt : Suivant en un appui
     assert st.cursor == pytest.approx(res.songs[2]["start"])
     st.cursor = res.songs[1]["bar1"] + 1.0; frame(L, g)
     xy = find_text(g, "Solo"); assert xy
@@ -340,12 +375,12 @@ def test_window_docked_and_empty(concert, tmp_path):
     g.state.pos = res.songs[1]["stop"] - 0.2; frame(L, g)
     g.state.pos = res.songs[1]["stop"] + 0.05; frame(L, g)
     assert g.state.play == 0 and g.state.cursor == pytest.approx(res.songs[2]["start"])
-    # sans concert : liste des concerts à ouvrir
+    # sans concert : onglet Scène vide, concerts existants à ouvrir
     L2, g2 = runtime(concert, lang="en", proj=tmp_path / "other.RPP")
     window(L2, g2)
     frame(L2, g2); frame(L2, g2)
     T = texts(g2)
-    assert "No concert in this project" in T and any("Concert test" in t for t in T), T
+    assert "No concert or song open" in T and any("Concert test" in t for t in T), T
     st = g2.state
     st.ext["remote"] = f"toggle||{st.persist['remote_pin']}|z1"; frame(L2, g2)
     assert st.ext["remote_ack"] == "z1|noconcert"

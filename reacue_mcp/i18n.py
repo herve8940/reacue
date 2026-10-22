@@ -39,7 +39,7 @@ SECTION_EN = {
     "Pont": "Bridge", "Solo": "Solo", "Break": "Break", "Outro": "Outro", "Interlude": "Interlude",
     "Main Riff": "Main Riff", "Riff": "Riff", "Section": "Section",
     "Intro guitare": "Guitar intro", "Intro basse": "Bass intro", "Intro claviers": "Keys intro",
-    "Intro voix": "Vocal intro", "Bridge": "Bridge",
+    "Intro voix": "Vocal intro", "Bridge": "Bridge", "Instrumental": "Instrumental",
 }
 SECTION_FR = {v: k for k, v in SECTION_EN.items() if k != "Bridge"}
 SECTION_FR["Bridge"] = "Pont"
@@ -236,11 +236,11 @@ MSG = {
                      "No usable region in the project: the saved structure is kept."),
     "regions_changed_publish": (
         "Tes régions REAPER ont changé depuis la dernière préparation : le prompteur garde la structure "
-        "enregistrée (pour rester d'accord avec les annonces et le click). Lance « ReaCue - Préparer le "
-        "morceau » pour reprendre tes régions partout.",
+        "enregistrée (pour rester d'accord avec les annonces et le click). Clique « Appliquer » (fenêtre "
+        "ReaCue, onglet Morceau) pour reprendre tes régions partout.",
         "Your REAPER regions changed since the last preparation: the prompter keeps the saved structure "
-        "(to stay in line with the cues and the click). Run “ReaCue - Prepare the song” to take your "
-        "regions everywhere."),
+        "(to stay in line with the cues and the click). Click “Apply” (ReaCue window, Song "
+        "tab) to take your regions everywhere."),
     # mode concert
     "concert_rpp_unreadable": ("Fichier RPP illisible.", "Unreadable RPP file."),
     "concert_project_missing": ("Projet introuvable pour « {name} » (cherché dans {dirs}).",
@@ -253,6 +253,14 @@ MSG = {
                            "morceau et enregistre son projet, puis reconstruis le concert.",
                            "{title}: no regions (structure): whole song without sections. Prepare this song "
                            "and save its project, then rebuild the concert."),
+    "concert_live_role": ("Instrument inconnu : « {r} » (possibles : {roles}).",
+                          "Unknown instrument: “{r}” (possible: {roles})."),
+    "concert_live_mode": ("Valeur inconnue : « {v} » (live ou stem).", "Unknown value: “{v}” (live or stem)."),
+    "concert_live_song": ("Morceau introuvable dans la setlist : « {s} » ({songs}).",
+                          "Song not found in the setlist: “{s}” ({songs})."),
+    "concert_not_found": ("Concert introuvable : « {name} » (dossier {d}).", "Concert not found: “{name}” (folder {d})."),
+    "concert_live_applied": ("Profil enregistré : la fenêtre ReaCue l'applique tout de suite (pas besoin de reconstruire).",
+                             "Profile saved: the ReaCue window applies it right away (no rebuild needed)."),
     "concert_empty": ("Setlist vide.", "Empty setlist."),
     "concert_lane_songs": ("Morceaux", "Songs"),
     "concert_prompter_failed": ("Prompteur du concert non publié : {e}", "Concert prompter not published: {e}"),
@@ -268,10 +276,25 @@ MSG = {
                                "structure published; chords, lyrics and drums being computed (background)"),
     "concert_extras_not_spawned": ("Calcul des accords/paroles/batterie non lancé : {e}",
                                    "Chords/lyrics/drums computation not started: {e}"),
+    "new_song_open_hint": ("Dans REAPER : fenêtre ReaCue, onglet Concert → clic sur le nom du morceau (nouvel onglet), "
+                           "puis « Tout faire » (stems, structure, click, téléphones).",
+                           "In REAPER: ReaCue window, Concert tab → click the song's name (new tab), then "
+                           "“Do everything” (stems, structure, click, phones)."),
     "concert_open_hint": ("Dans REAPER : action « ReaCue - Concert » → choisir le concert (nouvel onglet).",
                           "In REAPER: “ReaCue - Concert” action → choose the concert (new tab)."),
     "cli_running": ("Analyse et préparation en cours…", "Analysis and preparation in progress…"),
     "cli_unknown": ("commande inconnue : {cmd}", "unknown command: {cmd}"),
+    # analyse de structure (SongFormer, composant optionnel)
+    "structure_running": ("Analyse de structure (SongFormer)… {s} s",
+                          "Structure analysis (SongFormer)… {s} s"),
+    "structure_timeout": ("SongFormer n'a pas répondu en {min} min", "SongFormer did not answer within {min} min"),
+    "structure_empty": ("SongFormer n'a trouvé aucune section", "SongFormer found no section"),
+    "structure_used": ("Sections détectées par SongFormer ({s} s), calées sur la grille de ReaCue.",
+                       "Sections detected by SongFormer ({s} s), aligned on ReaCue's grid."),
+    "structure_used_cached": ("Sections détectées par SongFormer (résultat mémorisé), calées sur la grille de ReaCue.",
+                              "Sections detected by SongFormer (cached result), aligned on ReaCue's grid."),
+    "structure_failed": ("Analyse SongFormer impossible : {e} → structure ReaCue utilisée.",
+                         "SongFormer analysis failed: {e} → ReaCue structure used."),
 }
 
 

@@ -1,0 +1,71 @@
+cff-version: 1.2.0
+message: "Si tu cites ReaCue, utilise ces métadonnées. / If you cite ReaCue, please use this metadata."
+title: "ReaCue"
+abstract: "Live-ready songs in REAPER: tempo map, regions, click, spoken cues and a web prompter for musicians."
+authors:
+  - family-names: "Naessens"
+    given-names: "Hervé"
+version: "1.0.0"
+license: MIT
+repository-code: "https://github.com/herve8940/reacue"
+references:
+  - type: article
+    title: "SongFormer: Scaling Music Structure Analysis with Heterogeneous Supervision"
+    authors:
+      - family-names: "Hao"
+        given-names: "Chunbo"
+      - family-names: "Yuan"
+        given-names: "Ruibin"
+      - family-names: "Yao"
+        given-names: "Jixun"
+      - family-names: "Deng"
+        given-names: "Qixin"
+      - family-names: "Bai"
+        given-names: "Xinyi"
+      - family-names: "Wang"
+        given-names: "Yanbo"
+      - family-names: "Xue"
+        given-names: "Wei"
+      - family-names: "Xie"
+        given-names: "Lei"
+    identifiers:
+      - type: other
+        value: "arXiv:2510.02797"
+    url: "https://arxiv.org/abs/2510.02797"
+    license: CC-BY-4.0
+  - type: article
+    title: "MuQ: Self-Supervised Music Representation Learning with Mel Residual Vector Quantization"
+    authors:
+      - family-names: "Zhu"
+        given-names: "Haina"
+      - name: "et al."
+    identifiers:
+      - type: other
+        value: "arXiv:2501.01108"
+    url: "https://arxiv.org/abs/2501.01108"
+    notes: "Code MIT; weights CC BY-NC 4.0 (non-commercial)."
+  - type: article
+    title: "A Foundation Model for Music Informatics"
+    authors:
+      - family-names: "Won"
+        given-names: "Minz"
+      - family-names: "Hung"
+        given-names: "Yun-Ning"
+      - family-names: "Le"
+        given-names: "Duc"
+    identifiers:
+      - type: other
+        value: "arXiv:2311.03318"
+    url: "https://arxiv.org/abs/2311.03318"
+  - type: conference-paper
+    title: "Hybrid Transformers for Music Source Separation"
+    authors:
+      - family-names: "Rouard"
+        given-names: "Simon"
+      - family-names: "Massa"
+        given-names: "Francisco"
+      - family-names: "Défossez"
+        given-names: "Alexandre"
+    collection-title: "ICASSP 2023"
+    url: "https://arxiv.org/abs/2211.08553"
+    license: MIT

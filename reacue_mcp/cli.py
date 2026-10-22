@@ -47,6 +47,9 @@ def _message(res: dict, title: str) -> str:
         lines.append(t("cli_tempo", bpm=res["bpm"], sig=res.get("signature", ""), bars=res.get("bars", "?"))
                      + (t("cli_alt", alt=res["alt_bpm"]) if res.get("alt_bpm") else ""))
     secs = res.get("sections") or []
+    se = res.get("structure_engine") or {}
+    if se.get("message"):
+        lines.append(se["message"])
     if secs:
         lines.append("")
         lines.append(t("cli_structure"))
@@ -191,11 +194,25 @@ def main(argv=None):
             return 1
     titles = {"prepare": t("cli_prepared"), "publish": t("cli_published_title")}
     _status("running", cmd=args.cmd, step=t("cli_running"))
+    from . import structure
+    structure.PROGRESS = lambda msg: _status("running", cmd=args.cmd, step=msg)
     try:
         res = asyncio.run(_run(args.cmd, args))
         ok = not res.get("error")
+        se = res.get("structure_engine") or {}
+        extra = {}
+        if args.cmd == "prepare":
+            # moteur des sections, lu par la fenêtre (pastille « Structure ») : songformer | reacue | regions
+            extra["engine"] = ("regions" if res.get("structure_from_regions") or "structure_engine" not in res
+                               else se.get("engine") or "reacue")
+            if se.get("fallback"):
+                extra["fallback"] = True
+            if se.get("missing"):
+                extra["structure_missing"] = True
+            # débuts de sections douteux (orange dans la fenêtre) : « 9:moved,17:unsure »
+            extra["doubts"] = ",".join(f'{d["start_bar"]}:{d["reason"]}' for d in se.get("doubts") or [])
         _status("done" if ok else "error", cmd=args.cmd,
-                message=_message(res, res.pop("_title", None) or titles[args.cmd]))
+                message=_message(res, res.pop("_title", None) or titles[args.cmd]), **extra)
         return 0 if ok else 1
     except Exception as e:
         log.parent.mkdir(parents=True, exist_ok=True)

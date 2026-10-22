@@ -94,6 +94,133 @@ local function jfield(s, key)
 end
 M.jfield = jfield
 
+-- JSON complet (réglages, setlists) : décodage et encodage ---------------------------------
+-- Les tableaux JSON gardent la marque « array » (même vides) pour être réécrits comme tableaux.
+local ARRAY = { __jsontype = "array" }
+function M.json_array(t) return setmetatable(t or {}, ARRAY) end
+function M.is_array(t)
+  if type(t) ~= "table" then return false end
+  if getmetatable(t) == ARRAY then return true end
+  if next(t) == nil then return false end
+  local n = 0
+  for k in pairs(t) do
+    if type(k) ~= "number" or k < 1 or k % 1 ~= 0 then return false end
+    n = n + 1
+  end
+  return n == #t
+end
+
+function M.json_decode(s)
+  if type(s) ~= "string" then return nil end
+  local i = 1
+  local function ws() i = s:find("[^ \t\r\n]", i) or (#s + 1) end
+  local value
+  local function obj()
+    local t = {}
+    i = i + 1; ws()
+    if s:sub(i, i) == "}" then i = i + 1 return t end
+    while true do
+      ws()
+      if s:sub(i, i) ~= '"' then error("json: key") end
+      local k, j = json_string(s, i)
+      i = j; ws()
+      if s:sub(i, i) ~= ":" then error("json: colon") end
+      i = i + 1
+      t[k] = value()
+      ws()
+      local c = s:sub(i, i)
+      i = i + 1
+      if c == "}" then return t end
+      if c ~= "," then error("json: object") end
+    end
+  end
+  local function arr()
+    local t = M.json_array({})
+    i = i + 1; ws()
+    if s:sub(i, i) == "]" then i = i + 1 return t end
+    while true do
+      t[#t + 1] = value()
+      ws()
+      local c = s:sub(i, i)
+      i = i + 1
+      if c == "]" then return t end
+      if c ~= "," then error("json: array") end
+    end
+  end
+  value = function()
+    ws()
+    local c = s:sub(i, i)
+    if c == "{" then return obj() end
+    if c == "[" then return arr() end
+    if c == '"' then local v, j = json_string(s, i); i = j; return v end
+    if s:sub(i, i + 3) == "true" then i = i + 4 return true end
+    if s:sub(i, i + 4) == "false" then i = i + 5 return false end
+    if s:sub(i, i + 3) == "null" then i = i + 4 return nil end
+    local num = s:match("^%-?%d+%.?%d*[eE]?[%+%-]?%d*", i)
+    if num and num ~= "" then i = i + #num; return tonumber(num) end
+    error("json: value at " .. i)
+  end
+  local ok, v = pcall(value)
+  if ok then return v end
+  return nil
+end
+
+local function json_str_enc(v)
+  return '"' .. v:gsub('[%c"\\]', function(c)
+    local map = { ['"'] = '\\"', ['\\'] = '\\\\', ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t" }
+    return map[c] or string.format("\\u%04x", c:byte())
+  end) .. '"'
+end
+
+-- order : liste de clés à écrire en premier (les autres suivent, triées)
+function M.json_encode(v, indent, order, depth)
+  depth = depth or 0
+  local t = type(v)
+  if v == nil then return "null" end
+  if t == "boolean" then return v and "true" or "false" end
+  if t == "number" then
+    if v ~= v or v == math.huge or v == -math.huge then return "null" end
+    if math.type and math.type(v) == "integer" then return tostring(v) end
+    if v % 1 == 0 and math.abs(v) < 1e15 then return string.format("%d", v) end
+    return string.format("%.10g", v)
+  end
+  if t == "string" then return json_str_enc(v) end
+  if t ~= "table" then return json_str_enc(tostring(v)) end
+  local nl = indent and ("\n" .. string.rep(indent, depth + 1)) or ""
+  local nl0 = indent and ("\n" .. string.rep(indent, depth)) or ""
+  local sp = indent and " " or ""
+  if M.is_array(v) or (getmetatable(v) == ARRAY) then
+    if #v == 0 then return "[]" end
+    local out = {}
+    for k = 1, #v do out[k] = nl .. M.json_encode(v[k], indent, nil, depth + 1) end
+    return "[" .. table.concat(out, ",") .. nl0 .. "]"
+  end
+  local keys, seen = {}, {}
+  for _, k in ipairs(order or {}) do if v[k] ~= nil then keys[#keys + 1] = k; seen[k] = true end end
+  local rest = {}
+  for k in pairs(v) do if not seen[k] then rest[#rest + 1] = tostring(k) end end
+  table.sort(rest)
+  for _, k in ipairs(rest) do keys[#keys + 1] = k end
+  if #keys == 0 then return "{}" end
+  local out = {}
+  for n, k in ipairs(keys) do out[n] = nl .. json_str_enc(k) .. ":" .. sp .. M.json_encode(v[k], indent, nil, depth + 1) end
+  return "{" .. table.concat(out, ",") .. nl0 .. "}"
+end
+
+-- écriture atomique d'un fichier texte
+function M.write_atomic(path, text)
+  local tmp = path .. ".tmp"
+  local f = io.open(tmp, "wb"); if not f then return false end
+  f:write(text); f:close()
+  os.remove(path)
+  return os.rename(tmp, path) and true or false
+end
+
+M.read = read
+M.exists = exists
+M.SETTINGS = SETTINGS
+M.STATUS = STATUS
+
 -- Langue ------------------------------------------------------------------------
 local TXT = {
   fr = {
@@ -154,6 +281,14 @@ function M.python(dir, windows)
   return dir .. "/.venv/bin/python"
 end
 
+-- analyse de structure SongFormer (composant optionnel : Install ReaCue Structure) installée ?
+function M.structure_installed(dir, windows)
+  if windows == nil then windows = is_windows() end
+  local py = windows and (dir .. "\\.venv-structure\\Scripts\\python.exe") or (dir .. "/.venv-structure/bin/python")
+  local sep = windows and "\\" or "/"
+  return exists(py) and exists(dir .. sep .. "reacue_structure.py")
+end
+
 -- guillemets shell POSIX : 'a'\''b'
 function M.shq(s) return "'" .. tostring(s):gsub("'", "'\\''") .. "'" end
 
@@ -183,37 +318,44 @@ local function bridge_alive()
   return t == nil
 end
 
-function M.run(cmd, label, script_dir)
-  label = (label and label ~= "") and label or M.tr(cmd)
+M.bridge_alive = bridge_alive
+-- durée maximale d'une commande (analyse de structure SongFormer comprise, sur CPU lent)
+M.TIMEOUT = 2400
+
+-- lance la CLI en arrière-plan sans fenêtre (fenêtre ReaCue) : renvoie true, ou false + message
+function M.start(cmd, script_dir, need_bridge)
   local windows = is_windows()
   local dir = M.install_dir(script_dir)
   local py = M.python(dir, windows)
-  if not exists(py) then
-    reaper.ShowMessageBox(string.format(M.tr("not_found"), py), TITLE, 0)
-    return
-  end
-  if not bridge_alive() then
-    reaper.ShowMessageBox(M.tr("no_bridge"), TITLE, 0)
-    return
-  end
+  if not exists(py) then return false, string.format(M.tr("not_found"), py) end
+  if need_bridge ~= false and not bridge_alive() then return false, M.tr("no_bridge") end
   local st = read(STATUS)
   if st and jfield(st, "state") == "running" and os.time() - (jfield(st, "time") or 0) < 600 then
-    reaper.ShowMessageBox(M.tr("busy"), TITLE, 0)
-    return
+    return false, M.tr("busy")
   end
   os.remove(STATUS)
   local log = DIR .. SEP .. "cli.log"
   local line = M.command(cmd, dir, py, windows, log)
   if windows then
-    local r = reaper.ExecProcess(line, -1)
-    if r == nil then
-      reaper.ShowMessageBox(string.format(M.tr("launch_failed"), line), TITLE, 0)
-      return
-    end
+    if reaper.ExecProcess(line, -1) == nil then return false, string.format(M.tr("launch_failed"), line) end
   else
     os.execute(line)
   end
+  return true
+end
 
+-- état de la dernière commande : state ("running" | "done" | "error" | nil), message, cmd
+function M.status()
+  local s = read(STATUS)
+  if not s then return nil end
+  return jfield(s, "state"), jfield(s, "message"), jfield(s, "cmd"), jfield(s, "step")
+end
+
+function M.run(cmd, label, script_dir)
+  label = (label and label ~= "") and label or M.tr(cmd)
+  local ok, err = M.start(cmd, script_dir)
+  if not ok then reaper.ShowMessageBox(err, TITLE, 0) return end
+  local log = DIR .. SEP .. "cli.log"
   local t0 = reaper.time_precise()
   local spin = { "|", "/", "-", "\\" }
   local win = true
@@ -224,13 +366,13 @@ function M.run(cmd, label, script_dir)
   end
   local function loop()
     local el = reaper.time_precise() - t0
-    local s = read(STATUS)
-    local state = s and jfield(s, "state")
+    local state, msg, _, step = M.status()
     if state == "done" or state == "error" then
-      finish(jfield(s, "message") or (state == "done" and M.tr("done") or M.tr("error")))
+      finish(msg or (state == "done" and M.tr("done") or M.tr("error")))
       return
     end
-    if el > 900 then finish(string.format(M.tr("timeout"), log)) return end
+    if step and step ~= "" then label = step end
+    if el > M.TIMEOUT then finish(string.format(M.tr("timeout"), log)) return end
     if win then
       if gfx.getchar() < 0 then win = false else
         gfx.set(0.08, 0.09, 0.11, 1); gfx.rect(0, 0, gfx.w, gfx.h, 1)

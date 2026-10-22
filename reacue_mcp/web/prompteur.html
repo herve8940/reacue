@@ -198,6 +198,34 @@
   .rbtns button.armed { background: var(--warn); border-color: var(--warn); color: #000; }
   .rbtns button.sent { opacity: .65; }
   .rbtns button.done { box-shadow: 0 0 0 3px var(--ok) inset; }
+  .rreh { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .rreh button { font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px;
+    padding: 8px 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .rreh button.on { background: var(--warn); border-color: var(--warn); color: #000; }
+  .rreh button.sent { opacity: .65; }
+  .rreh button.done { box-shadow: 0 0 0 3px var(--ok) inset; }
+  .rreh .rate { min-width: 56px; }
+  .rrehb { border-radius: 12px; padding: 8px 12px; font-size: 15px; font-weight: 800; background: var(--warn); color: #000; display: none; }
+  .rrehb.show { display: block; }
+  .rsecs button.inloop { box-shadow: inset 0 -5px 0 var(--warn); }
+  .rmix { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+  .rmix button { font: inherit; color: #111; border: 3px solid transparent; border-radius: 12px; padding: 8px 6px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 15px; font-weight: 800; }
+  .rmix button small { font-size: 12px; font-weight: 600; }
+  .rmix button.cut { opacity: .35; text-decoration: line-through; }
+  .rmix button.solo { border-color: #fff; }
+  .rmix button.sent { filter: brightness(.7); }
+  .rmix button.armed { outline: 4px solid var(--warn); }
+  .rmix button.done { box-shadow: 0 0 0 3px var(--ok); }
+  .rmixb { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .rmixb button { font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px;
+    padding: 8px 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .rmixb button.on { background: var(--warn); border-color: var(--warn); color: #000; }
+  .rmixb span { color: var(--dim); font-size: 13px; }
+  .stem { flex: none; font-size: 13px; font-weight: 800; border-radius: 999px; padding: 4px 10px; display: none; }
+  .stem.show { display: inline-block; }
+  .stem.on { border: 2px solid var(--ok); color: var(--ok); }
+  .stem.off { background: var(--warn); color: #000; border: 2px solid var(--warn); }
   .rtitle { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
   .rsecs { display: flex; flex-wrap: wrap; gap: 6px; }
   .rsecs button { font: inherit; font-size: 15px; font-weight: 700; color: #111; border: 3px solid transparent; border-radius: 10px; padding: 8px 10px; cursor: pointer; opacity: .8; }
@@ -244,6 +272,7 @@
   <div class="top">
     <button class="role" id="roleBtn">…</button>
     <div class="title" id="title">ReaCue</div>
+    <span class="stem" id="stemNote"></span>
     <button class="iconbtn" id="langBtn" title="Langue / Language">EN</button>
     <button class="iconbtn" id="fsBtn" title="">⛶</button>
     <div class="dot" id="dot" title=""></div>
@@ -302,6 +331,16 @@
       <button id="rHome" data-cmd="home"><span class="ic">↺</span><span data-t="home"></span></button>
       <button id="rNext" data-cmd="next" data-confirm="1"><span class="ic">⏭</span><span data-t="next"></span></button>
     </div>
+    <div class="rrehb" id="rRehB"></div>
+    <div class="rreh" id="rReh">
+      <button id="rRehBtn"></button>
+      <button id="rLoopOff" class="rx"></button>
+      <button class="rate rx" data-rate="1"></button><button class="rate rx" data-rate="0.9"></button>
+      <button class="rate rx" data-rate="0.8"></button><button class="rate rx" data-rate="0.7"></button>
+    </div>
+    <div class="rtitle" id="rMixT"></div>
+    <div class="rmix" id="rMix"></div>
+    <div class="rmixb"><button id="rHearAll"></button><span id="rMixH"></span></div>
     <div class="rtitle" id="rSecsT"></div>
     <div class="rsecs" id="rSecs"></div>
     <div class="rtitle" id="rListT"></div>
@@ -347,7 +386,7 @@ const STR = {
       guitars: ["Guitare rythmique", "accords, grille, entrées et sorties"], lead_guitar: ["Guitare solo", "solos, accords, entrées"],
       vocals: ["Chant", "paroles défilantes, entrées de voix"], all: ["Vue générale", "structure et accords"], regie: ["Régie", "télécommande du concert (code PIN)"] },
     fullscreen: "Plein écran", link: "Liaison avec REAPER", next: "Ensuite", footR: "touche le plan : liste on/off",
-    noSong: "Pas de morceau préparé : lance « ReaCue - Préparer le morceau » dans REAPER.",
+    noSong: "Pas de morceau préparé : dans REAPER, fenêtre ReaCue → « Analyser et préparer ».",
     noReaper: "REAPER ne répond pas : vérifie le Wi-Fi et l'interface web de REAPER.",
     bars: n => n > 1 ? `${n} mesures` : "1 mesure", barsWord: n => n > 1 ? "mesures" : "mesure",
     inBars: n => n <= 1 ? "à la prochaine mesure" : `dans ${n} mesures`,
@@ -377,7 +416,7 @@ const STR = {
     lastRound: "DERNIER TOUR", solo: "SOLO", soloEnds: x => `fin du solo ${x}`, soloIn: x => `SOLO ${x}`,
     noVoiceStem: "Pas de stem voix : les entrées de chant ne sont pas connues.", endIn: x => `Fin ${x}`,
     key: k => `Tonalité : ${k}`, noChords: " · pas de grille d'accords pour ce morceau",
-    noLyrics: "Pas de paroles : dépose paroles.txt à côté des stems puis relance « Republier le prompteur ».",
+    noLyrics: "Pas de paroles : dépose paroles.txt à côté des stems puis « Mettre à jour les téléphones » (fenêtre ReaCue).",
     noStems: "Morceau sans stems : seule la structure est affichée.",
     // mode concert et Régie (télécommande)
     rank: (i, n) => `${i}/${n} · `, thenSong: x => ` · ensuite : ${x}`, lastSong: " · dernier morceau",
@@ -388,12 +427,19 @@ const STR = {
     rPin: p => `Code PIN : ${p}`, rNoPin: "Code PIN : pas encore saisi",
     rWhere: { count: "Décompte", ready: "Prêt", end: "Fin du morceau" }, rBar: (b, n) => ` · mesure ${b} / ${n}`,
     rRest: x => ` · reste ${x}`,
-    pinH: "Code PIN de la Régie", pinP: "Il est affiché dans la fenêtre ReaCue - Concert de l'ordinateur (bouton PIN).",
+    pinH: "Code PIN de la Régie", pinP: "Il est affiché dans la fenêtre ReaCue de l'ordinateur (onglet Scène, bouton PIN).",
     pinCancel: "Annuler", pin4: "4 chiffres.", pinBad: "Code incorrect : vérifie le code affiché sur l'ordinateur.",
     rBadPin: "Code PIN incorrect.", rNoConcert: "Aucun concert ouvert dans REAPER.", rRefused: "Commande refusée.",
-    rNoAnswer: "Pas de réponse : ouvre la fenêtre ReaCue - Concert sur l'ordinateur.",
-    rOpenWin: "Ouvre la fenêtre ReaCue - Concert sur l'ordinateur pour piloter depuis ce téléphone.",
+    rNoAnswer: "Pas de réponse : ouvre la fenêtre ReaCue sur l'ordinateur.",
+    rOpenWin: "Ouvre la fenêtre ReaCue sur l'ordinateur pour piloter depuis ce téléphone.",
     rNoConcertHint: "Pas de concert : la Régie pilote un concert ouvert dans REAPER.",
+    rReh: "Répétition", rRehOn: "Répétition ✓", rLoopOff: "Boucle off", rRate: r => `${Math.round(r * 100)} %`,
+    rRehBanner: (loop, r) => `Répétition · ${loop ? "boucle : " + loop : "touche une section pour la faire boucler"}${r < 0.999 ? " · " + Math.round(r * 100) + " %" : ""}`,
+    rSecsReh: "Sections — toucher = boucler (2e section = plage)",
+    rMix: "Instruments (stems)", rHearAll: "Tout entendre", rMixH: "toucher = couper / remettre · appui long = solo",
+    mixCut: "coupé", mixOn: "joué", mixSolo: "solo", mixLive: "live",
+    stemCut: "ton stem est coupé", stemOn: "ton stem est joué",
+    tracks: { vocals: "Chant", drums: "Batterie", bass: "Basse", guitars: "Guitares", lead_guitar: "Guitare solo", keys: "Claviers", other: "Autres", mix: "Mix" },
   },
   en: {
     role: "Role", roles: { drums: "Drums", bass: "Bass", guitars: "Rhythm gtr", lead_guitar: "Lead gtr", vocals: "Vocals", all: "Overview", regie: "Stage control" },
@@ -404,7 +450,7 @@ const STR = {
       guitars: ["Rhythm guitar", "chords, chart, entries and exits"], lead_guitar: ["Lead guitar", "solos, chords, entries"],
       vocals: ["Vocals", "scrolling lyrics, vocal entries"], all: ["Overview", "structure and chords"], regie: ["Stage control", "concert remote (PIN code)"] },
     fullscreen: "Full screen", link: "Link to REAPER", next: "Next", footR: "tap the map: list on/off",
-    noSong: "No song prepared: run “ReaCue - Prepare the song” in REAPER.",
+    noSong: "No song prepared: in REAPER, ReaCue window → “Analyse and prepare”.",
     noReaper: "REAPER is not responding: check the Wi-Fi and REAPER's web interface.",
     bars: n => n > 1 ? `${n} bars` : "1 bar", barsWord: n => n > 1 ? "bars" : "bar",
     inBars: n => n <= 1 ? "next bar" : `in ${n} bars`,
@@ -434,7 +480,7 @@ const STR = {
     lastRound: "LAST ROUND", solo: "SOLO", soloEnds: x => `solo ends ${x}`, soloIn: x => `SOLO ${x}`,
     noVoiceStem: "No vocal stem: vocal entries are unknown.", endIn: x => `End ${x}`,
     key: k => `Key: ${k}`, noChords: " · no chord chart for this song",
-    noLyrics: "No lyrics: put lyrics.txt next to the stems, then run “Republish the prompter”.",
+    noLyrics: "No lyrics: put lyrics.txt next to the stems, then “Update the phones” (ReaCue window).",
     noStems: "Song without stems: only the structure is shown.",
     // concert mode and Stage control (remote)
     rank: (i, n) => `${i}/${n} · `, thenSong: x => ` · next: ${x}`, lastSong: " · last song",
@@ -445,12 +491,19 @@ const STR = {
     rPin: p => `PIN code: ${p}`, rNoPin: "PIN code: not entered yet",
     rWhere: { count: "Count-in", ready: "Ready", end: "End of song" }, rBar: (b, n) => ` · bar ${b} / ${n}`,
     rRest: x => ` · ${x} left`,
-    pinH: "Stage control PIN code", pinP: "It is shown in the ReaCue - Concert window on the computer (PIN button).",
+    pinH: "Stage control PIN code", pinP: "It is shown in the ReaCue window on the computer (Stage tab, PIN button).",
     pinCancel: "Cancel", pin4: "4 digits.", pinBad: "Wrong code: check the code shown on the computer.",
     rBadPin: "Wrong PIN code.", rNoConcert: "No concert open in REAPER.", rRefused: "Command refused.",
-    rNoAnswer: "No answer: open the ReaCue - Concert window on the computer.",
-    rOpenWin: "Open the ReaCue - Concert window on the computer to control it from this phone.",
+    rNoAnswer: "No answer: open the ReaCue window on the computer.",
+    rOpenWin: "Open the ReaCue window on the computer to control it from this phone.",
     rNoConcertHint: "No concert: Stage control drives a concert open in REAPER.",
+    rReh: "Rehearsal", rRehOn: "Rehearsal ✓", rLoopOff: "Loop off", rRate: r => `${Math.round(r * 100)} %`,
+    rRehBanner: (loop, r) => `Rehearsal · ${loop ? "loop: " + loop : "tap a section to loop it"}${r < 0.999 ? " · " + Math.round(r * 100) + " %" : ""}`,
+    rMix: "Instruments (stems)", rHearAll: "Hear everything", rMixH: "tap = mute / unmute · long press = solo",
+    mixCut: "muted", mixOn: "playing", mixSolo: "solo", mixLive: "live",
+    stemCut: "your stem is muted", stemOn: "your stem is playing",
+    tracks: { vocals: "Vocals", drums: "Drums", bass: "Bass", guitars: "Guitars", lead_guitar: "Lead guitar", keys: "Keys", other: "Other", mix: "Mix" },
+    rSecsReh: "Sections — tap = loop (2nd section = range)",
   },
 };
 const params = new URLSearchParams(location.search);
@@ -579,11 +632,17 @@ async function poll() {
   if (DEMO) return;
   const t = performance.now();
   try {
-    const q = role === "regie" ? "/_/TRANSPORT;GET/EXTSTATE/ReaCue/remote_alive;GET/EXTSTATE/ReaCue/remote_ack" : "/_/TRANSPORT";
+    let q = "/_/TRANSPORT";
+    if (role && role !== "all") q += ";GET/EXTSTATE/ReaCue/mix";
+    if (role === "regie") {
+      q += ";GET/EXTSTATE/ReaCue/remote_alive;GET/EXTSTATE/ReaCue/remote_ack;GET/EXTSTATE/ReaCue/rehearsal";
+      if (t - rg.seenAt > 3000) { rg.seenAt = t; q += ";SET/EXTSTATE/ReaCue/remote_seen/" + rg.sid + "-" + (++rg.seenN); }
+    }
     const r = await fetch(q, { cache: "no-store" });
     const txt = await r.text();
     const now = performance.now();
     if (role === "regie") regieReply(txt, now);
+    mixReply(txt);
     const f = txt.split("\n").find(l => l.startsWith("TRANSPORT"));
     if (!f) throw new Error("bad answer");
     const p = f.split("\t");
@@ -825,6 +884,7 @@ function render() {
   requestAnimationFrame(render);
   const live = DEMO || (st.ok && performance.now() - st.lastOk < 1500);
   $("dot").classList.toggle("on", live);
+  renderStemNote();
   if (concert) pickSong(curPos());
   if (!song) return;
   const t = curPos(), L = locate(t), m = song.beats_per_bar;
@@ -937,9 +997,10 @@ function alerts(L, si, sec, nxt, left) {
 
 // ---------------------------------------------------------------- régie (télécommande du concert)
 // Commandes envoyées par l'interface web de REAPER : SET/EXTSTATE/ReaCue/remote/<cmd>|<arg>|<pin>|<nonce>
-// La fenêtre « ReaCue - Concert » (sur l'ordinateur) exécute et répond dans ReaCue/remote_ack = <nonce>|ok|badpin|bad|noconcert ;
+// La fenêtre « ReaCue » (sur l'ordinateur) exécute et répond dans ReaCue/remote_ack = <nonce>|ok|badpin|bad|noconcert ;
 // elle publie ReaCue/remote_alive (compteur qui avance) tant qu'elle est ouverte.
-const rg = { alive: "", aliveAt: 0, pending: {}, armed: null, lastAck: "", queued: null };
+const rg = { alive: "", aliveAt: 0, pending: {}, armed: null, lastAck: "", queued: null,
+  sid: Math.random().toString(36).slice(2, 8), seenN: 0, seenAt: -1e9, reh: { on: false, rate: 1, a: null, b: null, names: "" } };
 let rKeySecs = "", rKeyList = "";
 const pinGet = () => { const p = load("reacue_pin"); return p && /^\d{4}$/.test(p) ? p : null; };
 function extVal(txt, key) {
@@ -947,6 +1008,11 @@ function extVal(txt, key) {
   return l == null ? null : (l.split("\t")[3] || "");
 }
 function regieReply(txt, now) {
+  const rh = extVal(txt, "rehearsal");
+  if (rh != null) {
+    const [on, rate, a0, b0, names] = rh.split("|");
+    rg.reh = { on: on === "1", rate: parseFloat(rate) || 1, a: a0 ? parseFloat(a0) : null, b: b0 ? parseFloat(b0) : null, names: names || "" };
+  }
   const a = extVal(txt, "remote_alive");
   if (a != null && a !== rg.alive) { rg.alive = a; rg.aliveAt = now; }
   const ack = extVal(txt, "remote_ack");
@@ -963,6 +1029,74 @@ function regieReply(txt, now) {
     }
   }
 }
+// instruments : ReaCue/mix = "rôle=1|0[L],…;solo;tout entendre (1/0);n° du morceau" (publié par la fenêtre ReaCue)
+const mix = { raw: null, roles: [], solo: "", all: false };
+function mixParse(v) {
+  if (v == null) return;
+  if (v === mix.raw) return;
+  mix.raw = v;
+  const [a, solo, all] = v.split(";");
+  mix.roles = (a || "").split(",").filter(Boolean).map(x => {
+    const [r, m] = x.split("="); return { role: r, on: (m || "")[0] === "1", live: (m || "").includes("L") };
+  });
+  mix.solo = solo || ""; mix.all = all === "1"; mix.key = null;
+}
+function mixReply(txt) {
+  const l = txt.split("\n").find(x => x.startsWith("EXTSTATE\tReaCue\tmix"));
+  if (l != null) mixParse(l.split("\t")[3] || "");
+}
+const STEM_ROLE = { drums: "drums", bass: "bass", guitars: "guitars", lead_guitar: "lead_guitar", vocals: "vocals" };
+function renderStemNote() {
+  const el = $("stemNote"), r = STEM_ROLE[role], m = r && mix.roles.find(x => x.role === r);
+  if (!m || (!DEMO && !st.ok)) { el.className = "stem"; return; }
+  el.className = "stem show " + (m.on ? "on" : "off");
+  el.textContent = m.on ? S.stemOn : S.stemCut;
+}
+let mixPress = null;
+function renderMix() {
+  const box = $("rMix");
+  $("rMixT").style.display = mix.roles.length ? "" : "none";
+  $("rHearAll").parentElement.style.display = mix.roles.length ? "" : "none";
+  const k = mix.raw + LANG;
+  if (k === mix.key) return;
+  mix.key = k;
+  box.innerHTML = mix.roles.map(m => {
+    const info = (S.tracks[m.role] != null) ? S.tracks[m.role] : m.role;
+    const sub = mix.solo === m.role ? S.mixSolo : m.on ? S.mixOn : S.mixCut;
+    const c = ROLE_COLORS[m.role] || "#888";
+    return `<button data-r="${esc(m.role)}" class="${m.on ? "" : "cut"} ${mix.solo === m.role ? "solo" : ""}" style="background:${c}">` +
+      `${esc(info)}<small>${esc(sub)}${m.live ? " · " + esc(S.mixLive) : ""}</small></button>`;
+  }).join("");
+  box.querySelectorAll("button").forEach(b => {
+    const down = () => { mixPress = { el: b, t: performance.now(), fired: false,
+      timer: setTimeout(() => { mixPress.fired = true; sendCmd("solo", b.dataset.r, b); }, 600) }; };
+    const up = () => {
+      if (!mixPress || mixPress.el !== b) return;
+      clearTimeout(mixPress.timer);
+      if (!mixPress.fired && (!st.play || confirmTap("mute" + b.dataset.r, b))) sendCmd("mute", b.dataset.r, b);
+      mixPress = null;
+    };
+    b.addEventListener("pointerdown", down);
+    b.addEventListener("pointerup", up);
+    b.addEventListener("pointerleave", () => { if (mixPress && mixPress.el === b) { clearTimeout(mixPress.timer); mixPress = null; } });
+    b.addEventListener("contextmenu", e => e.preventDefault());
+  });
+  $("rHearAll").textContent = S.rHearAll; $("rHearAll").classList.toggle("on", mix.all);
+  $("rMixH").textContent = S.rMixH;
+}
+const ROLE_COLORS = { vocals: "#d4537e", drums: "#ba7517", bass: "#185fa5", guitars: "#639922", lead_guitar: "#0f6e56",
+  keys: "#7f77dd", other: "#888780", mix: "#5f5e5a" };
+function demoMix(cmd, arg) {
+  const m = mix.roles.find(x => x.role === arg);
+  if (cmd === "mute" && m) m.on = !m.on;
+  else if (cmd === "solo") { mix.solo = mix.solo === arg ? "" : arg; mix.roles.forEach(x => { x.on = !mix.solo || x.role === mix.solo; }); }
+  else if (cmd === "hearall") { mix.all = arg === "1"; mix.roles.forEach(x => { x.on = mix.all || !x.live; }); }
+  else return;
+  mix.raw = mix.roles.map(x => `${x.role}=${x.on ? 1 : 0}${x.live ? "L" : ""}`).join(",") + `;${mix.solo};${mix.all ? 1 : 0};1`;
+  mix.key = null;
+}
+if (DEMO) mixParse("vocals=1,drums=0L,bass=1,guitars=1;;0;1");
+$("rHearAll").onclick = () => sendCmd("hearall", mix.all ? "0" : "1", $("rHearAll"));
 function rWarn(t, bad) { const w = $("rWarn"); w.textContent = t; w.classList.toggle("show", !!t); w.classList.toggle("bad", !!bad); }
 function sendCmd(cmd, arg, el) {
   const pin = pinGet();
@@ -971,7 +1105,7 @@ function sendCmd(cmd, arg, el) {
   const v = `${cmd}|${arg == null ? "" : arg}|${pin}|${nonce}`;
   rg.pending[nonce] = { el, cmd, arg, at: performance.now() };
   el && el.classList.add("sent");
-  if (DEMO) { setTimeout(() => regieReply(`EXTSTATE\tReaCue\tremote_ack\t${nonce}|ok`, performance.now()), 150); return; }
+  if (DEMO) { demoMix(cmd, arg); setTimeout(() => regieReply(`EXTSTATE\tReaCue\tremote_ack\t${nonce}|ok`, performance.now()), 150); return; }
   fetch("/_/SET/EXTSTATE/ReaCue/remote/" + encodeURIComponent(v), { cache: "no-store" }).catch(() => {});
 }
 // double appui pendant la lecture (Stop, Précédent, Suivant, changer de morceau)
@@ -1004,6 +1138,9 @@ document.querySelectorAll(".rbtns button").forEach(b => b.onclick = () => {
   if (b.dataset.confirm && !confirmTap(b.id, b)) return;
   sendCmd(b.dataset.cmd, "", b);
 });
+$("rRehBtn").onclick = () => sendCmd("reh", rg.reh.on ? "0" : "1", $("rRehBtn"));
+$("rLoopOff").onclick = () => sendCmd("loopoff", "", $("rLoopOff"));
+document.querySelectorAll("#rReh button.rate").forEach(b => b.onclick = () => sendCmd("rate", b.dataset.rate, b));
 const mmss = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 function renderRegie(t, L, si, sec) {
   if (role !== "regie") return;
@@ -1037,10 +1174,29 @@ function renderRegie(t, L, si, sec) {
     $("rSecs").innerHTML = song.sections.map((s, i) => `<button data-i="${i}" style="background:${s.color}">${esc(s.name)}</button>`).join("");
     $("rSecs").querySelectorAll("button").forEach(b => b.onclick = () => {
       const s = song.sections[+b.dataset.i];
-      sendCmd("seek", barT(s.start_bar).toFixed(3), b);
+      sendCmd(rg.reh.on ? "loop" : "seek", barT(s.start_bar).toFixed(3), b);
     });
   }
-  $("rSecs").querySelectorAll("button").forEach(b => b.classList.toggle("cur", +b.dataset.i === si));
+  const rh = rg.reh, inLoop = s => rh.on && rh.a != null && barT(s.start_bar) >= rh.a - 0.05 &&
+    (s.end_bar != null ? barT(s.end_bar + 1) : barT(s.start_bar)) <= rh.b + 0.05;
+  $("rSecs").querySelectorAll("button").forEach(b => {
+    b.classList.toggle("cur", +b.dataset.i === si);
+    b.classList.toggle("inloop", !!inLoop(song.sections[+b.dataset.i]));
+  });
+  // répétition
+  $("rMixT").textContent = S.rMix;
+  renderMix();
+  $("rMix").querySelectorAll("button").forEach(b => b.classList.toggle("armed", !!(rg.armed && rg.armed.el === b)));
+  $("rRehBtn").textContent = rh.on ? S.rRehOn : S.rReh;
+  $("rRehBtn").classList.toggle("on", rh.on);
+  document.querySelectorAll("#rReh .rx").forEach(b => { b.style.display = rh.on ? "" : "none"; });
+  $("rLoopOff").textContent = S.rLoopOff;
+  document.querySelectorAll("#rReh button.rate").forEach(b => {
+    b.textContent = S.rRate(+b.dataset.rate); b.classList.toggle("on", rh.on && Math.abs(rh.rate - b.dataset.rate) < 0.001);
+  });
+  $("rRehB").textContent = rh.on ? S.rRehBanner(rh.names, rh.rate) : "";
+  $("rRehB").classList.toggle("show", rh.on);
+  $("rSecsT").textContent = rh.on ? S.rSecsReh : S.rSecs;
   // setlist
   const kl = concert ? concert.id : "";
   if (kl !== rKeyList) {
