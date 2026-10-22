@@ -65,6 +65,7 @@ local ctx = {
 }
 REACUE_CTX = ctx                       -- tests (état partagé de la fenêtre)
 function ctx.lang() return L.lang() end
+function ctx.colon() return L.lang() == "fr" and " : " or ": " end   -- « Solution : » / “Solution:”
 function ctx.tr(tbl, k)       -- textes d'un module : tbl = {fr = {...}, en = {...}}
   local l = tbl[L.lang()] or tbl.fr
   local v = l[k]
@@ -243,11 +244,11 @@ function ctx.draw_solution(why, x, y, w, id)
   local E = ctx.guide.E
   local bw = why.action_label and (U.text_w(why.action_label, 13) + 26) or 0
   local tw = w - 24 - (bw > 0 and bw + 8 or 0)
-  local h1 = U.para(E("solution") .. " : " .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
+  local h1 = U.para(E("solution") .. ctx.colon() .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
   local h = math.max(h1 + 14, bw > 0 and 44 or 0)
   U.set(U.WARN, 0.16); gfx.rect(x, y, w, h, 1)
   U.set(U.WARN); gfx.rect(x, y, 4, h, 1)
-  U.para(E("solution") .. " : " .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
+  U.para(E("solution") .. ctx.colon() .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
   if bw > 0 and U.button(id or "err_action", why.action_label, x + w - bw - 6, y + (h - 30) / 2, bw, 30, "primary", 13) then
     ctx.do_action(why.action)
     return h, true

@@ -585,7 +585,7 @@ return function(ctx)
     local ly = i.lyrics
     local pills = {
       { "pill_stems", t("p_stems") .. (i.stems_ok and " ✓" or " —"), i.stems_ok or (i.single_mix and "warn" or false), "stems" },
-      { "pill_structure", t("p_structure") .. (#i.regions > 0 and (" : " .. (eng_lab or t("p_reacue")) .. " ✓") or " —"),
+      { "pill_structure", t("p_structure") .. (#i.regions > 0 and (ctx.colon() .. (eng_lab or t("p_reacue")) .. " ✓") or " —"),
         #i.regions > 0 and ((eng == "reacue" and not sf) and "warn" or true) or false, "structure" },
       { "pill_tempo", i.prepared and fmt_bpm(i.bpm) or (t("p_tempo_none") .. " —"), i.prepared or false, "tempo" },
       { "pill_chords", t("p_chords") .. ((p and p.chords) and " ✓" or " —"), (p and p.chords) or false, "publish" },

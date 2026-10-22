@@ -22,8 +22,12 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 > et [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — l'analyse de structure facultative est réservée à un
 > **usage non commercial**.
 
-> **État : 1.0.0.** Développé et utilisé sur macOS (Intel). La prise en charge de Windows et des Mac Apple Silicon
+> **État : 1.0.1.** Développé et utilisé sur macOS (Intel). La prise en charge de Windows et des Mac Apple Silicon
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
+
+| La fenêtre ReaCue dans REAPER | Le prompteur sur un téléphone | La Régie (télécommande, PIN) |
+|---|---|---|
+| <img src="docs/images/window_song_fr.png" width="360"> | <img src="docs/images/prompter_concert_fr.png" width="190"> | <img src="docs/images/prompter_regie_fr.png" width="190"> |
 
 | Batterie | Basse | Chant | Guitare |
 |---|---|---|---|
@@ -308,14 +312,20 @@ pour chaque point manquant ; on le retrouve dans *Réglages → Vérifier l'inst
 | Morceau | Tout faire |
 |---|---|
 | <img src="docs/images/window_song_fr.png" width="380"> | <img src="docs/images/window_doall_fr.png" width="380"> |
-| **Structure (édition)** | **Concert — préparation en lot** |
-| <img src="docs/images/window_structure_fr.png" width="380"> | <img src="docs/images/window_batch_fr.png" width="380"> |
-| **Scène** | **Réglages** |
-| <img src="docs/images/window_stage_fr.png" width="380"> | <img src="docs/images/window_settings_fr.png" width="380"> |
-| **Assistant** | **Réglages avancés** |
-| <img src="docs/images/window_assistant_fr.png" width="380"> | <img src="docs/images/window_settings_advanced_fr.png" width="380"> |
+| **Structure (édition)** | **+ Nouveau morceau** |
+| <img src="docs/images/window_structure_fr.png" width="380"> | <img src="docs/images/window_newsong_fr.png" width="380"> |
+| **Concert** | **Concert — préparation en lot** |
+| <img src="docs/images/window_concert_fr.png" width="380"> | <img src="docs/images/window_batch_fr.png" width="380"> |
+| **Scène** | **Joué en live** |
+| <img src="docs/images/window_stage_fr.png" width="380"> | <img src="docs/images/window_live_fr.png" width="380"> |
+| **Vérifier (avant le concert)** | **QR code (téléphones)** |
+| <img src="docs/images/window_check_fr.png" width="380"> | <img src="docs/images/window_qr_fr.png" width="380"> |
+| **Assistant (premier lancement)** | **Réglages** |
+| <img src="docs/images/window_assistant_fr.png" width="380"> | <img src="docs/images/window_settings_fr.png" width="380"> |
+| **Réglages avancés** |  |
+| <img src="docs/images/window_settings_advanced_fr.png" width="380"> |  |
 
-*(Morceaux de démonstration inventés.)*
+*(Morceaux de démonstration inventés, adresse 192.168.1.20, PIN 1234.)*
 
 - **Morceau** — le projet ouvert.
   - Un **grand bouton** donne l'étape suivante : **Séparer les stems** (un seul MP3/WAV) → **Analyser et
@@ -705,7 +715,7 @@ besoin. Les stems séparés restent à côté de tes morceaux.
 uv pip install -r requirements-dev.txt     # pytest, lupa, playwright
 python -m pytest tests                     # tests légers : ni audio, ni REAPER
 python tools/make_screenshots.py           # régénère docs/images/prompter_* (Playwright + Chromium)
-REACUE_SHOTS=/tmp/shots python -m pytest tests/test_reacue_window.py   # rend les onglets de la fenêtre en PNG
+REACUE_SHOTS=docs/images python -m pytest tests/test_doc_screenshots.py   # régénère docs/images/window_* (FR + EN)
 ```
 
 Organisation :

@@ -2,8 +2,9 @@
 """Captures d'écran du prompteur pour la documentation (outil de développement).
 
 Fabrique un morceau de démonstration entièrement fictif (« Demo Song » : structure, accords,
-paroles et batterie inventés), le sert avec la page du prompteur sur un faux serveur REAPER
-(/_/TRANSPORT renvoie une position fixe), puis photographie chaque vue avec Playwright (Chromium).
+paroles et batterie inventés) et un concert fictif de trois morceaux, les sert avec la page du prompteur
+sur un faux serveur REAPER (/_/TRANSPORT renvoie une position fixe ; instruments, Régie et répétition
+simulés), puis photographie chaque vue avec Playwright (Chromium) : rôles, tablette, concert, Régie (PIN 1234).
 
     pip install playwright && playwright install chromium
     python3 tools/make_screenshots.py [--out docs/images] [--check]
@@ -17,6 +18,7 @@ import hashlib
 import json
 import sys
 import threading
+import time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -62,13 +64,13 @@ LYRICS = {
 }
 
 
-def bar_len() -> float:
-    return 60.0 * BPB / BPM
+def bar_len(bpm: float = BPM) -> float:
+    return 60.0 * BPB / bpm
 
 
-def bar_time(bar: int, pos: float = 0.0) -> float:
-    """Mesure 1-based (≤ 0 : count-in) -> secondes sur la timeline."""
-    return round((bar - 1 + COUNT_IN + pos / BPB) * bar_len(), 4)
+def bar_time(bar: int, pos: float = 0.0, bpm: float = BPM, t0: float = 0.0) -> float:
+    """Mesure 1-based (≤ 0 : count-in) -> secondes sur la timeline (t0 : début du morceau dans un concert)."""
+    return round(t0 + (bar - 1 + COUNT_IN + pos / BPB) * bar_len(bpm), 4)
 
 
 def _drums(lang: str) -> dict:
@@ -104,7 +106,7 @@ def _drums(lang: str) -> dict:
             "version": "demo"}
 
 
-def demo_song(lang: str) -> dict:
+def demo_song(lang: str, title: str = "Demo Song", bpm: float = BPM, t0: float = 0.0) -> dict:
     secs = []
     for name, a, b in STRUCT:
         nm = localize_section(name, lang)
@@ -137,14 +139,14 @@ def demo_song(lang: str) -> dict:
         step = 2 if kind != "prechorus" else 4
         for k, bar in enumerate(range(a, b + 1, step)):
             text = lines[k % len(lines)]
-            t0, t1 = bar_time(bar, 0.5), bar_time(bar + 1, 3.0)
-            lyrics.append({"i": i, "line": i + 1, "bar": bar, "beat": 0, "pos": 0.5, "t": t0, "end": t1,
+            ta, tb = bar_time(bar, 0.5, bpm, t0), bar_time(bar + 1, 3.0, bpm, t0)
+            lyrics.append({"i": i, "line": i + 1, "bar": bar, "beat": 0, "pos": 0.5, "t": ta, "end": tb,
                            "text": text, "confidence": 0.9, "copy": False})
             i += 1
     song = {
-        "version": 1, "language": lang, "title": "Demo Song", "bpm": BPM, "beats_per_bar": BPB,
+        "version": 1, "language": lang, "title": title, "bpm": bpm, "beats_per_bar": BPB,
         "tempo_mode": "constant", "count_in_bars": COUNT_IN, "n_bars": N_BARS,
-        "bar_times": [bar_time(k) for k in range(-COUNT_IN + 1, N_BARS + 2)],
+        "bar_times": [bar_time(k, 0.0, bpm, t0) for k in range(-COUNT_IN + 1, N_BARS + 2)],
         "key": {"chord": "Am", "fr": "La mineur", "en": "A minor"},
         "sections": secs, "activity": act, "roles": sorted(act), "chords": chords, "lyrics": lyrics,
         "drums": _drums(lang),
@@ -153,21 +155,47 @@ def demo_song(lang: str) -> dict:
     return song
 
 
+# concert fictif : trois morceaux inventés à la suite sur la même timeline, 4 s de blanc entre eux
+CONCERT = [("Demo Song", 112.0), ("Second Demo", 150.0), ("Third Demo", 100.0)]
+GAP = 4.0
+
+
+def demo_concert(lang: str) -> dict:
+    songs, t = [], 0.0
+    for k, (title, bpm) in enumerate(CONCERT):
+        s = demo_song(lang, title, bpm, t)
+        stop = s["bar_times"][-1]
+        s.update({"n": k + 1, "start_t": t, "stop_t": stop, "next_t": stop + GAP,
+                  "next_title": CONCERT[k + 1][0] if k + 1 < len(CONCERT) else None})
+        songs.append(s)
+        t = stop + GAP
+    name = "Concert de démo" if lang == "fr" else "Demo concert"
+    data = {"version": 1, "language": lang, "concert": {"name": name, "n": len(songs), "titles": [x[0] for x in CONCERT]},
+            "songs": songs}
+    data["id"] = hashlib.md5(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
+    return data
+
+
 # --------------------------------------------------------------------------- faux REAPER
 class FakeReaper(SimpleHTTPRequestHandler):
     song: dict = {}
     pos: float = 0.0
+    play: int = 0
+    mix: str = ""
+    rehearsal: str = ""
 
     def log_message(self, *a):
         pass
 
     def do_GET(self):
         path = self.path.split("?")[0]
-        if path.startswith("/_/TRANSPORT"):           # + GET/EXTSTATE/ReaCue/mix (instruments) : vide
-            body = f"TRANSPORT\t0\t{self.pos:.4f}\t0\t1.1.00\t1.1.00\n".encode()
-            if "GET/EXTSTATE/ReaCue/mix" in path:
-                body += b"EXTSTATE\tReaCue\tmix\t\n"
-            ctype = "text/plain"
+        if path.startswith("/_/TRANSPORT"):           # + EXTSTATE ReaCue : instruments, Régie
+            body = f"TRANSPORT\t{self.play}\t{self.pos:.4f}\t0\t1.1.00\t1.1.00\n"
+            for key, val in (("mix", self.mix), ("remote_alive", str(int(time.time() * 2))),
+                             ("remote_ack", ""), ("rehearsal", self.rehearsal)):
+                if f"GET/EXTSTATE/ReaCue/{key}" in path:
+                    body += f"EXTSTATE\tReaCue\t{key}\t{val}\n"
+            body, ctype = body.encode("utf-8"), "text/plain"
         elif path == "/reacue_song.json":
             body, ctype = json.dumps(self.song, ensure_ascii=False).encode("utf-8"), "application/json"
         elif path in ("/", "/prompteur.html"):
@@ -229,6 +257,44 @@ def run(out: Path | None, check_only: bool) -> list[str]:
                         page.screenshot(path=str(f))
                         shots.append(f.name)
                     ctx.close()
+            # mode concert (2e morceau, stem de la batterie coupé) et Régie (télécommande, PIN 1234)
+            for lang in ("fr", "en"):
+                data = demo_concert(lang)
+                s2 = data["songs"][1]
+                bt = lambda bar, beat=0.0: bar_time(bar, beat, s2["bpm"], s2["start_t"])
+                FakeReaper.song = data
+                FakeReaper.mix = "vocals=1,drums=0L,bass=1,guitars=1;;0;2"
+                chorus = next(x for x in s2["sections"] if x["start_bar"] == 29)
+                shots_c = [("drums", "concert", PHONE, bt(21, 1.2), 0, ""),
+                           ("vocals", "concert_vocals", PHONE, bt(11, 1.6), 0, ""),
+                           ("regie", "regie", PHONE, bt(31, 0.5), 1,
+                            f"1|0.9|{bt(29):.3f}|{bt(45):.3f}|{chorus['name']}")]
+                for role, name, vp, pos, play, reh in shots_c:
+                    FakeReaper.pos, FakeReaper.play, FakeReaper.rehearsal = pos, play, reh
+                    ctx = browser.new_context(viewport=vp, device_scale_factor=2, locale="fr-FR" if lang == "fr" else "en-US")
+                    ctx.add_init_script("localStorage.setItem('reacue_pin', '1234')")
+                    page = ctx.new_page()
+                    page.on("console", lambda m, r=name, lg=lang: m.type == "error" and errors.append(f"{lg}/{r}: {m.text}"))
+                    page.on("pageerror", lambda e, r=name, lg=lang: errors.append(f"{lg}/{r}: {e}"))
+                    page.goto(f"{base}/prompteur.html?role={role}&lang={lang}")
+                    sel = "rTitle" if role == "regie" else "nowName"
+                    page.wait_for_function(f"document.getElementById('{sel}').textContent !== '—'", timeout=8000)
+                    page.wait_for_timeout(900)
+                    rank = page.text_content("#rRank" if role == "regie" else "#title") or ""
+                    if "2" not in rank:
+                        errors.append(f"{lang}/{name}: concert rank missing ({rank!r})")
+                    if out and not check_only:
+                        f = out / f"prompter_{name}_{lang}.png"
+                        page.screenshot(path=str(f))
+                        shots.append(f.name)
+                        if role == "regie":           # bas de la Régie : sections, setlist
+                            page.eval_on_selector("#regie", "e => e.scrollTop = e.scrollHeight")
+                            page.wait_for_timeout(300)
+                            f = out / f"prompter_regie2_{lang}.png"
+                            page.screenshot(path=str(f))
+                            shots.append(f.name)
+                    ctx.close()
+            FakeReaper.mix, FakeReaper.play, FakeReaper.rehearsal = "", 0, ""
             # bouton de langue : FR -> EN sans erreur, mémorisé
             ctx = browser.new_context(viewport=PHONE)
             page = ctx.new_page()

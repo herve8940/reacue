@@ -147,7 +147,7 @@ return function(ctx)
       p.secs = now() - p.t0
       if not okk then
         local fs = run.failed and run.steps[run.failed]
-        p.msg = fs and (t(fs.id) .. " : " .. tostring(fs.msg or "")) or t("stopped")
+        p.msg = fs and (t(fs.id) .. ctx.colon() .. tostring(fs.msg or "")) or t("stopped")
         b.n_fail = b.n_fail + 1
       else
         b.n_ok = b.n_ok + 1

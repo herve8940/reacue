@@ -1,6 +1,6 @@
 """Fenêtre « ReaCue » en 4 onglets (Morceau, Concert, Scène, Réglages) et instruments (mute / solo / joué en
 live) : Lua 5.4 via lupa, API REAPER simulée (tests/test_concert_lua.py), concert et morceaux de démonstration
-fictifs construits par le vrai code Python. Rend aussi les 4 vues en PNG (captures de la documentation)."""
+fictifs construits par le vrai code Python. Captures de la documentation : tests/test_doc_screenshots.py."""
 import json
 import os
 import time
@@ -119,57 +119,6 @@ def mutes(g):
     return {t.name: t.mute or 0 for t in g.TRACKS.values() if t.name not in ("CUES", "VOIX", "CLICK")}
 
 
-# ------------------------------------------------------------------------------------- rendu PNG
-def render(g, w, h):
-    from PIL import Image, ImageDraw, ImageFont
-    img = Image.new("RGB", (int(w), int(h)), (29, 29, 31))
-    d = ImageDraw.Draw(img, "RGBA")
-    fonts = {}
-
-    def font(size, bold):
-        k = (size, bold)
-        if k not in fonts:
-            name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
-            try:
-                fonts[k] = ImageFont.truetype(f"/usr/share/fonts/truetype/dejavu/{name}", int(size * 0.9))
-            except OSError:
-                fonts[k] = ImageFont.load_default()
-        return fonts[k]
-    col = lambda r, gg, b, a: (int(r * 255), int(gg * 255), int(b * 255), int(255 * (a if a is not None else 1)))
-    for o in g.state.ops.values():
-        o = list(o.values())
-        k = o[0]
-        if k == "rect":
-            x, y, ww, hh, r, gg, b, a, fill = o[1:10]
-            if ww > 0 and hh > 0:
-                d.rectangle([x, y, x + ww - 1, y + hh - 1], fill=col(r, gg, b, a) if fill else None,
-                            outline=None if fill else col(r, gg, b, a))
-        elif k == "rrect":
-            x, y, ww, hh, r, gg, b, a = o[1:9]
-            d.rounded_rectangle([x, y, x + ww, y + hh], radius=6, outline=col(r, gg, b, a))
-        elif k == "circle":
-            x, y, rad, r, gg, b, a = o[1:8]
-            d.ellipse([x - rad, y - rad, x + rad, y + rad], fill=col(r, gg, b, a))
-        elif k == "tri":
-            pts = o[1:7]
-            r, gg, b, a = o[7:11]
-            d.polygon([(pts[0], pts[1]), (pts[2], pts[3]), (pts[4], pts[5])], fill=col(r, gg, b, a))
-        elif k == "line":
-            x1, y1, x2, y2, r, gg, b, a = o[1:9]
-            d.line([(x1, y1), (x2, y2)], fill=col(r, gg, b, a), width=2)
-        elif k == "text":
-            x, y, s, size, flags, r, gg, b, a = o[1:10]
-            d.text((x, y), s, font=font(size, flags == ord("b")), fill=col(r, gg, b, a))
-    return img
-
-
-def shot(g, gx, name):
-    if not SHOTS:
-        return
-    SHOTS.mkdir(parents=True, exist_ok=True)
-    render(g, gx.w, gx.h).save(SHOTS / name)
-
-
 # ------------------------------------------------------------------------------- instruments (lib)
 def test_mix_profile_exceptions_solo_hearall_and_rehearsal(concert, tmp_path):
     res = concert[0]
@@ -245,8 +194,6 @@ def test_window_tabs_auto_and_handoff(concert, tmp_path, lang):
     # projet concert : onglet Scène choisi tout seul
     assert ("Précédent" if lang == "fr" else "Previous") in T and "1 / 3" in T
     assert ("Batterie" if lang == "fr" else "Drums") in T                 # rangée Instruments
-    if lang == "fr":
-        shot(g, gx, "scene.png")
     press_text(L, g, names[3], exact=True); frame(L, g)
     assert ("Langue" if lang == "fr" else "Language") in TL.texts(g)
     press_text(L, g, names[1], exact=True); frame(L, g)
@@ -305,7 +252,6 @@ def test_stage_instruments_click_long_press_and_live_view(concert):
     frame(L, g)
     T = TL.texts(g)
     assert "Exceptions par morceau  ·  clic : stem / live / profil" in T and "2. Second Demo" in T, T
-    shot(g, L.globals().gfx, "joue_en_live.png")
     press_text(L, g, "Basse", exact=True)
     assert json.loads(res.setlist.read_text(encoding="utf-8"))["live"] == ["drums", "bass"]
     C.set_live_profile(res.setlist, live=[], exceptions={}, replace_exceptions=True)
@@ -373,7 +319,6 @@ def test_song_tab_prepare_structure_lyrics_and_add_to_concert(concert, tmp_path)
     for p in ("Stems ✓", "Structure : SongFormer ✓", "120 BPM", "Paroles : 3 lignes", "Accords —", "Prompteur —"):
         assert p in T, (p, T)
     assert "Intro" in T and "Couplet 1" in T and any("4 mes." in t for t in T)
-    shot(g, gx, "morceau.png")
     # longueurs inhabituelles signalées (Couplet 1 : 9 mesures) ; ligne d'aide au survol
     assert any("9 mes." in t for t in T)
     x, y = text_xy(g, "Tout faire")
@@ -480,7 +425,6 @@ def test_structure_band_edit_merge_split_undo_redo(concert, tmp_path):
     TL.frame(L, g, (x + 2, y + 2)); frame(L, g)
     assert g.state.play == 1 and g.state.cursor == pytest.approx(12.0)
     assert "Couplet 1 · m. 5 · 9 mes." in TL.texts(g) and "Fusionner →" in TL.texts(g)
-    shot(g, gx, "structure_edition.png")
     # fusionner avec la suivante
     press_text(L, g, "Fusionner →", exact=True)
     assert names() == ["Intro", "Couplet 1"] and sorted(g.REGIONS.values(), key=lambda r: r[2])[1][3] == pytest.approx(46.0)
@@ -548,7 +492,6 @@ def test_do_everything_success_failure_resume(concert, tmp_path):
     assert "Arrêter" in T
     g.state.t += 12
     frame(L, g)
-    shot(g, gx, "morceau_toutfaire.png")
     status(g, state="done", cmd="prepare", message="Morceau préparé", engine="songformer", doubts="")
     frame(L, g)
     assert "reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
@@ -607,7 +550,6 @@ def test_assistant_first_launch_and_settings_simple_advanced(concert, tmp_path):
     assert "Bienvenue dans ReaCue" in T and "Analyse de structure (SongFormer)  ·  facultatif" in T, T
     assert "Installer" in T and "Créer" in T and "Pont ReaCue (dans REAPER)" in T, T
     assert any("/Users/demo/Documents" in t for t in T), T            # dossier par défaut absent
-    shot(g, gx, "assistant.png")
     # dossier des projets absent : « Créer »
     sp.write_text(json.dumps({"language": "fr", "projects_dir": str(tmp_path / "Projets")}), encoding="utf-8")
     press_text(L, g, "Revérifier", exact=True); frame(L, g)
@@ -625,11 +567,9 @@ def test_assistant_first_launch_and_settings_simple_advanced(concert, tmp_path):
     T = TL.texts(g)
     assert "Décompte avant le morceau" in T and "Détection de structure" in T and "Licences" in T, T
     assert "Volume du click" not in T and "Code PIN de la Régie" not in T and "Dossier des projets" not in T
-    shot(g, gx, "reglages_simple.png")
     press_text(L, g, "Réglages avancés", exact=True); frame(L, g)
     T = TL.texts(g)
     assert "Volume du click" in T and "Code PIN de la Régie" in T and "Dossier des projets" in T and "Débit du décompte" in T, T
-    shot(g, gx, "reglages_avances.png")
     assert g.state.persist["settings_adv"] == "1"
     press_text(L, g, "Réglages simples", exact=True); frame(L, g)
     # « Vérifier l'installation » rouvre l'assistant
@@ -666,7 +606,6 @@ def test_concert_batch_prepare(concert, tmp_path):
     T = TL.texts(g)
     assert "Préparation en lot  ·  1 / 2" in T and "Bravo" in T and "Charlie" in T and "Arrêter" in T, T
     assert "Concert" in T and g.state.persist["tab"] == "concert"
-    shot(g, gx, "concert_lot.png")
     for cmd in ("prepare", "publish"):
         status(g, state="done", cmd=cmd, message="ok", engine="songformer")
         frame(L, g)
@@ -715,7 +654,6 @@ def test_concert_tab_compose_build_open(concert, tmp_path):
     assert "1. Demo Song" in TL.texts(g)
     g.state.inputs = "Samedi"
     press_text(L, g, "Renommer"); frame(L, g)
-    shot(g, gx, "concert.png")
     press_text(L, g, "Construire", exact=True)
     sl = tmp_path / "Shows" / "Samedi.setlist.json"
     d = json.loads(sl.read_text(encoding="utf-8"))
@@ -749,7 +687,6 @@ def test_settings_tab_writes_json(concert, tmp_path):
     press_text(L, g, "Réglages", exact=True); frame(L, g)
     T = TL.texts(g)
     assert "Langue" in T and "Décompte avant le morceau" in T and "2 mes." in T, T
-    shot(g, gx, "reglages.png")
     # décompte 2 → 3 mesures
     x, y = text_xy(g, "2 mes.")
     tri = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "tri" and abs(list(o.values())[2] - (y + 7)) < 14]
@@ -805,18 +742,15 @@ def test_window_english_views(concert, tmp_path):
     T = TL.texts(g)
     assert "Song One" in T and "Ready ✓" in T and "Do everything" in T and "Update the phones" in T, T
     assert "Lyrics: 3 lines" in T and any("bars" in t for t in T), T
-    shot(g, gx, "morceau_en.png")
     press_text(L, g, "Concert", exact=True); frame(L, g)
     for name in ("Second Demo", "Demo Song"):
         x, y = text_xy(g, name)
         TL.frame(L, g, (x + 230, y + 4)); frame(L, g)
     T = TL.texts(g)
     assert "1. Second Demo" in T and "Build" in T, T
-    shot(g, gx, "concert_en.png")
     press_text(L, g, "Settings", exact=True); frame(L, g)
     T = TL.texts(g)
     assert "Language" in T and "Count-in before the song" in T and "Spoken count-in" in T, T
-    shot(g, gx, "reglages_en.png")
     press_text(L, g, "Stage", exact=True); frame(L, g)
     T = TL.texts(g)
     assert "Single song" in T or any("Single song" in t for t in T), T
@@ -829,7 +763,6 @@ def test_stage_english_view(concert):
     T = TL.texts(g)
     assert "Instruments (stems)  ·  long press = solo" in T or any(t.startswith("Instruments") for t in T), T
     assert "Hear everything" in T and "Played live…" in T, T
-    shot(g, gx, "scene_en.png")
 
 
 def test_english_new_views(concert, tmp_path):

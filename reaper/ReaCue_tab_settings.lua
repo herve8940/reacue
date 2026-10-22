@@ -16,13 +16,13 @@ return function(ctx)
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixe", tempo_beatmap = "variable",
       stems = "Séparation de stems", stems6 = "6 stems", stems4 = "4 stems",
       structure = "Détection de structure", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue seul",
-      structure_on = "SongFormer installé", structure_off = "SongFormer non installé : détection simple de ReaCue",
+      structure_on = "SongFormer installé", structure_off = "SongFormer non installé",
       projects_dir = "Dossier des projets", concert_dir = "Dossier des concerts", default = "par défaut",
       dir_title = "ReaCue - Dossier", dir_field = "Dossier (vide = par défaut) :",
       pin = "Code PIN de la Régie", on = "oui", off = "non",
       note = "Les changements s'appliquent à la prochaine préparation (« Analyser et préparer », « Re-préparer » ou « Reconstruire » le concert).",
       version = "Version installée : %s", saved = "enregistré",
-      noncommercial = "Usage non commercial uniquement (poids MuQ CC BY-NC 4.0)",
+      noncommercial = "Usage non commercial uniquement (MuQ : CC BY-NC 4.0)",
       licences = "Licences", licences_tip = "Composants tiers, licences et avertissements",
       simple = "Réglages simples", advanced = "Réglages avancés", check_install = "Vérifier l'installation",
       count_rate = "Débit du décompte", rate_n = "%d mots/min", announce = "Annonces", install_sf = "Installer",
@@ -37,13 +37,13 @@ return function(ctx)
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixed", tempo_beatmap = "variable",
       stems = "Stem separation", stems6 = "6 stems", stems4 = "4 stems",
       structure = "Structure detection", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue only",
-      structure_on = "SongFormer installed", structure_off = "SongFormer not installed: ReaCue's simple detection",
+      structure_on = "SongFormer installed", structure_off = "SongFormer not installed",
       projects_dir = "Projects folder", concert_dir = "Concerts folder", default = "default",
       dir_title = "ReaCue - Folder", dir_field = "Folder (empty = default):",
       pin = "Stage control PIN code", on = "yes", off = "no",
       note = "Changes apply at the next preparation (“Analyse and prepare”, “Prepare again” or “Rebuild” the concert).",
       version = "Installed version: %s", saved = "saved",
-      noncommercial = "Non-commercial use only (MuQ weights CC BY-NC 4.0)",
+      noncommercial = "Non-commercial use only (MuQ: CC BY-NC 4.0)",
       licences = "Licences", licences_tip = "Third-party components, licences and disclaimers",
       simple = "Simple settings", advanced = "Advanced settings", check_install = "Check the installation",
       count_rate = "Count speed", rate_n = "%d words/min", announce = "Spoken cues", install_sf = "Install",
@@ -301,8 +301,7 @@ return function(ctx)
       y = y + 4
     end
     y = y + 16
-    U.text(U.fit(t("noncommercial"), cw, 11), cx, y, 11, U.WARN)
-    y = y + 18
+    y = y + U.para(t("noncommercial"), cx, y, cw, 11, U.WARN, 2) + 2
     if adv then
       label(t("tempo"), x, y, w)
       v, ch = seg("tempo", cx, y, cw, { { "auto", t("tempo_auto") }, { "constant", t("tempo_constant") }, { "beatmap", t("tempo_beatmap") } },
@@ -316,8 +315,9 @@ return function(ctx)
       for _, k in ipairs({ "projects_dir", "concert_dir" }) do
         label(t(k), x, y, w)
         local cur = get(k)
-        local shown = cur or (t("default") .. " · " .. (k == "projects_dir" and L.projects_dir() or L.concert_dir()))
-        if U.button("dir_" .. k, U.fit(shown, cw - 12, 11), cx, y, cw, 26, nil, 11) then choose_dir(k) end
+        local shown = cur and U.fit_path("", cur, cw - 12, 11) or
+          U.fit_path(t("default") .. " · ", k == "projects_dir" and L.projects_dir() or L.concert_dir(), cw - 12, 11)
+        if U.button("dir_" .. k, shown, cx, y, cw, 26, nil, 11) then choose_dir(k) end
         y = y + row
       end
     end

@@ -23,8 +23,12 @@ language with Claude (MCP server).
 > and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — the optional structure analysis is for
 > **non-commercial use only**.
 
-> **Status: 1.0.0.** Developed and used on macOS (Intel). Windows and Apple Silicon support has **not yet been
+> **Status: 1.0.1.** Developed and used on macOS (Intel). Windows and Apple Silicon support has **not yet been
 > tested on a real machine** — feedback welcome.
+
+| The ReaCue window in REAPER | The prompter on a phone | Stage control (remote, PIN) |
+|---|---|---|
+| <img src="docs/images/window_song_en.png" width="360"> | <img src="docs/images/prompter_concert_en.png" width="190"> | <img src="docs/images/prompter_regie_en.png" width="190"> |
 
 | Drums | Bass | Vocals | Guitar |
 |---|---|---|---|
@@ -297,13 +301,23 @@ log*…). On **first launch**, an assistant checks the installation (bridge, web
 address, program, stems, structure, projects folder) with a button for each missing item; it is also in
 *Settings → Check the installation*.
 
-| Song | Stage |
+| Song | Do everything |
 |---|---|
-| <img src="docs/images/window_song_en.png" width="380"> | <img src="docs/images/window_stage_en.png" width="380"> |
-| **Concert** | **Settings** |
-| <img src="docs/images/window_concert_en.png" width="380"> | <img src="docs/images/window_settings_en.png" width="380"> |
+| <img src="docs/images/window_song_en.png" width="380"> | <img src="docs/images/window_doall_en.png" width="380"> |
+| **Structure (editing)** | **+ New song** |
+| <img src="docs/images/window_structure_en.png" width="380"> | <img src="docs/images/window_newsong_en.png" width="380"> |
+| **Concert** | **Concert — batch preparation** |
+| <img src="docs/images/window_concert_en.png" width="380"> | <img src="docs/images/window_batch_en.png" width="380"> |
+| **Stage** | **Played live** |
+| <img src="docs/images/window_stage_en.png" width="380"> | <img src="docs/images/window_live_en.png" width="380"> |
+| **Check (before the show)** | **QR code (phones)** |
+| <img src="docs/images/window_check_en.png" width="380"> | <img src="docs/images/window_qr_en.png" width="380"> |
+| **Assistant (first launch)** | **Settings** |
+| <img src="docs/images/window_assistant_en.png" width="380"> | <img src="docs/images/window_settings_en.png" width="380"> |
+| **Advanced settings** |  |
+| <img src="docs/images/window_settings_advanced_en.png" width="380"> |  |
 
-*(Made-up demo songs. More screenshots, in French, in [LISEZMOI.md](LISEZMOI.md#la-fenêtre-reacue).)*
+*(Made-up demo songs, address 192.168.1.20, PIN 1234.)*
 
 - **Song** — the project that is open.
   - A **big button** gives the next step: **Split stems** (a single MP3/WAV) → **Analyse and prepare** →
@@ -671,7 +685,7 @@ hundred MB): delete that folder if you no longer need them. Separated stems stay
 uv pip install -r requirements-dev.txt     # pytest, lupa, playwright
 python -m pytest tests                     # light tests: no audio, no REAPER
 python tools/make_screenshots.py           # regenerates docs/images/prompter_* (Playwright + Chromium)
-REACUE_SHOTS=/tmp/shots python -m pytest tests/test_reacue_window.py   # renders the window tabs to PNG
+REACUE_SHOTS=docs/images python -m pytest tests/test_doc_screenshots.py   # regenerates docs/images/window_* (FR + EN)
 ```
 
 Project layout:

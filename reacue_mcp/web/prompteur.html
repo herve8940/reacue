@@ -226,6 +226,18 @@
   .stem.show { display: inline-block; }
   .stem.on { border: 2px solid var(--ok); color: var(--ok); }
   .stem.off { background: var(--warn); color: #000; border: 2px solid var(--warn); }
+  /* téléphone : titre sur deux lignes au besoin, sans la tonalité (affichée dans la page) */
+  @media (max-width: 560px) {
+    .title { white-space: normal; font-size: 13px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; }
+    .title .tkey { display: none; }
+  }
+  /* téléphone : l'état du stem prend la place du titre, qui passe sur sa propre ligne (pas « 2… ») */
+  @media (max-width: 560px) {
+    .top:has(.stem.show) { flex-wrap: wrap; row-gap: 4px; }
+    .top:has(.stem.show) .stem { margin-right: auto; }
+    .top:has(.stem.show) .title { order: 9; flex-basis: 100%; font-size: 14px; }
+  }
   .rtitle { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
   .rsecs { display: flex; flex-wrap: wrap; gap: 6px; }
   .rsecs button { font: inherit; font-size: 15px; font-weight: 700; color: #111; border: 3px solid transparent; border-radius: 10px; padding: 8px 10px; cursor: pointer; opacity: .8; }
@@ -435,7 +447,7 @@ const STR = {
     rNoConcertHint: "Pas de concert : la Régie pilote un concert ouvert dans REAPER.",
     rReh: "Répétition", rRehOn: "Répétition ✓", rLoopOff: "Boucle off", rRate: r => `${Math.round(r * 100)} %`,
     rRehBanner: (loop, r) => `Répétition · ${loop ? "boucle : " + loop : "touche une section pour la faire boucler"}${r < 0.999 ? " · " + Math.round(r * 100) + " %" : ""}`,
-    rSecsReh: "Sections — toucher = boucler (2e section = plage)",
+    rSecsReh: "Sections — toucher = boucler (2e section\u00a0=\u00a0plage)",
     rMix: "Instruments (stems)", rHearAll: "Tout entendre", rMixH: "toucher = couper / remettre · appui long = solo",
     mixCut: "coupé", mixOn: "joué", mixSolo: "solo", mixLive: "live",
     stemCut: "ton stem est coupé", stemOn: "ton stem est joué",
@@ -503,7 +515,7 @@ const STR = {
     mixCut: "muted", mixOn: "playing", mixSolo: "solo", mixLive: "live",
     stemCut: "your stem is muted", stemOn: "your stem is playing",
     tracks: { vocals: "Vocals", drums: "Drums", bass: "Bass", guitars: "Guitars", lead_guitar: "Lead guitar", keys: "Keys", other: "Other", mix: "Mix" },
-    rSecsReh: "Sections — tap = loop (2nd section = range)",
+    rSecsReh: "Sections — tap = loop (2nd section\u00a0=\u00a0range)",
   },
 };
 const params = new URLSearchParams(location.search);
@@ -593,7 +605,7 @@ function pickSong(t) {
 }
 function keyName(k) { return k ? (k[LANG] || k.fr || k.chord) : ""; }
 function prepSong() {
-  const k = song.key ? ` · ${esc(keyName(song.key))} (${esc(song.key.chord)})` : "";
+  const k = song.key ? `<span class="tkey"> · ${esc(keyName(song.key))} (${esc(song.key.chord)})</span>` : "";
   const rank = concert ? S.rank(cIdx + 1, concert.songs.length) : "";
   $("title").innerHTML = `${esc(rank)}<b>${esc(song.title)}</b> · ${Math.round(song.bpm * 10) / 10} BPM${k}`;
   $("footL").textContent = S.footL(song.n_bars, song.beats_per_bar) +
@@ -880,8 +892,25 @@ function renderDrums(t, L, si, sec) {
 }
 
 // ---------------------------------------------------------------- rendu
+// grands titres sur une ligne : police réduite (jusqu'à 60 %) plutôt que « … » quand le nom est long
+const FIT_IDS = ["nowName", "nextName", "dSecV", "rTitle"];
+function fitText(el) {
+  if (!el) return;
+  const key = el.textContent + "|" + el.clientWidth;
+  if (el._fit === key) return;
+  el.style.fontSize = "";
+  let s = parseFloat(getComputedStyle(el).fontSize);
+  const min = s * 0.6;
+  const r = document.createRange();
+  r.selectNodeContents(el);
+  const room = () => el.getBoundingClientRect().width - parseFloat(getComputedStyle(el).paddingLeft || 0) -
+    parseFloat(getComputedStyle(el).paddingRight || 0);
+  while (el.clientWidth > 0 && r.getBoundingClientRect().width > room() - 0.5 && s > min) { s -= 1; el.style.fontSize = s + "px"; }
+  el._fit = el.textContent + "|" + el.clientWidth;
+}
 function render() {
   requestAnimationFrame(render);
+  FIT_IDS.forEach(id => fitText($(id)));
   const live = DEMO || (st.ok && performance.now() - st.lastOk < 1500);
   $("dot").classList.toggle("on", live);
   renderStemNote();

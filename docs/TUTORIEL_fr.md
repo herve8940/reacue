@@ -237,6 +237,8 @@ maintenant ? »** : clique **Tout faire** (étape 10) — ou **Plus tard**. Le g
 suivante : **Séparer les stems** (un seul fichier, étape 9) ou **Analyser et préparer** (stems). Le morceau apparaît aussi
 dans la liste de l'onglet **Concert** (en orange tant qu'il n'est pas préparé ; un clic sur son nom l'ouvre).
 
+<img src="images/window_newsong_fr.png" width="420">
+
 > Copier les fichiers évite le problème des fichiers « OFFLINE » laissés dans *Téléchargements* sur Mac.
 > Après **Tout faire**, **Séparer les stems**, **Analyser et préparer** ou **Appliquer** réussis depuis la
 > fenêtre, le projet du morceau est **enregistré automatiquement** (pastille « Enregistré ✓ ») : le concert retrouvera toujours ses
@@ -494,6 +496,10 @@ main avec un fichier d'ancres `paroles_calage.json` (voir la section *Paroles* d
 
 **Tu dois voir** un point vert (liaison avec REAPER active), la section en cours et la suivante.
 
+<img src="images/prompter_drums_fr.png" width="200"> <img src="images/prompter_vocals_fr.png" width="200">
+
+<img src="images/prompter_vocals_fr_tablet.png" width="600">
+
 Conseils :
 
 - **Écran d'accueil** : iPhone : bouton *Partager → Sur l'écran d'accueil* ; Android : menu **⋮ → Ajouter à
@@ -705,6 +711,8 @@ précédent** (*Actions → Show action list* → sélectionne l'action → **Ad
    le lien : le prompteur s'ouvre ; il choisit son rôle.
 4. Clique sur **Fermer** (ou sur le QR, ou Échap) pour revenir.
 
+<img src="images/window_qr_fr.png" width="300">
+
 L'adresse est recalculée à chaque clic : si l'ordinateur a changé d'adresse, le QR est quand même juste.
 Si « Adresse IP de l'ordinateur introuvable » s'affiche : l'ordinateur n'est connecté à aucun réseau.
 
@@ -714,6 +722,8 @@ Si « Adresse IP de l'ordinateur introuvable » s'affiche : l'ordinateur n'est c
 2. Touche un bouton (par ex. **Lecture**) : le téléphone demande le **code PIN**. Il est affiché dans
    l'onglet Scène (bouton **PIN 1234**, et sous le QR code) et dans l'onglet Réglages. Tape-le, **OK**.
 3. Le bouton s'entoure de vert quand REAPER a exécuté la commande.
+
+<img src="images/prompter_regie_fr.png" width="200"> <img src="images/prompter_regie2_fr.png" width="200">
 
 La Régie offre Lecture/Pause, Stop, Précédent, Début, Suivant, la setlist, les sections et les
 **instruments** (16.8), avec le même double appui pendant la lecture. Le PIN est mémorisé sur le téléphone ; **Changer de code** pour le retaper.
@@ -733,6 +743,8 @@ Les modifications faites directement dans le projet concert sont **écrasées** 
 ### 16.7 Vérifier avant de jouer
 
 Avant la balance ou le concert, clique sur **Vérifier** dans l'onglet Scène.
+
+<img src="images/window_check_fr.png" width="420">
 
 1. Une liste s'affiche, avec un résumé en haut : **Tout est prêt ✓** (vert), **N point(s) à surveiller**
    (orange) ou **N problème(s)** (rouge).
@@ -791,6 +803,8 @@ n'écrase pas tes choix.
 Sur les téléphones, chaque musicien voit en haut **« ton stem est coupé »** (orange) ou **« ton stem est
 joué »** (vert). En **Régie**, les mêmes boutons : toucher = couper / remettre, appui long = solo, **Tout
 entendre**.
+
+<img src="images/prompter_concert_fr.png" width="200"> <img src="images/prompter_concert_vocals_fr.png" width="200">
 
 Avec Claude : « dans le concert Samedi 15, la batterie et la basse sont jouées en live, sauf la basse sur
 Second Demo » (outil `set_live_profile`, sans reconstruire).
