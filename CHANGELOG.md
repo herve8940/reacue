@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.12.0-beta — 2026-10
+## 1.0.0 — 2026-10-22
+
+First stable release / Première version stable. Contents of the 0.12.0 development cycle below.
+Première version stable : contenu du cycle 0.12.0 ci-dessous.
+
 
 ### Added / Ajouts
 - **SongFormer by default / SongFormer par défaut**: the main installers (macOS / Windows) offer the
@@ -158,7 +162,7 @@
 - Stage control page and docs: “ReaCue - Concert window” is now “the ReaCue window (Stage tab)”.
 - Docs: README / LISEZMOI and both tutorials reorganised around the window tabs, with screenshots of a
   made-up concert.
-- Package version `0.12.0b1`.
+- Package version `1.0.0`.
 
 ## 0.11.0-beta — 2026-10
 

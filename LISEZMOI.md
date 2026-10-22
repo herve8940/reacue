@@ -22,7 +22,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 > et [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — l'analyse de structure facultative est réservée à un
 > **usage non commercial**.
 
-> **État : 0.12.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
+> **État : 1.0.0.** Développé et utilisé sur macOS (Intel). La prise en charge de Windows et des Mac Apple Silicon
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
 
 | Batterie | Basse | Chant | Guitare |

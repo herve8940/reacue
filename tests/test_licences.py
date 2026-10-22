@@ -33,7 +33,7 @@ def test_citation_cff_valid():
     for t in ("SongFormer", "MuQ", "Foundation Model for Music Informatics", "Hybrid Transformers"):
         assert t in titles
     init = (ROOT / "reacue_mcp" / "__init__.py").read_text(encoding="utf-8")
-    ver = re.search(r'__version__\s*=\s*"([^"]+)"', init).group(1)        # 0.12.0b1
+    ver = re.search(r'__version__\s*=\s*"([^"]+)"', init).group(1)
     assert d["version"].replace("-beta", "b1") == ver
 
 

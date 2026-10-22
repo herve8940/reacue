@@ -23,7 +23,7 @@ language with Claude (MCP server).
 > and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — the optional structure analysis is for
 > **non-commercial use only**.
 
-> **Status: 0.12.0 beta.** Developed and used on macOS. Windows support is new and has **not yet been
+> **Status: 1.0.0.** Developed and used on macOS (Intel). Windows and Apple Silicon support has **not yet been
 > tested on a real machine** — feedback welcome.
 
 | Drums | Bass | Vocals | Guitar |
