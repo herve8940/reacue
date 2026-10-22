@@ -662,9 +662,9 @@ function L.run_checks(c, opts)
   end
   -- pont, interface web, adresse IP
   if L.R.bridge_alive and L.R.bridge_alive() then add("bridge", "ok", ck.bridge, ck.bridge_ok)
-  else add("bridge", "bad", ck.bridge, ck.bridge_bad) end
+  else add("bridge", "bad", ck.bridge, ck.bridge_bad, "bridge") end
   local port, found = L.web_port()
-  if found then add("web", "ok", ck.web, string.format(ck.web_ok, port)) else add("web", "bad", ck.web, ck.web_bad) end
+  if found then add("web", "ok", ck.web, string.format(ck.web_ok, port)) else add("web", "bad", ck.web, ck.web_bad, "web") end
   local ips = opts.ips or L.local_ips()
   if #ips > 0 then add("ip", "ok", ck.ip, string.format(ck.ip_ok, L.prompter_url(ips[1], port)))
   else add("ip", "bad", ck.ip, ck.ip_bad) end

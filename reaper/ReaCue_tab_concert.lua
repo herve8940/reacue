@@ -1,5 +1,7 @@
 -- ReaCue : onglet « Concert » / “Concert” tab : composer une setlist à partir des projets de morceaux,
--- la construire / reconstruire, l'ouvrir, régler « joué en live », retrouver les concerts existants.
+-- la construire / reconstruire, l'ouvrir, régler « joué en live », retrouver les concerts existants,
+-- préparer en lot (« Préparer tous les morceaux non préparés » ou la sélection cochée) : en arrière-plan,
+-- un morceau après l'autre (onglet ouvert, « Tout faire », enregistré, onglet refermé), arrêtable.
 return function(ctx)
   local L, U, T, R, SEP = ctx.L, ctx.U, ctx.T, ctx.R, ctx.SEP
   local TXT = {
@@ -13,6 +15,11 @@ return function(ctx)
       name_title = "ReaCue - Nom du concert", name_field = "Nom :",
       building = "Construction du concert", built = "Concert « %s » construit : ouvert dans un onglet.",
       unprepared_q = "Ces morceaux ne sont pas préparés (pas de sections ou pas de click) :\n%s\n\nConstruire quand même ?",
+      batch_all = "Préparer tous les morceaux non préparés (%d)", batch_sel = "Préparer la sélection (%d)",
+      batch_none = "Tous les morceaux sont prêts ✓", batch = "Préparation en lot", stop = "Arrêter",
+      batch_progress = "%d / %d", batch_done = "Lot terminé : %d prêt(s), %d en échec", batch_stopping = "arrêt après ce morceau…",
+      batch_q = "Préparer %d morceau(x) l'un après l'autre ?\n\nChaque projet est ouvert dans un onglet, préparé (« Tout faire »), enregistré puis refermé. Compte quelques minutes par morceau (plus avec la séparation de stems).",
+      close = "Fermer",
     },
     en = {
       songs = "Songs (%s)", setlist = "Setlist “%s”", unnamed = "New concert",
@@ -24,6 +31,11 @@ return function(ctx)
       name_title = "ReaCue - Concert name", name_field = "Name:",
       building = "Building the concert", built = "Concert “%s” built: open in a tab.",
       unprepared_q = "These songs are not prepared (no sections or no click):\n%s\n\nBuild anyway?",
+      batch_all = "Prepare all songs not prepared (%d)", batch_sel = "Prepare the selection (%d)",
+      batch_none = "All songs are ready ✓", batch = "Batch preparation", stop = "Stop",
+      batch_progress = "%d / %d", batch_done = "Batch finished: %d ready, %d failed", batch_stopping = "stopping after this song…",
+      batch_q = "Prepare %d song(s) one after the other?\n\nEach project is opened in a tab, prepared (“Do everything”), saved and closed. Allow a few minutes per song (more with stem separation).",
+      close = "Close",
     },
   }
   local function t(k) return ctx.tr(TXT, k) end
@@ -33,6 +45,7 @@ return function(ctx)
   local scroll = 0
   local concerts, setlists = nil, nil
   local ed = { name = nil, path = nil, songs = {}, extra = nil }
+  local picked = {}                    -- path -> true : sélection pour la préparation en lot
   local ORDER = { "name", "gap_s", "songs", "live", "live_exceptions" }
 
   -- un projet est « préparé » s'il a des régions et une piste CLICK ; tempo : 1er point de la carte
@@ -182,6 +195,74 @@ return function(ctx)
     end)
   end
 
+  -- préparation en lot ---------------------------------------------------------------------------
+  function M.batch_list()
+    local out, sel = {}, {}
+    for _, p in ipairs(projects or {}) do
+      if picked[p.path] then sel[#sel + 1] = { path = p.path, name = p.name } end
+      if not p.prepared then out[#out + 1] = { path = p.path, name = p.name } end
+    end
+    if #sel > 0 then return sel, true end
+    return out, false
+  end
+
+  function M.start_batch()
+    local list = M.batch_list()
+    if #list == 0 or ctx.job then return false end
+    if reaper.ShowMessageBox(string.format(t("batch_q"), #list), T("title"), 1) ~= 1 then return false end
+    picked = {}
+    return ctx.flow.batch(list, function() cache = {}; M.rescan = true end)
+  end
+
+  local MARK = { done = "✓", running = "●", failed = "✗", pending = "○" }
+  local function draw_batch(x, y, w)
+    local F = ctx.flow
+    local b = F.batch_run
+    if b then
+      U.set(U.PANEL2); gfx.rect(x - 4, y - 4, w + 8, 40 + #b.list * 24, 1)
+      local done = b.n_ok + b.n_fail
+      local head = t("batch") .. "  ·  " .. string.format(t("batch_progress"), math.min(done + (b.finished and 0 or 1), #b.list), #b.list)
+      U.text(U.fit(head, w - 110, 14, true), x + 4, y + 4, 14, U.INK, true)
+      if not b.finished then
+        if U.button("bstop", t("stop"), x + w - 90, y, 90, 26, nil, 12) then F.stop_batch() end
+      elseif U.button("bclose", t("close"), x + w - 90, y, 90, 26, "primary", 12) then F.batch_run = nil return y + 30 end
+      -- barre globale
+      U.set(U.PANEL); gfx.rect(x + 4, y + 30, w - 8, 4, 1)
+      U.set(U.ACCENT); gfx.rect(x + 4, y + 30, math.floor((w - 8) * done / math.max(1, #b.list)), 4, 1)
+      y = y + 40
+      for _, p in ipairs(b.list) do
+        local st = p.status or "pending"
+        local col = (st == "done" and U.ACCENT) or (st == "running" and U.BLUE) or (st == "failed" and U.RED) or U.GREY
+        U.text(MARK[st] or "○", x + 6, y + 1, 14, col, true)
+        local right = ""
+        if st == "running" then
+          local s = F.run and F.run.steps[F.run.i]
+          right = s and F.label(s.id) or ""
+          if b.stop then right = t("batch_stopping") end
+        elseif p.secs then right = string.format("%d s", math.floor(p.secs + 0.5)) end
+        if st == "failed" and p.msg then right = p.msg end
+        local rw = math.min(w * 0.55, U.text_w(right, 11))
+        U.text(U.fit(p.name, w - rw - 40, 13), x + 26, y + 2, 13, st == "pending" and U.MUTED or U.INK)
+        U.text(U.fit(right, w * 0.55, 11), x + w - rw - 4, y + 4, 11, st == "failed" and U.WARN or U.MUTED)
+        y = y + 24
+      end
+      if b.finished then
+        U.text(string.format(t("batch_done"), b.n_ok, b.n_fail), x, y + 2, 12, b.n_fail > 0 and U.WARN or U.ACCENT, true)
+        y = y + 20
+      end
+      return y + 8
+    end
+    local list, is_sel = M.batch_list()
+    if #list == 0 then
+      U.text(t("batch_none"), x, y + 4, 12, U.ACCENT)
+      return y + 26
+    end
+    local lab = string.format(is_sel and t("batch_sel") or t("batch_all"), #list)
+    local bw = math.min(w, U.text_w(lab, 13) + 30)
+    if U.button("batch", lab, x, y, bw, 30, nil, 13) and not ctx.job then M.start_batch() end
+    return y + 40
+  end
+
   function M.enter() M.scan() end
   function M.project_changed() concerts, setlists = nil, nil end
 
@@ -219,8 +300,8 @@ return function(ctx)
       local mark = p.prepared and t("prepared") or t("to_prepare")
       local right = (p.bpm and string.format("%.0f", p.bpm) or "") .. "  " .. mark
       local rwid = U.text_w(right, 11)
-      local nover = U.over(x, yy, w - rwid - 44, ROWH - 3)
-      U.text(U.fit(p.name, w - rwid - 44, 13), x + 6, yy + 4, 13, nover and U.BLUE or (p.prepared and U.INK or U.WARN))
+      local nover = U.over(x, yy, w - rwid - 68, ROWH - 3)
+      U.text(U.fit(p.name, w - rwid - 68, 13), x + 6, yy + 4, 13, nover and U.BLUE or (p.prepared and U.INK or U.WARN))
       if nover and U.clicked then                      -- clic sur le nom : ouvrir le morceau (nouvel onglet)
         if (ctx.proj_file or ""):lower() ~= p.path:lower() then
           reaper.Main_OnCommand(40859, 0)
@@ -230,7 +311,15 @@ return function(ctx)
         ctx.goto_tab("song")
         return y
       end
-      U.text(right, x + w - 30 - rwid - 6, yy + 6, 11, p.prepared and U.ACCENT or U.WARN)
+      U.text(right, x + w - 30 - rwid - 30, yy + 6, 11, p.prepared and U.ACCENT or U.WARN)
+      -- case à cocher : sélection pour la préparation en lot
+      local cbx = x + w - 52
+      local on = picked[p.path]
+      local cov = U.over(cbx, yy + 3, 18, 18)
+      if cov then U.hover = "bsel" .. k end
+      U.set(on and U.BLUE or U.MUTED, on and 1 or 0.7); gfx.roundrect(cbx, yy + 3, 17, 17, 4, 1)
+      if on then gfx.rect(cbx + 4, yy + 7, 10, 10, 1) end
+      if cov and U.clicked then picked[p.path] = (not on) or nil end
       if U.ibutton("addp" .. k, "plus", x + w - 28, yy + 1, 26, ROWH - 5) then
         ed.songs[#ed.songs + 1] = { project = p.path, title = p.name }
       end
@@ -308,7 +397,7 @@ return function(ctx)
 
   function M.draw(x, y, w)
     if not projects or M.rescan then M.rescan = nil; M.scan() end
-    if ctx.job then y = y + ctx.draw_job(x, y, w) end
+    if ctx.job and not ctx.flow.batch_active() then y = y + ctx.draw_job(x, y, w) end
     local two = w >= 500
     local y_end
     if two then
@@ -341,6 +430,7 @@ return function(ctx)
       ctx.open_live(c)
     end
     y = y + 44
+    y = draw_batch(x, y, w)
     if ctx.flash and reaper.time_precise() - ctx.flash.t < 3 then
       U.text(U.fit(ctx.flash.txt, w, 12), x, y - 6, 12, ctx.flash.bad and U.WARN or U.ACCENT, true)
       y = y + 14

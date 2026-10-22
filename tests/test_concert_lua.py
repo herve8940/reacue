@@ -17,7 +17,7 @@ import concert_demo as D  # noqa: E402
 from reacue_mcp import concert as C, i18n  # noqa: E402
 
 FAKE = r"""
-state = {play=0, pos=0, cursor=0, stopped=0, played=0, paused=0, cmds={}, ext={}, persist={}, opened=nil,
+state = {play=0, pos=0, cursor=0, stopped=0, played=0, paused=0, cmds={}, ext={assistant_seen="1"}, persist={}, opened=nil,
          ops={}, color={0,0,0,1}, font={14,0}, dock=0, execs={}, seeks={}, t=1000.0, inputs=nil, shell={}}
 reaper = {
   EnumProjects=function(i, s) return 1, PROJFILE end,

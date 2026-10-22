@@ -536,3 +536,15 @@ def test_reuse_from_windows_profile_and_cli(tmp_path, monkeypatch):
     r = subprocess.run([sys.executable, str(inst / "reacue_structure.py"), "reuse", "--lang", "en"],
                        capture_output=True, text=True, env=env)
     assert r.returncode == 0 and "no already-downloaded model" in r.stdout, r.stdout + r.stderr
+
+
+def test_doubts_moved_and_unsure():
+    db = grid(48)
+    segs = [seg(0, 8, "intro"), seg(8.45, 23.2, "verse"), seg(23.2, 34.6, "chorus"), seg(34.6, 48, "bridge")]
+    secs = ST.sections_from_segments(segs, db)
+    d = {x["start_bar"]: x["reason"] for x in ST.doubts(segs, db, secs)}
+    # 8,45 -> 9 (0-based 8) : entre deux mesures ; 23,2 -> 24 (carrure) : déplacée ; 34,6 -> 35 : entre deux
+    assert d == {9: "unsure", 25: "moved", 36: "unsure"}, d
+    # cas réel : aucune frontière douteuse
+    real = [{"start": a, "end": b, "label": l} for a, b, l in UJEF]
+    assert ST.doubts(real, UJEF_DB, ST.sections_from_segments(real, UJEF_DB)) == []

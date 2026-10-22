@@ -209,6 +209,8 @@ def main(argv=None):
                 extra["fallback"] = True
             if se.get("missing"):
                 extra["structure_missing"] = True
+            # débuts de sections douteux (orange dans la fenêtre) : « 9:moved,17:unsure »
+            extra["doubts"] = ",".join(f'{d["start_bar"]}:{d["reason"]}' for d in se.get("doubts") or [])
         _status("done" if ok else "error", cmd=args.cmd,
                 message=_message(res, res.pop("_title", None) or titles[args.cmd]), **extra)
         return 0 if ok else 1

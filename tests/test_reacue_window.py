@@ -34,6 +34,11 @@ reaper.EnumerateSubdirectories = function(dir, i) return LISTDIRS(dir, i) end
 reaper.get_action_context = function() return false, ACTION or "" end
 reaper.RecursiveCreateDirectory = function(d) MKDIR(d); return 1 end
 reaper.GetMediaItem_Track = function(it) return TRACKS[it.track] end
+state.projext, state.saves = {}, 0
+reaper.GetProjExtState = function(p, s, k) local v = state.projext[k]; return v and 1 or 0, v or "" end
+reaper.SetProjExtState = function(p, s, k, v) state.projext[k] = v; return 1 end
+reaper.Main_SaveProject = function() state.saves = state.saves + 1 end
+reaper.AddRemoveReaScript = function(add, sec, f, commit) state.added_script = f; return 55555 end
 local _gfx = gfx
 gfx = setmetatable({}, {__index = function(t, k)
   if k == "showmenu" then return function(s) table.insert(state.menus, s); return state.menu end end
@@ -323,56 +328,94 @@ def song_runtime(concert, tmp_path, lang="fr"):
       TRACKS = {{ {{name="Chant"}}, {{name="Batterie"}}, {{name="CLICK"}} }}
       ITEMS = {{ {{track=1, file=[[{files[0]}]]}}, {{track=2, file=[[{files[1]}]]}} }}
       BARS = {{}}; for k = 0, 40 do BARS[k + 1] = 4.0 + k * 2.0 end
-      REGIONS = {{ {{true, 4.0, 12.0, "Intro", 0}}, {{true, 12.0, 30.0, "Couplet 1", 0}}, {{true, 30.0, 46.0, "Refrain 1", 0}} }}
+      REGIONS = {{ {{true, 4.0, 12.0, "Intro", 0x5A7FA8}}, {{true, 12.0, 30.0, "Couplet 1", 0x3E9E7A}}, {{true, 30.0, 46.0, "Refrain 1", 0xC2554F}} }}
       PROJLEN = 46; BPM = 120
     """)
     return L, g, res
 
 
+def status(g, **kw):
+    (Path(g.RES) / "ReaCueMCP" / "cli_status.json").write_text(json.dumps(kw), encoding="utf-8")
+
+
+def clear_status(g):
+    (Path(g.RES) / "ReaCueMCP" / "cli_status.json").unlink(missing_ok=True)
+
+
+def install(g, tmp_path, structure=False, stems=False):
+    inst = tmp_path / "inst"
+    (inst / ".venv" / "bin").mkdir(parents=True, exist_ok=True)
+    (inst / ".venv" / "bin" / "python").write_text("")
+    if structure:
+        (inst / ".venv-structure" / "bin").mkdir(parents=True, exist_ok=True)
+        (inst / ".venv-structure" / "bin" / "python").write_text("")
+        (inst / "reacue_structure.py").write_text("")
+    if stems:
+        (inst / ".venv-demucs" / "bin").mkdir(parents=True, exist_ok=True)
+        (inst / ".venv-demucs" / "bin" / "python").write_text("")
+    g.state.ext["install_dir"] = str(inst)
+    return inst
+
+
 def test_song_tab_prepare_structure_lyrics_and_add_to_concert(concert, tmp_path):
     L, g, res = song_runtime(concert, tmp_path)
-    inst = tmp_path / "inst"
-    (inst / ".venv" / "bin").mkdir(parents=True)
-    (inst / ".venv" / "bin" / "python").write_text("")
-    g.state.ext["install_dir"] = str(inst)
+    install(g, tmp_path, structure=True)
+    g.state.projext["structure_engine"] = "songformer"
+    g.state.projext["doubts"] = "16:moved"
     gx = open_window(L, g)
     frame(L, g); frame(L, g)
     T = TL.texts(g)
     assert "Song One" in T and "Morceau" in T
-    assert any("préparé · 120 BPM · 21 mesures · Am" in t for t in T), T
+    assert any("21 mesures · Am" in t for t in T), T
+    # grand bouton : morceau prêt ; pastilles d'état
+    assert "Prêt ✓" in T and "Tout faire" in T and "Re-préparer" in T and "Réanalyser depuis zéro" in T
+    assert "Mettre à jour les téléphones" in T, T
+    for p in ("Stems ✓", "Structure : SongFormer ✓", "120 BPM", "Paroles : 3 lignes", "Accords —", "Prompteur —"):
+        assert p in T, (p, T)
     assert "Intro" in T and "Couplet 1" in T and any("4 mes." in t for t in T)
-    assert any(t.startswith("Paroles : 3 lignes (paroles.txt)") for t in T), T
     shot(g, gx, "morceau.png")
-    # longueurs inhabituelles signalées (Couplet 1 : 9 mesures)
+    # longueurs inhabituelles signalées (Couplet 1 : 9 mesures) ; ligne d'aide au survol
     assert any("9 mes." in t for t in T)
-    # Préparer : CLI en arrière-plan, progression, puis résultat
-    press_text(L, g, "Préparer", exact=True)
+    x, y = text_xy(g, "Tout faire")
+    gx.mouse_x, gx.mouse_y = x + 2, y + 2
+    frame(L, g)
+    assert any(t.startswith("Tout faire : séparer les stems si besoin") for t in TL.texts(g)), TL.texts(g)
+    gx.mouse_x, gx.mouse_y = 0, 0
+    # Re-préparer : CLI en arrière-plan, progression, puis résultat ; moteur et doutes mémorisés
+    press_text(L, g, "Re-préparer", exact=True)
     sh = list(g.state.shell.values())[-1]
     assert "-m reacue_mcp.cli prepare" in sh and "--reanalyse" not in sh, sh
     frame(L, g)
     assert any(t.startswith("Préparation du morceau en cours…") for t in TL.texts(g)), TL.texts(g)
-    (Path(g.RES) / "ReaCueMCP" / "cli_status.json").write_text(
-        json.dumps({"state": "done", "cmd": "prepare", "message": "Morceau préparé : 3 sections"}), encoding="utf-8")
+    status(g, state="done", cmd="prepare", message="Morceau préparé : 3 sections", engine="reacue", doubts="9:unsure")
     frame(L, g)
     assert "Terminé" in TL.texts(g) and "Morceau préparé : 3 sections" in TL.texts(g)
+    assert g.state.projext["structure_engine"] == "reacue" and g.state.projext["doubts"] == "9:unsure"
     press_text(L, g, "OK", exact=True)
-    # Réanalyser : confirmation puis --reanalyse
-    (Path(g.RES) / "ReaCueMCP" / "cli_status.json").unlink()
-    press_text(L, g, "Réanalyser", exact=True)
+    assert "Structure : ReaCue ✓" in TL.texts(g)
+    # Réanalyser depuis zéro : confirmation puis --reanalyse ; erreur expliquée (cause + solution + bouton)
+    clear_status(g)
+    press_text(L, g, "Réanalyser depuis zéro", exact=True)
     assert "prepare --reanalyse" in list(g.state.shell.values())[-1]
-    (Path(g.RES) / "ReaCueMCP" / "cli_status.json").write_text(json.dumps({"state": "error", "cmd": "prepare", "message": "boom"}), encoding="utf-8")
-    frame(L, g); press_text(L, g, "OK", exact=True)
-    # structure : renommer, déplacer, supprimer, ajouter
+    status(g, state="error", cmd="prepare", message="Fichier audio introuvable : /x/y.wav (hors ligne)")
+    frame(L, g)
+    T = TL.texts(g)
+    assert "Un fichier audio est hors ligne ou introuvable." in T and "Corriger" in T, T
+    press_text(L, g, "Corriger", exact=True)
+    assert 40101 in list(g.state.cmds.values())
+    # structure : renommer (liste), déplacer, supprimer, ajouter
     g.state.inputs = "Pont"
-    x, y = text_xy(g, "Couplet 1")
+    x, y = [o for o in (list(v.values()) for v in g.state.ops.values()) if o[0] == "text" and o[3] == "Couplet 1"][-1][1:3]
     rows = [o for o in (list(v.values()) for v in g.state.ops.values()) if o[0] == "text" and o[3] == "Nom"]
     ren = [r for r in rows if abs(r[2] - y) < 8][0]
     TL.frame(L, g, (ren[1] + 2, ren[2] + 3))
     assert g.REGIONS[2][4] == "Pont"
     frame(L, g)
-    assert any("Structure modifiée" in t for t in TL.texts(g)), TL.texts(g)
+    T = TL.texts(g)
+    assert any("Structure modifiée" in t for t in T) and "Appliquer les modifications" in T, T
+    assert "Structure : manuelle ✓" in T
     # déplacer le début du Refrain d'une mesure plus tôt : la fin du Pont suit
-    xr, yr = text_xy(g, "Refrain 1")
+    xr, yr = [o for o in (list(v.values()) for v in g.state.ops.values()) if o[0] == "text" and o[3] == "Refrain 1"][-1][1:3]
     tri = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "tri"]
     left = [t_ for t_ in tri if abs(t_[2] - (yr + 9)) < 14]
     lx = min(t_[1] for t_ in left)
@@ -385,14 +428,14 @@ def test_song_tab_prepare_structure_lyrics_and_add_to_concert(concert, tmp_path)
     press_text(L, g, "+ Section au curseur")
     added = [r for r in g.REGIONS.values() if r[4] == "Pré-refrain"]
     assert added and added[0][2] == pytest.approx(20.0) and g.REGIONS[2][3] == pytest.approx(20.0)
-    # Appliquer = Préparer
-    (Path(g.RES) / "ReaCueMCP" / "cli_status.json").unlink(missing_ok=True)
+    # Appliquer (grand bouton) = préparer en gardant les régions
+    clear_status(g)
     frame(L, g)
-    press_text(L, g, "Appliquer", exact=True)
+    press_text(L, g, "Appliquer les modifications", exact=True)
     sh = list(g.state.shell.values())[-1]
     assert "reacue_mcp.cli prepare" in sh and "--reanalyse" not in sh
     # ajouter à un nouveau concert
-    (Path(g.RES) / "ReaCueMCP" / "cli_status.json").write_text(json.dumps({"state": "done", "cmd": "prepare", "message": "ok"}), encoding="utf-8")
+    status(g, state="done", cmd="prepare", message="ok")
     frame(L, g); press_text(L, g, "OK", exact=True)
     g.state.menu = 1
     g.state.inputs = "Samedi"
@@ -406,6 +449,237 @@ def test_song_tab_prepare_structure_lyrics_and_add_to_concert(concert, tmp_path)
     press_text(L, g, "Scène", exact=True); frame(L, g)
     T = TL.texts(g)
     assert "Morceau seul" in T and "Début" in T and "Précédent" not in T and "Intro" in T, T
+
+
+def band_box(g, name):
+    """case de la bande de structure (texte en 11 gras, couleur sombre)"""
+    for o in g.state.ops.values():
+        o = list(o.values())
+        if o[0] == "text" and o[3] == name and o[4] == 11:
+            return o[1], o[2]
+    raise AssertionError((name, TL.texts(g)))
+
+
+def test_structure_band_edit_merge_split_undo_redo(concert, tmp_path):
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path, structure=True)
+    g.state.projext["structure_engine"] = "songformer"
+    g.state.projext["doubts"] = "5:moved"
+    gx = open_window(L, g)
+    frame(L, g); frame(L, g)
+    names = lambda: [r[4] for r in sorted(g.REGIONS.values(), key=lambda r: r[2])]
+    # bande : orange = à vérifier (Couplet 1 : 9 mesures, frontière déplacée)
+    x, y = band_box(g, "Couplet 1")
+    gx.mouse_x, gx.mouse_y = x + 2, y + 2
+    frame(L, g)
+    T = TL.texts(g)
+    i = [k for k, t in enumerate(T) if t.startswith("Couplet 1 · m. 5 · 9 mes.")][-1]
+    help_ = " ".join(T[i:i + 2])
+    assert "longueur inhabituelle" in help_ and "frontière déplacée" in help_, T
+    # clic sur une case : choisie + écoute
+    TL.frame(L, g, (x + 2, y + 2)); frame(L, g)
+    assert g.state.play == 1 and g.state.cursor == pytest.approx(12.0)
+    assert "Couplet 1 · m. 5 · 9 mes." in TL.texts(g) and "Fusionner →" in TL.texts(g)
+    shot(g, gx, "structure_edition.png")
+    # fusionner avec la suivante
+    press_text(L, g, "Fusionner →", exact=True)
+    assert names() == ["Intro", "Couplet 1"] and sorted(g.REGIONS.values(), key=lambda r: r[2])[1][3] == pytest.approx(46.0)
+    frame(L, g)
+    # couper en deux (au milieu, sur une mesure)
+    g.state.inputs = "Refrain"
+    press_text(L, g, "Couper en deux", exact=True)
+    regs = sorted(g.REGIONS.values(), key=lambda r: r[2])
+    assert names() == ["Intro", "Couplet 1", "Refrain"] and regs[2][2] == pytest.approx(28.0)
+    frame(L, g)
+    # annuler deux fois, rétablir une fois
+    press_text(L, g, "Annuler", exact=True); frame(L, g)
+    assert names() == ["Intro", "Couplet 1"]
+    press_text(L, g, "Annuler", exact=True); frame(L, g)
+    assert names() == ["Intro", "Couplet 1", "Refrain 1"]
+    regs = sorted(g.REGIONS.values(), key=lambda r: r[2])
+    assert [round(r[2]) for r in regs] == [4, 12, 30]
+    press_text(L, g, "Rétablir", exact=True); frame(L, g)
+    assert names() == ["Intro", "Couplet 1"]
+    # supprimer depuis les outils de la section choisie
+    x, y = band_box(g, "Intro")
+    TL.frame(L, g, (x + 2, y + 2)); frame(L, g)
+    press_text(L, g, "Supprimer", exact=True)
+    assert names() == ["Couplet 1"]
+
+
+def test_song_contextual_button_states(concert, tmp_path):
+    """« Séparer les stems » (un seul fichier) → « Analyser et préparer » → « Prêt ✓ »"""
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path)
+    mp3 = tmp_path / "Song One" / "Song One.mp3"
+    mp3.write_bytes(b"ID3")
+    L.execute(f"""TRACKS = {{ {{name="Song One"}} }}; ITEMS = {{ {{track=1, file=[[{mp3}]]}} }}; REGIONS = {{}}""")
+    gx = open_window(L, g)
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    assert "Séparer les stems" in T and "Tout faire" in T and "Stems —" in T and "Structure —" in T, T
+    # stems séparés, pas encore préparé
+    L.execute(f"""TRACKS = {{ {{name="Chant"}}, {{name="Batterie"}} }}
+      ITEMS = {{ {{track=1, file=[[{tmp_path / 'Song One' / 'Song One-A minor-120bpm-vocals.wav'}]]}},
+                {{track=2, file=[[{tmp_path / 'Song One' / 'Song One-A minor-120bpm-drums.wav'}]]}} }}""")
+    g.state.t += 3; frame(L, g)
+    T = TL.texts(g)
+    assert "Analyser et préparer" in T and "Séparer les stems" not in T and "Stems ✓" in T, T
+    # préparé
+    L.execute("""TRACKS[3] = {name="CLICK"}; REGIONS = { {true, 4.0, 12.0, "Intro", 0}, {true, 12.0, 28.0, "Couplet 1", 0} }""")
+    g.state.t += 3; frame(L, g)
+    T = TL.texts(g)
+    assert "Prêt ✓" in T and "Re-préparer" in T, T
+    press_text(L, g, "Prêt ✓", exact=True); frame(L, g)
+    assert g.state.persist["tab"] == "stage"
+
+
+def test_do_everything_success_failure_resume(concert, tmp_path):
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path)
+    gx = open_window(L, g)
+    frame(L, g); frame(L, g)
+    press_text(L, g, "Tout faire", exact=True)
+    # étape 1 (stems) : déjà fait (stems présents) ; étape 2 : analyser et préparer
+    assert "-m reacue_mcp.cli prepare" in list(g.state.shell.values())[-1]
+    frame(L, g)
+    T = TL.texts(g)
+    assert "Séparer les stems" in T and "déjà fait" in T and "Mettre à jour les téléphones" in T, T
+    assert "Arrêter" in T
+    g.state.t += 12
+    frame(L, g)
+    shot(g, gx, "morceau_toutfaire.png")
+    status(g, state="done", cmd="prepare", message="Morceau préparé", engine="songformer", doubts="")
+    frame(L, g)
+    assert "reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
+    # échec de la mise à jour des téléphones : pont arrêté → explication + bouton
+    status(g, state="error", cmd="publish", message="Le pont ReaCue ne tourne pas dans REAPER.")
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    assert "Arrêté à l'étape « Mettre à jour les téléphones »" in T and "Reprendre" in T, T
+    assert "Démarrer le pont" in T, T
+    # reprendre : relance seulement l'étape en échec, puis enregistre
+    clear_status(g)
+    n_saves = g.state.saves
+    press_text(L, g, "Reprendre", exact=True)
+    assert "reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
+    status(g, state="done", cmd="publish", message="ok")
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    assert any(t.startswith("Morceau prêt ✓") for t in T) and g.state.saves == n_saves + 1, T
+    assert g.state.projext["structure_engine"] == "songformer"
+    press_text(L, g, "Fermer", exact=True); frame(L, g)
+    assert "Prêt ✓" in TL.texts(g)
+    # annuler : s'arrête après l'étape en cours
+    clear_status(g)
+    press_text(L, g, "Tout faire", exact=True)
+    frame(L, g)
+    press_text(L, g, "Arrêter", exact=True)
+    status(g, state="done", cmd="prepare", message="ok")
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    assert "annulé" in T and "Reprendre" in T, T
+
+
+def test_new_song_proposes_do_everything(concert, tmp_path):
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path)
+    open_window(L, g)
+    frame(L, g)
+    # simule la fin de « + Nouveau morceau »
+    L.execute("REACUE_CTX.propose_all = REACUE_CTX.proj_key")
+    frame(L, g)
+    T = TL.texts(g)
+    assert any(t.startswith("Morceau créé. Tout préparer maintenant") for t in T) and "Plus tard" in T, T
+    press_text(L, g, "Plus tard", exact=True); frame(L, g)
+    assert not any(t.startswith("Morceau créé.") for t in TL.texts(g))
+
+
+def test_assistant_first_launch_and_settings_simple_advanced(concert, tmp_path):
+    L, g = rt(concert, proj=tmp_path / "x.RPP", tracks=False)
+    g.state.ext["assistant_seen"] = ""
+    install(g, tmp_path, stems=True)
+    sp = Path(g.RES) / "ReaCueMCP" / "reacue_settings.json"
+    L.execute("local ge = os.getenv; os.getenv = function(k) if k == 'HOME' then return '/Users/demo' end return ge(k) end")
+    gx = open_window(L, g)
+    frame(L, g)
+    T = TL.texts(g)
+    assert "Bienvenue dans ReaCue" in T and "Analyse de structure (SongFormer)  ·  facultatif" in T, T
+    assert "Installer" in T and "Créer" in T and "Pont ReaCue (dans REAPER)" in T, T
+    assert any("/Users/demo/Documents" in t for t in T), T            # dossier par défaut absent
+    shot(g, gx, "assistant.png")
+    # dossier des projets absent : « Créer »
+    sp.write_text(json.dumps({"language": "fr", "projects_dir": str(tmp_path / "Projets")}), encoding="utf-8")
+    press_text(L, g, "Revérifier", exact=True); frame(L, g)
+    press_text(L, g, "Créer", exact=True)
+    assert (tmp_path / "Projets").is_dir()
+    # SongFormer : « Installer » ouvre l'installateur
+    press_text(L, g, "Installer", exact=True)
+    assert any("Install ReaCue Structure" in c or str(tmp_path / "inst") in c for c in g.state.shell.values())
+    press_text(L, g, "Terminer", exact=True)
+    assert g.state.persist["assistant_seen"] == "1"
+    sp.write_text(json.dumps({"language": "fr"}), encoding="utf-8")       # captures : dossiers par défaut
+    g.state.ext["concert_dir"] = ""
+    # Réglages simples / avancés
+    press_text(L, g, "Réglages", exact=True); frame(L, g)
+    T = TL.texts(g)
+    assert "Décompte avant le morceau" in T and "Détection de structure" in T and "Licences" in T, T
+    assert "Volume du click" not in T and "Code PIN de la Régie" not in T and "Dossier des projets" not in T
+    shot(g, gx, "reglages_simple.png")
+    press_text(L, g, "Réglages avancés", exact=True); frame(L, g)
+    T = TL.texts(g)
+    assert "Volume du click" in T and "Code PIN de la Régie" in T and "Dossier des projets" in T and "Débit du décompte" in T, T
+    shot(g, gx, "reglages_avances.png")
+    assert g.state.persist["settings_adv"] == "1"
+    press_text(L, g, "Réglages simples", exact=True); frame(L, g)
+    # « Vérifier l'installation » rouvre l'assistant
+    press_text(L, g, "Vérifier l'installation", exact=True); frame(L, g)
+    assert "Vérifier l'installation" in TL.texts(g) and "Revérifier" in TL.texts(g)
+
+
+def test_concert_batch_prepare(concert, tmp_path):
+    res = concert[0]
+    projects = tmp_path / "projects"
+    projects.mkdir()
+    for name, ready in (("Alpha", True), ("Bravo", False), ("Charlie", False)):
+        body = '<REAPER_PROJECT\n  MARKER 1 0 "Intro" 1\n  <TRACK\n    NAME CLICK\n  >\n>\n' if ready else "<REAPER_PROJECT\n>\n"
+        (projects / f"{name}.RPP").write_text(body, encoding="utf-8")
+    L, g = rt(concert, proj=tmp_path / "empty.RPP", tracks=False)
+    (Path(g.RES) / "ReaCueMCP" / "reacue_settings.json").write_text(
+        json.dumps({"language": "fr", "projects_dir": str(projects)}), encoding="utf-8")
+    g.state.ext["concert_dir"] = str(tmp_path / "Shows")
+    install(g, tmp_path)
+    gx = open_window(L, g)
+    press_text(L, g, "Concert", exact=True); frame(L, g)
+    T = TL.texts(g)
+    assert "Préparer tous les morceaux non préparés (2)" in T, T
+    # les projets ouverts par le lot : chacun « préparé » par la CLI simulée
+    L.execute(f"""
+      local mo = reaper.Main_openProject
+      reaper.Main_openProject = function(p) mo(p); PROJFILE = p:gsub("^noprompt:", "")
+        TRACKS = {{ {{name="Chant"}}, {{name="Batterie"}} }}
+        ITEMS = {{ {{track=1, file="/x/a-vocals.wav"}}, {{track=2, file="/x/a-drums.wav"}} }}
+      end""")
+    press_text(L, g, "Préparer tous les morceaux non préparés", exact=False)
+    assert g.state.opened == "noprompt:" + str(projects / "Bravo.RPP") and 40859 in list(g.state.cmds.values())
+    frame(L, g)
+    T = TL.texts(g)
+    assert "Préparation en lot  ·  1 / 2" in T and "Bravo" in T and "Charlie" in T and "Arrêter" in T, T
+    assert "Concert" in T and g.state.persist["tab"] == "concert"
+    shot(g, gx, "concert_lot.png")
+    for cmd in ("prepare", "publish"):
+        status(g, state="done", cmd=cmd, message="ok", engine="songformer")
+        frame(L, g)
+    g.state.t += 1; frame(L, g)
+    # 1er morceau fini : enregistré, onglet refermé, 2e ouvert
+    assert 40860 in list(g.state.cmds.values()) and g.state.opened == "noprompt:" + str(projects / "Charlie.RPP")
+    press_text(L, g, "Arrêter", exact=True)
+    for cmd in ("prepare", "publish"):
+        status(g, state="done", cmd=cmd, message="ok")
+        frame(L, g)
+    g.state.t += 1; frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    assert "Lot terminé : 2 prêt(s), 0 en échec" in T, T
 
 
 def test_concert_tab_compose_build_open(concert, tmp_path):
@@ -484,6 +758,7 @@ def test_settings_tab_writes_json(concert, tmp_path):
     d = json.loads(sp.read_text(encoding="utf-8"))
     assert d["count_in_bars"] == 3 and d["custom_key"] == 7
     frame(L, g)
+    press_text(L, g, "Réglages avancés", exact=True); frame(L, g)
     press_text(L, g, "fixe", exact=True)
     assert json.loads(sp.read_text(encoding="utf-8"))["tempo_mode"] == "constant"
     frame(L, g)
@@ -528,8 +803,8 @@ def test_window_english_views(concert, tmp_path):
     gx = open_window(L, g)
     frame(L, g); frame(L, g)
     T = TL.texts(g)
-    assert "Song One" in T and "Split stems" in T and "Prepare" in T and any("bars" in t for t in T), T
-    assert any(t.startswith("Lyrics: 3 lines") for t in T), T
+    assert "Song One" in T and "Ready ✓" in T and "Do everything" in T and "Update the phones" in T, T
+    assert "Lyrics: 3 lines" in T and any("bars" in t for t in T), T
     shot(g, gx, "morceau_en.png")
     press_text(L, g, "Concert", exact=True); frame(L, g)
     for name in ("Second Demo", "Demo Song"):
@@ -555,3 +830,32 @@ def test_stage_english_view(concert):
     assert "Instruments (stems)  ·  long press = solo" in T or any(t.startswith("Instruments") for t in T), T
     assert "Hear everything" in T and "Played live…" in T, T
     shot(g, gx, "scene_en.png")
+
+
+def test_english_new_views(concert, tmp_path):
+    """Assistant, « Tout faire », aide, réglages avancés et erreurs expliquées en anglais."""
+    L, g, res = song_runtime(concert, tmp_path, lang="en")
+    g.state.ext["assistant_seen"] = ""
+    install(g, tmp_path)
+    gx = open_window(L, g)
+    frame(L, g)
+    T = TL.texts(g)
+    assert "Welcome to ReaCue" in T and "Structure analysis (SongFormer)  ·  optional" in T and "Finish" in T, T
+    press_text(L, g, "Finish", exact=True)
+    gx.mouse_x, gx.mouse_y = 0, 0
+    frame(L, g)
+    T = TL.texts(g)
+    assert "Ready ✓" in T and "Prepare again" in T and "Re-analyse from scratch" in T and "Stems ✓" in T, T
+    assert any(t.startswith("Hover a button") for t in T), T
+    press_text(L, g, "Do everything", exact=True); frame(L, g)
+    assert any(t.startswith("Analyse and prepare") for t in TL.texts(g)) and "already done" in TL.texts(g)
+    status(g, state="error", cmd="prepare", message="The ReaCue bridge is not running in REAPER.")
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    assert "Stopped at step “Analyse and prepare”" in T and "Start the bridge" in T and "Resume" in T, T
+    press_text(L, g, "Start the bridge", exact=True)
+    assert g.state.added_script.endswith("ReaCue_Bridge.lua") and 55555 in list(g.state.cmds.values())
+    press_text(L, g, "Settings", exact=True); frame(L, g)
+    press_text(L, g, "Advanced settings", exact=True); frame(L, g)
+    T = TL.texts(g)
+    assert "Click volume" in T and "Count speed" in T and "Simple settings" in T and "Check the installation" in T, T

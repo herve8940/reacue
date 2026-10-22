@@ -1,12 +1,14 @@
 -- ReaCue : fenêtre principale, en 4 onglets / main window, 4 tabs (French / English).
---   Morceau  : préparer le projet ouvert (séparer les stems, préparer, réanalyser, republier), structure
---              (écouter, renommer, déplacer, ajouter, supprimer une section), paroles, ajout à un concert
+--   Morceau  : grand bouton « étape suivante » (Séparer les stems → Analyser et préparer → Prêt ✓),
+--              « Tout faire » (liste d'étapes), pastilles d'état, structure en bande colorée (écouter,
+--              renommer, déplacer, fusionner, couper, supprimer, annuler / rétablir), paroles, concert
 --   Concert  : composer une setlist avec les projets préparés, construire / reconstruire, ouvrir,
---              « joué en live » (stems coupés), concerts existants
+--              « joué en live » (stems coupés), concerts existants, préparation en lot
 --   Scène    : pilotage (transport, sections, setlist), instruments (mute / solo / tout entendre),
 --              répétition (boucle avec 1 mesure de décompte, ralenti), Vérifier, QR, PIN de la Régie
---   Réglages : reacue_settings.json sans éditer le fichier (langue, décompte, annonces, voix, sorties,
---              volumes, tempo, séparation, dossiers), version installée
+--   Réglages : reacue_settings.json sans éditer le fichier, vue simple / avancée, « Vérifier
+--              l'installation » (assistant du premier lancement), version, licences
+-- Ligne d'aide en bas : rôle de l'élément survolé. Erreurs : cause, solution et bouton d'action.
 -- Tant que la fenêtre est ouverte (quel que soit l'onglet, même ancrée) : arrêt automatique en fin de
 -- morceau (concert), boucle de répétition, télécommande Régie des téléphones, profil « joué en live ».
 -- Clic droit : ancrer / détacher. Échap : fermer une vue (QR, Vérifier…) puis la fenêtre.
@@ -61,6 +63,7 @@ local ctx = {
   c = nil, is_concert = false, proj_key = nil, proj_file = "", proj_name = "",
   layout_h = nil, W = 560, overlays = {},
 }
+REACUE_CTX = ctx                       -- tests (état partagé de la fenêtre)
 function ctx.lang() return L.lang() end
 function ctx.tr(tbl, k)       -- textes d'un module : tbl = {fr = {...}, en = {...}}
   local l = tbl[L.lang()] or tbl.fr
@@ -71,12 +74,15 @@ function ctx.tr(tbl, k)       -- textes d'un module : tbl = {fr = {...}, en = {.
 end
 
 local TAB_ORDER = { "song", "concert", "stage", "settings" }
+ctx.guide = dofile(script_dir .. "ReaCue_guide.lua")(ctx)          -- aide au survol, erreurs expliquées
 local tabs = {}
 for _, k in ipairs(TAB_ORDER) do
   tabs[k] = dofile(script_dir .. "ReaCue_tab_" .. k .. ".lua")(ctx)
 end
 ctx.tabs = tabs
 ctx.newsong = dofile(script_dir .. "ReaCue_newsong.lua")(ctx)      -- « + Nouveau morceau »
+ctx.flow = dofile(script_dir .. "ReaCue_flow.lua")(ctx)            -- « Tout faire », lot
+dofile(script_dir .. "ReaCue_assistant.lua")(ctx)                  -- assistant (ctx.assistant)
 
 function ctx.goto_tab(t)
   if not tabs[t] then return end
@@ -117,6 +123,7 @@ function ctx.refresh(force)
   for _, k in ipairs(TAB_ORDER) do if tabs[k].project_changed then tabs[k].project_changed() end end
   -- onglet choisi automatiquement : concert → Scène, morceau → Morceau (sinon le dernier utilisé)
   local want
+  if ctx.flow and ctx.flow.batch_active() then return true end      -- lot en cours : on reste sur Concert
   if first and START_TAB then want = START_TAB
   elseif ctx.is_concert then want = "stage"
   elseif has_audio() then want = "song"
@@ -128,18 +135,27 @@ end
 
 -- tâches en arrière-plan (CLI ReaCue, séparation de stems) : une à la fois ---------------------
 -- on_done(state, message) ; la fenêtre affiche la progression dans l'onglet
-function ctx.start_cli(cmd, label, on_done)
-  if ctx.job then return false end
+-- quiet : en cas d'échec au lancement, pas de message (ctx.last_error ; « Tout faire » l'affiche)
+function ctx.start_cli(cmd, label, on_done, quiet)
+  if ctx.job then ctx.last_error = R.tr("busy") return false end
   local ok, err = R.start(cmd, script_dir, cmd ~= "concert" and not cmd:match("^concert"))
-  if not ok then ctx.show_result(T("error_title"), err, false) return false end
+  if not ok then
+    ctx.last_error = err
+    if not quiet then ctx.show_result(T("error_title"), err, false) end
+    return false
+  end
   ctx.job = { kind = "cli", cmd = cmd:match("^(%S+)"), label = label, t0 = reaper.time_precise(), on_done = on_done }
   return true
 end
 
-function ctx.start_stems(on_done)
-  if ctx.job then return false end
+function ctx.start_stems(on_done, quiet)
+  if ctx.job then ctx.last_error = R.tr("busy") return false end
   local job, err = S.start(R, script_dir)
-  if not job then ctx.show_result(T("error_title"), err, false) return false end
+  if not job then
+    ctx.last_error = err
+    if not quiet then ctx.show_result(T("error_title"), err, false) end
+    return false
+  end
   if job.ready then
     local msg = S.finish(R, job)
     if on_done then on_done("done", msg) end
@@ -183,6 +199,7 @@ local function poll_job()
   local state, msg, cmd, step = R.status()
   if (state == "done" or state == "error") and (cmd == nil or cmd == j.cmd) then
     ctx.job = nil
+    if tabs.song.cli_done then tabs.song.cli_done(j.cmd, state, msg) end
     if j.on_done then j.on_done(state, msg) end
   elseif state == "running" and step and step ~= "" and (cmd == nil or cmd == j.cmd) then
     j.label = step                               -- étape en cours (« Analyse de structure… »)
@@ -216,15 +233,45 @@ end
 -- résultat (message de fin d'une tâche) ----------------------------------------------------
 function ctx.show_result(title, text, ok)
   ctx.result = { title = title, text = tostring(text or ""), ok = ok ~= false }
+  if not ctx.result.ok then ctx.result.why = ctx.explain(ctx.result.text) end
   ctx.overlay = "result"
+end
+
+-- encadré « Que faire » d'une erreur (cause + solution + bouton) ; renvoie la hauteur
+function ctx.draw_solution(why, x, y, w, id)
+  if not why or not why.solution then return 0 end
+  local E = ctx.guide.E
+  local bw = why.action_label and (U.text_w(why.action_label, 13) + 26) or 0
+  local tw = w - 24 - (bw > 0 and bw + 8 or 0)
+  local h1 = U.para(E("solution") .. " : " .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
+  local h = math.max(h1 + 14, bw > 0 and 44 or 0)
+  U.set(U.WARN, 0.16); gfx.rect(x, y, w, h, 1)
+  U.set(U.WARN); gfx.rect(x, y, 4, h, 1)
+  U.para(E("solution") .. " : " .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
+  if bw > 0 and U.button(id or "err_action", why.action_label, x + w - bw - 6, y + (h - 30) / 2, bw, 30, "primary", 13) then
+    ctx.do_action(why.action)
+    return h, true
+  end
+  return h
 end
 
 local function draw_result(x, y, w)
   local r = ctx.result
   U.text(r.title, x, y, 18, r.ok and U.INK or U.RED, true)
   if U.button("resok", T("ok"), x + w - 90, y - 4, 90, 30, "primary") then ctx.overlay = nil; ctx.result = nil return y + 40 end
-  local h = U.para(r.text, x, y + 36, w, 13, U.INK, 34)
-  return y + 36 + h + 10
+  y = y + 36
+  if r.why and r.why.kind ~= "generic" and r.why.cause then
+    U.text(U.fit(r.why.cause, w, 14, true), x, y, 14, U.INK, true)
+    y = y + 22
+  end
+  local h = U.para(r.text, x, y, w, 13, r.why and U.MUTED or U.INK, r.why and 12 or 34)
+  y = y + h + 8
+  if r.why then
+    local hh, acted = ctx.draw_solution(r.why, x, y, w, "err_action")
+    if acted then ctx.overlay = nil; ctx.result = nil end
+    y = y + hh + 8
+  end
+  return y + 2
 end
 
 -- QR code du prompteur -----------------------------------------------------------------
@@ -339,6 +386,7 @@ local function draw_check(x, y, w)
     U.text(U.fit(it.detail, tw, 12), x + 24, y + 21, 12, it.status == "bad" and U.INK or U.MUTED)
     if fx and U.button("fix" .. k, L.tr("fix"), x + w - 78, y + 6, 78, 26) then
       if it.fix == "rebuild" then ctx.overlay = nil; chk = nil; tabs.stage.rebuild(true) return y
+      elseif it.fix == "bridge" or it.fix == "web" then ctx.do_action(it.fix); chk.recheck_at = reaper.time_precise() + 0.8
       else L.apply_fix(ctx.c, it.fix); chk.recheck_at = reaper.time_precise() + 0.6 end
     end
     y = y + 42
@@ -404,6 +452,7 @@ end
 local function background(now)
   ctx.refresh(false)
   poll_job()
+  ctx.flow.tick()
   poll_remote(now)
   local c = ctx.c
   if c and L.playing() then
@@ -429,6 +478,18 @@ local function background(now)
 end
 
 function ctx.reset_loop() loop_last = nil; last_pos = nil end
+
+-- ligne d'aide (bas de la fenêtre) : rôle de l'élément survolé -------------------------------------
+local HELP_H = 26
+local function draw_help(y, w)
+  local txt = ctx.help_text(U.hover) or ctx.guide.default_help()
+  local h = U.text_w(txt, 12) > w - 28 and HELP_H + 16 or HELP_H     -- texte long : 2 lignes
+  U.set(U.PANEL2); gfx.rect(0, y, w, h, 1)
+  U.set(U.INK, 0.08); gfx.line(0, y, w, y)
+  local hov = U.hover ~= nil or U.hover_tip ~= nil
+  U.para(txt, 14, y + 6, w - 28, 12, hov and U.INK or U.MUTED, 2)
+  return y + h
+end
 
 -- boucle ---------------------------------------------------------------------------------------
 local dock = tonumber(reaper.GetExtState("ReaCue", "concert_dock")) or 0
@@ -475,7 +536,8 @@ local function loop()
     else
       y = tabs[ctx.tab].draw(14, y, w - 28) or y
     end
-    ctx.layout_h = math.max(160, math.floor(y + 10))
+    y = draw_help(math.max(y + 6, (gfx.dock(-1) > 0) and (gfx.h - HELP_H) or 0), gfx.w)
+    ctx.layout_h = math.max(160, math.floor(y))
     if gfx.dock(-1) == 0 and math.abs(gfx.h - ctx.layout_h) > 2 then gfx.init("", w, ctx.layout_h) end
   end
   gfx.update()
@@ -493,4 +555,5 @@ reaper.atexit(function()
 end)
 
 ctx.refresh(true)
+ctx.assistant.maybe_first()                  -- premier lancement : assistant d'installation (une fois)
 loop()

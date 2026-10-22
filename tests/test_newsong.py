@@ -130,7 +130,8 @@ def test_new_song_stems_folder_copy_project_and_collision(concert, tmp_path):
     W.frame(L, g)
     T = TL.texts(g)
     assert "Morceau" in T and any("Nouveau morceau « Demo Ballad Live »" in t for t in T), T
-    assert any("Étape suivante : « Préparer »" in t for t in T), T
+    assert "Analyser et préparer" in T and "Tout faire" in T, T
+    assert any(t.startswith("Morceau créé. Tout préparer maintenant") for t in T), T      # « Tout faire » proposé
     W.shot(g, gx, "nouveau_morceau.png")
     if W.SHOTS:
         import shutil
@@ -171,21 +172,20 @@ def test_new_song_single_file_then_split_first_and_autosave(concert, tmp_path):
     assert rpp.exists() and [t.name for t in g.TRACKS.values()] == ["Band - Demo Tune"]
     W.frame(L, g); W.frame(L, g)
     T = TL.texts(g)
-    assert any("Séparer stems » (un seul fichier)" in t for t in T), T
-    # « Séparer stems » est le bouton principal (rempli) : on vérifie sa couleur d'accent
+    assert "Séparer les stems" in T and "Stems —" in T, T                 # grand bouton : séparer d'abord
     # préparation réussie depuis la fenêtre → projet du morceau enregistré automatiquement
     saves = g.state.saves
-    W.press_text(L, g, "Préparer", exact=True)
+    W.press_text(L, g, "Analyser et préparer", exact=True)
     (Path(g.RES) / "ReaCueMCP" / "cli_status.json").write_text(
         json.dumps({"state": "done", "cmd": "prepare", "message": "ok"}), encoding="utf-8")
     W.frame(L, g)
     assert g.state.saves == saves + 1
     W.press_text(L, g, "OK", exact=True)
     W.frame(L, g)
-    assert any("enregistré ✓" in t for t in TL.texts(g)), TL.texts(g)
+    assert "Enregistré ✓" in TL.texts(g), TL.texts(g)
     # échec : pas d'enregistrement
     (Path(g.RES) / "ReaCueMCP" / "cli_status.json").unlink()
-    W.press_text(L, g, "Préparer", exact=True)
+    W.press_text(L, g, "Analyser et préparer", exact=True)
     (Path(g.RES) / "ReaCueMCP" / "cli_status.json").write_text(
         json.dumps({"state": "error", "cmd": "prepare", "message": "boom"}), encoding="utf-8")
     W.frame(L, g)

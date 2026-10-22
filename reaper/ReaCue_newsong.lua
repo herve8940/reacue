@@ -341,6 +341,7 @@ return function(ctx)
                   ctx.tabs.concert.rescan = true
                   ctx.flash = { txt = string.format(t("created"), title, #files, dst), t = reaper.time_precise() + 6 }
                   ctx.last_new = { rpp = rpp, single = single }
+                  ctx.propose_all = ctx.proj_key            -- l'onglet Morceau propose « Tout faire »
                 end }
     return true
   end

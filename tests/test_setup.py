@@ -220,3 +220,15 @@ def test_stems_paths():
     assert S.stems_python(Path("/r"), "darwin") == Path("/r/.venv-demucs/bin/python")
     assert S.torch_hub_dir({"TORCH_HOME": "/t"}) == Path("/t/hub")
     assert S.torch_hub_dir({}, Path("/h")) == Path("/h/.cache/torch/hub")
+
+
+def test_all_window_modules_installed():
+    """Chaque module chargé par la fenêtre ReaCue (dofile) est copié dans REAPER/Scripts/ReaCue."""
+    import re
+    import reacue_setup as RS
+    root = Path(__file__).resolve().parents[1] / "reaper"
+    src = (root / "ReaCue.lua").read_text(encoding="utf-8")
+    used = set(re.findall(r'"(ReaCue_[A-Za-z_]+\.lua)"', src)) | {f"ReaCue_tab_{k}.lua" for k in ("song", "concert", "stage", "settings")}
+    assert used <= set(RS.SCRIPT_FILES), used - set(RS.SCRIPT_FILES)
+    for f in RS.SCRIPT_FILES:
+        assert (root / f).is_file(), f

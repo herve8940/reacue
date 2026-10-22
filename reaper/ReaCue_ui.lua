@@ -31,7 +31,7 @@ end
 
 function U.text_w(s, size, bold)
   gfx.setfont(1, U.FONT, size, bold and string.byte("b") or 0)
-  return gfx.measurestr(s)
+  return (gfx.measurestr(s))
 end
 
 -- texte coupé à la largeur w (avec « … »), sans couper un caractère UTF-8
@@ -60,6 +60,7 @@ function U.frame_begin(now)
   U.down = (cap & 1) == 1
   prev_cap = cap
   U.hover = nil
+  U.hover_tip = nil
   U.now = now or (reaper.time_precise and reaper.time_precise() or 0)
   U.wheel = gfx.mouse_wheel or 0
   gfx.mouse_wheel = 0
@@ -205,6 +206,31 @@ function U.pill(lab, col, x, y)
   gfx.circle(x - w + 12, y + 12, 4, 1, 1)
   U.text(lab, x - w + 22, y + 4, 13, U.INK, true)
   return w
+end
+
+-- pastille cliquable (état du morceau) : ok = vert, false = gris, "warn" = orange ; renvoie largeur, clic
+function U.chip(id, lab, ok, x, y, size)
+  size = size or 12
+  local w = U.text_w(lab, size, true) + 26
+  local h = size + 12
+  local over = U.over(x, y, w, h)
+  if over then U.hover = id end
+  local col = ok == true and U.ACCENT or (ok == "warn" and U.WARN or U.GREY)
+  U.set(col, over and 0.34 or 0.2); gfx.rect(x, y, w, h, 1)
+  U.set(col, over and 1 or 0.8); gfx.roundrect(x, y, w - 1, h - 1, 6, 1)
+  gfx.circle(x + 10, y + h / 2, 3.5, 1, 1)
+  U.text(lab, x + 18, y + 6, size, ok == true and U.INK or { 205, 205, 210 }, true)
+  return w, over and U.clicked
+end
+
+-- aide au survol d'une zone sans bouton (bande de structure, lignes)
+function U.tip(x, y, w, h, text, id)
+  if U.over(x, y, w, h) then
+    U.hover_tip = text
+    if id then U.hover = id end
+    return true
+  end
+  return false
 end
 
 -- titre de bloc (« 1. Préparer »)

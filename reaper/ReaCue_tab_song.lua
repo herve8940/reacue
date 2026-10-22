@@ -1,69 +1,124 @@
 -- ReaCue : onglet « Morceau » / “Song” tab : le projet ouvert.
---   1. Préparer : séparer les stems, préparer, réanalyser, republier le prompteur
---   2. Structure : sections (régions) — écouter, renommer, déplacer le début, ajouter, supprimer ;
---      puis « Appliquer » (= Préparer : ReaCue reprend les régions modifiées à la main)
---   3. Compléments : paroles, accords / batterie publiés, ajouter le morceau à un concert
+--   Un grand bouton suit l'état du morceau : « Séparer les stems » (un seul MP3) → « Analyser et préparer »
+--   → « Prêt ✓ » (+ « Re-préparer », « Réanalyser depuis zéro », « Mettre à jour les téléphones »).
+--   « Tout faire » : séparer (si besoin), analyser et préparer, mettre à jour les téléphones, enregistrer
+--   (liste d'étapes, annulable, reprise à l'étape en échec) ; proposé après « + Nouveau morceau ».
+--   Pastilles d'état : Stems · Structure (SongFormer | ReaCue | manuelle) · Tempo · Accords · Batterie ·
+--   Paroles · Prompteur · Enregistré (clic = action utile).
+--   Structure : bande colorée (largeur ∝ mesures ; orange = à vérifier) + liste ; écouter, renommer,
+--   déplacer d'une mesure, fusionner, couper en deux, supprimer, ajouter ; Annuler / Rétablir ;
+--   « Appliquer » (ReaCue reprend les régions modifiées à la main).
 return function(ctx)
   local L, U, T, R, SEP = ctx.L, ctx.U, ctx.T, ctx.R, ctx.SEP
   local TXT = {
     fr = {
       no_song = "Ouvre le projet d'un morceau, ou crée-en un avec « + Nouveau morceau » (un MP3 ou un dossier de stems).",
-      saved = "enregistré ✓", unsaved = "non enregistré", next_split = "Étape suivante : « Séparer stems » (un seul fichier), puis « Préparer ».",
-      next_prepare = "Étape suivante : « Préparer ».",
-      prepared = "préparé", not_prepared = "pas encore préparé", bars = "%d mesures",
-      step1 = "1. Préparer", step2 = "2. Structure — clic sur un nom : écouter", step3 = "3. Compléments",
-      separate = "Séparer stems", prepare = "Préparer", reanalyse = "Réanalyser", publish = "Republier",
-      reanalyse_q = "Réanalyser le morceau ?\n\nLa structure est recalculée : tes corrections de sections seront remplacées.",
-      no_regions = "Pas encore de sections : lance « Préparer ».",
-      bar_n = "m. %d", len_n = "%d mes.", odd = "longueur inhabituelle",
+      bars = "%d mesures",
+      separate = "Séparer les stems", prepare = "Analyser et préparer", ready = "Prêt ✓", doall = "Tout faire",
+      reprepare = "Re-préparer", reanalyse = "Réanalyser depuis zéro", publish = "Mettre à jour les téléphones",
+      apply_big = "Appliquer les modifications",
+      tip_separate = "Étape suivante : séparer le MP3 en stems (voix, batterie, basse…), puis « Analyser et préparer ».",
+      tip_prepare = "Étape suivante : tempo, structure (SongFormer), click, annonces et prompteur.",
+      tip_ready = "Le morceau est prêt : clic pour passer à l'onglet Scène.",
+      tip_apply = "Tu as modifié la structure : click, annonces et prompteur vont la suivre.",
+      reanalyse_q = "Réanalyser depuis zéro ?\n\nTempo et structure sont recalculés : tes corrections de sections seront remplacées.",
+      structure = "Structure", structure_hint = "clic : écouter",
+      no_regions = "Pas encore de sections : « Analyser et préparer ».",
+      bar_n = "m. %d", len_n = "%d mes.", odd = "longueur inhabituelle (pas 4, 8 ou 16)",
+      moved = "frontière déplacée par le calage sur les mesures", unsure = "frontière entre deux mesures",
       add = "+ Section au curseur", applied_hint = "Structure modifiée : « Appliquer » met à jour click, annonces et prompteur.",
-      apply = "Appliquer",
+      apply = "Appliquer", undo = "Annuler", redo = "Rétablir", rename_btn = "Nom",
+      merge = "Fusionner →", split = "Couper en deux", delete = "Supprimer", rename = "Renommer",
+      sel_line = "%s · m. %d · %d mes.",
       rename_title = "ReaCue - Renommer la section", rename_field = "Nom :",
       add_title = "ReaCue - Nouvelle section", add_field = "Nom de la section :", add_default = "Pont",
+      split_title = "ReaCue - Couper la section", split_field = "Nom de la 2e partie :",
       add_here = "Une section commence déjà à cette mesure.", add_outside = "Place le curseur dans une section existante.",
-      del_last = "Il faut garder au moins une section.",
+      del_last = "Il faut garder au moins une section.", split_short = "Section trop courte pour être coupée (2 mesures minimum).",
       undo_rename = "ReaCue : renommer une section", undo_move = "ReaCue : déplacer une section",
       undo_add = "ReaCue : ajouter une section", undo_del = "ReaCue : supprimer une section",
-      lyrics = "Paroles : %d lignes (%s)", lyrics_none = "Paroles : aucun fichier — dépose paroles.txt dans le dossier des stems",
-      open_dir = "Ouvrir le dossier", published = "Prompteur : accords %s · batterie %s", pub_unknown = "Prompteur : pas encore publié pour ce morceau",
-      rename_btn = "Nom", add_concert = "Ajouter à un concert", new_concert = "Nouveau concert…", new_name_title = "ReaCue - Nouveau concert",
+      undo_merge = "ReaCue : fusionner deux sections", undo_split = "ReaCue : couper une section",
+      undo_restore = "ReaCue : annuler / rétablir la structure",
+      p_stems = "Stems", p_structure = "Structure", p_songformer = "SongFormer", p_reacue = "ReaCue", p_manual = "manuelle",
+      p_chords = "Accords", p_drums = "Batterie", p_lyrics = "Paroles : %d lignes", p_lyrics_none = "Paroles",
+      p_prompter = "Prompteur publié", p_prompter_none = "Prompteur", p_saved = "Enregistré", p_unsaved = "Non enregistré",
+      p_tempo_none = "Tempo",
+      lyrics_none = "Pas de paroles : dépose paroles.txt dans le dossier du morceau.",
+      open_dir = "Ouvrir le dossier",
+      add_concert = "Ajouter à un concert", new_concert = "Nouveau concert…", new_name_title = "ReaCue - Nouveau concert",
       new_name_field = "Nom du concert :", added = "« %s » ajouté au concert « %s » Construis-le dans l'onglet Concert.",
       not_saved = "Enregistre d'abord le projet du morceau (Cmd+S / Ctrl+S).",
-      after_stems = "\n\nÉtape suivante : « Préparer ».",
+      after_stems = "",
+      propose = "Morceau créé. Tout préparer maintenant (stems, structure, click, téléphones) ?", later = "Plus tard",
+      steps = "Tout faire", cancel = "Arrêter", resume = "Reprendre", close = "Fermer", summary = "Résumé",
+      st_skipped = "déjà fait", st_cancelled = "annulé", st_pending = "", ready_in = "Morceau prêt ✓  (%s)",
+      stopped_at = "Arrêté à l'étape « %s »", cancelling = "arrêt après cette étape…",
+      structure_install = "SongFormer non installé : détection simple de ReaCue",
     },
     en = {
       no_song = "Open a song's project, or create one with “+ New song” (an MP3 or a folder of stems).",
-      saved = "saved ✓", unsaved = "not saved", next_split = "Next step: “Split stems” (a single file), then “Prepare”.",
-      next_prepare = "Next step: “Prepare”.",
-      prepared = "prepared", not_prepared = "not prepared yet", bars = "%d bars",
-      step1 = "1. Prepare", step2 = "2. Structure — click a name: listen", step3 = "3. Extras",
-      separate = "Split stems", prepare = "Prepare", reanalyse = "Re-analyse", publish = "Republish",
-      reanalyse_q = "Re-analyse the song?\n\nThe structure is computed again: your section fixes will be replaced.",
-      no_regions = "No sections yet: run “Prepare”.",
-      bar_n = "bar %d", len_n = "%d bars", odd = "unusual length",
+      bars = "%d bars",
+      separate = "Split stems", prepare = "Analyse and prepare", ready = "Ready ✓", doall = "Do everything",
+      reprepare = "Prepare again", reanalyse = "Re-analyse from scratch", publish = "Update the phones",
+      apply_big = "Apply the changes",
+      tip_separate = "Next step: split the MP3 into stems (vocals, drums, bass…), then “Analyse and prepare”.",
+      tip_prepare = "Next step: tempo, structure (SongFormer), click, cues and prompter.",
+      tip_ready = "The song is ready: click to go to the Stage tab.",
+      tip_apply = "You changed the structure: click, cues and prompter will follow it.",
+      reanalyse_q = "Re-analyse from scratch?\n\nTempo and structure are computed again: your section fixes will be replaced.",
+      structure = "Structure", structure_hint = "click: listen",
+      no_regions = "No sections yet: “Analyse and prepare”.",
+      bar_n = "bar %d", len_n = "%d bars", odd = "unusual length (not 4, 8 or 16)",
+      moved = "boundary moved when aligning on bars", unsure = "boundary between two bars",
       add = "+ Section at cursor", applied_hint = "Structure changed: “Apply” updates the click, cues and prompter.",
-      apply = "Apply",
+      apply = "Apply", undo = "Undo", redo = "Redo", rename_btn = "Name",
+      merge = "Merge →", split = "Split in two", delete = "Delete", rename = "Rename",
+      sel_line = "%s · bar %d · %d bars",
       rename_title = "ReaCue - Rename the section", rename_field = "Name:",
       add_title = "ReaCue - New section", add_field = "Section name:", add_default = "Bridge",
+      split_title = "ReaCue - Split the section", split_field = "Name of the 2nd part:",
       add_here = "A section already starts at this bar.", add_outside = "Put the cursor inside an existing section.",
-      del_last = "At least one section must stay.",
+      del_last = "At least one section must stay.", split_short = "Section too short to split (2 bars minimum).",
       undo_rename = "ReaCue: rename a section", undo_move = "ReaCue: move a section",
       undo_add = "ReaCue: add a section", undo_del = "ReaCue: delete a section",
-      lyrics = "Lyrics: %d lines (%s)", lyrics_none = "Lyrics: no file — drop lyrics.txt in the stems folder",
-      open_dir = "Open folder", published = "Prompter: chords %s · drums %s", pub_unknown = "Prompter: not published for this song yet",
-      rename_btn = "Name", add_concert = "Add to a concert", new_concert = "New concert…", new_name_title = "ReaCue - New concert",
+      undo_merge = "ReaCue: merge two sections", undo_split = "ReaCue: split a section",
+      undo_restore = "ReaCue: undo / redo the structure",
+      p_stems = "Stems", p_structure = "Structure", p_songformer = "SongFormer", p_reacue = "ReaCue", p_manual = "manual",
+      p_chords = "Chords", p_drums = "Drums", p_lyrics = "Lyrics: %d lines", p_lyrics_none = "Lyrics",
+      p_prompter = "Prompter published", p_prompter_none = "Prompter", p_saved = "Saved", p_unsaved = "Not saved",
+      p_tempo_none = "Tempo",
+      lyrics_none = "No lyrics: drop lyrics.txt in the song's folder.",
+      open_dir = "Open folder",
+      add_concert = "Add to a concert", new_concert = "New concert…", new_name_title = "ReaCue - New concert",
       new_name_field = "Concert name:", added = "“%s” added to the concert “%s”. Build it in the Concert tab.",
       not_saved = "Save the song's project first (Cmd+S / Ctrl+S).",
-      after_stems = "\n\nNext step: “Prepare”.",
+      after_stems = "",
+      propose = "Song created. Prepare everything now (stems, structure, click, phones)?", later = "Later",
+      steps = "Do everything", cancel = "Stop", resume = "Resume", close = "Close", summary = "Summary",
+      st_skipped = "already done", st_cancelled = "cancelled", st_pending = "", ready_in = "Song ready ✓  (%s)",
+      stopped_at = "Stopped at step “%s”", cancelling = "stopping after this step…",
+      structure_install = "SongFormer not installed: ReaCue's simple detection",
     },
   }
   local function t(k) return ctx.tr(TXT, k) end
   local M = {}
-  local info = nil          -- {regions, bpm, bars, key, prepared, dirs, titles, lyrics}
+  local info = nil          -- {regions, bpm, bars, key, prepared, dirs, titles, lyrics, …}
   local dirty = false
+  local sel = nil           -- section choisie (bande / liste)
+  local hist, redo = {}, {} -- historique de la structure (instantanés des régions)
+  local last_summary = nil  -- message de la dernière préparation (bouton « Résumé »)
   local GEN = { CLICK = true, CUES = true, VOIX = true, VOICE = true }
 
   -- projet ---------------------------------------------------------------------------------
+  -- état gardé dans le projet (.RPP) : moteur de structure, débuts de sections douteux
+  function M.proj_get(k)
+    if not reaper.GetProjExtState then return nil end
+    local _, v = reaper.GetProjExtState(0, "ReaCue", k)
+    return (v and v ~= "") and v or nil
+  end
+  function M.proj_set(k, v)
+    if reaper.SetProjExtState then reaper.SetProjExtState(0, "ReaCue", k, v or "") end
+  end
   local function measure_of(tp)
     if not reaper.TimeMap2_timeToBeats then return 0 end
     local _, m = reaper.TimeMap2_timeToBeats(0, tp + 1e-6)
@@ -187,7 +242,11 @@ return function(ctx)
       regions = regs, bpm = bpm, bars = bars, key = key_from(names), prepared = (#regs > 0 and has_click),
       dirs = dirs, titles = titles, has_audio = #names > 0, m0 = m0,
       single_mix = (#names == 1 and roles == 0),        -- un MP3 / WAV seul : séparer d'abord
+      stems_ok = (#names > 1 or roles > 0),
+      engine = M.proj_get("structure_engine"), doubts = {},
     }
+    for b, why in (M.proj_get("doubts") or ""):gmatch("(%d+):(%a+)") do info.doubts[tonumber(b)] = why end
+    for _, r in ipairs(regs) do r.doubt = info.doubts[r.bar] end
     info.lyrics = read_lyrics(dirs)
     info.pub = published(titles)
     info.t = reaper.time_precise()
@@ -209,20 +268,69 @@ return function(ctx)
     }
   end
 
-  function M.project_changed() info = nil; dirty = false end
+  function M.project_changed() info = nil; dirty = false; sel = nil; hist, redo = {}, {}; last_summary = nil end
   function M.enter() info = nil end
+
+  -- état pour « Tout faire » et le lot
+  function M.state()
+    local i = info or scan()
+    return { single_mix = i.single_mix and not i.prepared, prepared = i.prepared, dirty = dirty, has_audio = i.has_audio }
+  end
 
   local function changed()
     dirty = true
     info = nil
+    M.proj_set("structure_engine", "manual")
     if ctx.tabs.stage.invalidate then ctx.tabs.stage.invalidate() end
     reaper.UpdateTimeline()
   end
 
-  -- édition des régions ---------------------------------------------------------------------
+  -- édition des régions (avec historique Annuler / Rétablir) --------------------------------------
   local function set_region(r, start, stop, name)
     reaper.SetProjectMarker4(0, r.idx, true, start, stop, name or r.name, r.color or 0, (name == "") and 1 or 0)
   end
+
+  local function snapshot()
+    local out = {}
+    for _, r in ipairs(list_regions()) do out[#out + 1] = { start = r.start, stop = r.stop, name = r.name, color = r.color } end
+    return out
+  end
+
+  -- remplace toutes les régions du projet par un instantané
+  local function restore(snap)
+    local regs = list_regions()
+    table.sort(regs, function(a, b) return a.idx > b.idx end)
+    reaper.Undo_BeginBlock()
+    for _, r in ipairs(regs) do reaper.DeleteProjectMarker(0, r.idx, true) end
+    for _, r in ipairs(snap) do reaper.AddProjectMarker2(0, true, r.start, r.stop, r.name, -1, r.color or 0) end
+    reaper.Undo_EndBlock(t("undo_restore"), -1)
+  end
+
+  -- à appeler avant chaque modification
+  local function push()
+    hist[#hist + 1] = snapshot()
+    if #hist > 50 then table.remove(hist, 1) end
+    redo = {}
+  end
+
+  function M.undo()
+    if #hist == 0 then return false end
+    redo[#redo + 1] = snapshot()
+    restore(table.remove(hist))
+    changed()
+    return true
+  end
+
+  function M.redo()
+    if #redo == 0 then return false end
+    hist[#hist + 1] = snapshot()
+    restore(table.remove(redo))
+    changed()
+    return true
+  end
+
+  function M.can_undo() return #hist > 0 end
+  function M.can_redo() return #redo > 0 end
 
   local function rename(k)
     local r = info.regions[k]
@@ -230,6 +338,7 @@ return function(ctx)
     if not ok or not v or v == r.name then return end
     v = v:gsub("^%s+", ""):gsub("%s+$", "")
     if v == "" then return end
+    push()
     reaper.Undo_BeginBlock()
     set_region(r, r.start, r.stop, v)
     reaper.Undo_EndBlock(t("undo_rename"), -1)
@@ -243,6 +352,7 @@ return function(ctx)
     if not nt or nt >= r.stop - 0.01 then return end
     if prev and nt <= prev.start + 0.01 then return end
     if nt < 0 then return end
+    push()
     reaper.Undo_BeginBlock()
     if prev and math.abs(prev.stop - r.start) < 0.02 then set_region(prev, prev.start, nt) end
     set_region(r, nt, r.stop)
@@ -254,11 +364,43 @@ return function(ctx)
     local regs = info.regions
     if #regs <= 1 then reaper.ShowMessageBox(t("del_last"), T("title"), 0) return end
     local r, prev, nx = regs[k], regs[k - 1], regs[k + 1]
+    push()
     reaper.Undo_BeginBlock()
     if prev and math.abs(prev.stop - r.start) < 0.02 then set_region(prev, prev.start, r.stop)
     elseif nx and math.abs(nx.start - r.stop) < 0.02 then set_region(nx, r.start, nx.stop) end
     reaper.DeleteProjectMarker(0, r.idx, true)
     reaper.Undo_EndBlock(t("undo_del"), -1)
+    if sel and sel >= #regs then sel = #regs - 1 end
+    changed()
+  end
+
+  -- fusionner la section k avec la suivante (le nom de la 1re est gardé)
+  local function merge(k)
+    local regs = info.regions
+    local r, nx = regs[k], regs[k + 1]
+    if not nx then return end
+    push()
+    reaper.Undo_BeginBlock()
+    set_region(r, r.start, nx.stop)
+    reaper.DeleteProjectMarker(0, nx.idx, true)
+    reaper.Undo_EndBlock(t("undo_merge"), -1)
+    changed()
+  end
+
+  -- couper la section k en deux, sur la mesure du milieu
+  local function split(k)
+    local r = info.regions[k]
+    if r.len < 2 then reaper.ShowMessageBox(t("split_short"), T("title"), 0) return end
+    local mid = bar_time(measure_of(r.start) + math.floor(r.len / 2))
+    if not mid or mid <= r.start + 0.01 or mid >= r.stop - 0.01 then return end
+    local ok, v = reaper.GetUserInputs(t("split_title"), 1, t("split_field") .. ",extrawidth=120", r.name)
+    if not ok or not v or v:gsub("%s", "") == "" then return end
+    push()
+    reaper.Undo_BeginBlock()
+    local stop = r.stop
+    set_region(r, r.start, mid)
+    reaper.AddProjectMarker2(0, true, mid, stop, v, -1, r.color or 0)
+    reaper.Undo_EndBlock(t("undo_split"), -1)
     changed()
   end
 
@@ -274,12 +416,18 @@ return function(ctx)
     if not host then reaper.ShowMessageBox(t("add_outside"), T("title"), 0) return end
     local ok, v = reaper.GetUserInputs(t("add_title"), 1, t("add_field") .. ",extrawidth=120", t("add_default"))
     if not ok or not v or v:gsub("%s", "") == "" then return end
+    push()
     reaper.Undo_BeginBlock()
     local stop = host.stop
     set_region(host, host.start, tb)
     reaper.AddProjectMarker2(0, true, tb, stop, v, -1, 0)
     reaper.Undo_EndBlock(t("undo_add"), -1)
     changed()
+  end
+
+  local function listen(r)
+    reaper.SetEditCurPos(r.start, true, true)
+    if L.play_state() ~= "play" then reaper.OnPlayButton() end
   end
 
   -- ajouter à un concert --------------------------------------------------------------------
@@ -357,6 +505,25 @@ return function(ctx)
     return true
   end
 
+  -- fin d'une commande de la CLI (bouton ou « Tout faire ») : moteur des sections et débuts douteux
+  -- (lus dans cli_status.json), gardés dans le projet
+  function M.cli_done(cmd, state, msg)
+    if cmd ~= "prepare" then return end
+    if state == "done" then
+      dirty = false
+      last_summary = msg
+      local src = L.read(R.STATUS) or ""
+      local eng = R.jfield(src, "engine")
+      if eng == "songformer" or eng == "reacue" then
+        M.proj_set("structure_engine", eng)
+        M.proj_set("doubts", R.jfield(src, "doubts") or "")
+        hist, redo = {}, {}
+      end
+      M.structure_missing = R.jfield(src, "structure_missing") == true
+    end
+    info = nil
+  end
+
   local function done_cb(after)
     local key = ctx.proj_key
     return function(state, msg)
@@ -380,22 +547,199 @@ return function(ctx)
   end
   function M.publish() return ctx.start_cli("publish", R.tr("publish"), done_cb()) end
   function M.separate() return ctx.start_stems(done_cb(t("after_stems"))) end
+  function M.do_all()
+    ctx.propose_all = nil
+    return ctx.flow.start(M.state(), function()
+      info = nil
+      if ctx.tabs.stage.invalidate then ctx.tabs.stage.invalidate() end
+    end)
+  end
 
   -- dessin ------------------------------------------------------------------------------------
   local function fmt_bpm(b) return b and string.format("%.0f BPM", b) or "? BPM" end
+  local function fmt_secs(s)
+    s = math.floor((s or 0) + 0.5)
+    if s >= 60 then return string.format("%d min %02d s", s // 60, s % 60) end
+    return string.format("%d s", s)
+  end
+  local function region_col(r)
+    if r.color and r.color ~= 0 then local rr, gg, bb = reaper.ColorFromNative(r.color & 0xFFFFFF); return { rr, gg, bb } end
+    return U.GREY
+  end
+  local function odd_len(r) return r.len ~= 4 and r.len ~= 8 and r.len ~= 16 end
+  local function doubt_text(r)
+    local bits = {}
+    if odd_len(r) then bits[#bits + 1] = t("odd") end
+    if r.doubt then bits[#bits + 1] = t(r.doubt) end
+    return #bits > 0 and table.concat(bits, " · ") or nil
+  end
+
+  -- pastilles d'état (retour à la ligne si besoin) ; renvoie y suivant
+  local function draw_pills(i, x, y, w)
+    local saved = (ctx.proj_file or "") ~= "" and not (reaper.IsProjectDirty and reaper.IsProjectDirty(0) == 1)
+    local eng = i.engine
+    local eng_lab = (eng == "songformer" and t("p_songformer")) or (eng == "reacue" and t("p_reacue"))
+      or ((eng == "manual" or eng == "regions") and t("p_manual")) or nil
+    local sf = R.structure_installed and R.structure_installed(R.install_dir(ctx.dir))
+    local p = i.pub
+    local ly = i.lyrics
+    local pills = {
+      { "pill_stems", t("p_stems") .. (i.stems_ok and " ✓" or " —"), i.stems_ok or (i.single_mix and "warn" or false), "stems" },
+      { "pill_structure", t("p_structure") .. (#i.regions > 0 and (" : " .. (eng_lab or t("p_reacue")) .. " ✓") or " —"),
+        #i.regions > 0 and ((eng == "reacue" and not sf) and "warn" or true) or false, "structure" },
+      { "pill_tempo", i.prepared and fmt_bpm(i.bpm) or (t("p_tempo_none") .. " —"), i.prepared or false, "tempo" },
+      { "pill_chords", t("p_chords") .. ((p and p.chords) and " ✓" or " —"), (p and p.chords) or false, "publish" },
+      { "pill_drums", t("p_drums") .. ((p and p.drums) and " ✓" or " —"), (p and p.drums) or false, "publish" },
+      { "pill_lyrics", ly and string.format(t("p_lyrics"), ly.n) or (t("p_lyrics_none") .. " —"), ly and true or false, "lyrics" },
+      { "pill_prompter", p and (t("p_prompter") .. " ✓") or (t("p_prompter_none") .. " —"), p and true or false, "prompter" },
+      { "pill_saved", saved and (t("p_saved") .. " ✓") or t("p_unsaved"), saved or "warn", "save" },
+    }
+    local px, row_h = x, 26
+    for _, pl in ipairs(pills) do
+      local pw = U.text_w(pl[2], 12, true) + 26
+      if px > x and px + pw > x + w then px = x; y = y + row_h end
+      local _, clk = U.chip(pl[1], pl[2], pl[3], px, y)
+      if pl[1] == "pill_structure" and eng == "reacue" and not sf and U.hover == pl[1] then U.hover_tip = t("structure_install") end
+      if clk and not ctx.job then
+        local a = pl[4]
+        if a == "stems" and not i.stems_ok then M.separate()
+        elseif a == "structure" and not sf then ctx.do_action("structure")
+        elseif a == "publish" then M.publish()
+        elseif a == "lyrics" then
+          local d = (ly and ly.dir) or i.dirs[#i.dirs] or i.dirs[1]
+          if d then ctx.guide.open_path(d) end
+        elseif a == "prompter" then if p then ctx.open_qr() else M.publish() end
+        elseif a == "save" then ctx.guide.save_project(); saved_t = reaper.time_precise() end
+        return y + row_h, true
+      end
+      px = px + pw + 6
+    end
+    return y + row_h + 4
+  end
+
+  -- liste d'étapes de « Tout faire »
+  local MARK = { done = "✓", running = "●", failed = "✗", pending = "○", skipped = "–", cancelled = "–" }
+  local function draw_flow(x, y, w)
+    local F = ctx.flow
+    local run = F.run
+    U.set(U.PANEL2); gfx.rect(x - 4, y - 4, w + 8, 4 + 30 + #run.steps * 26 + 10, 1)
+    U.text(t("steps"), x + 4, y + 4, 15, U.INK, true)
+    local bx = x + w
+    local function btn(id, lab, style)
+      local bw = U.text_w(lab, 12) + 22
+      bx = bx - bw
+      local c = U.button(id, lab, bx, y, bw, 26, style, 12)
+      bx = bx - 6
+      return c
+    end
+    if not run.finished then
+      if btn("flow_cancel", t("cancel")) then F.cancel() end
+    else
+      if btn("flow_close", t("close"), run.ok and "primary" or nil) then F.close() return y end
+      if not run.ok and btn("flow_resume", t("resume"), "primary") and not ctx.job then F.resume() end
+      if run.ok and last_summary and btn("flow_summary", t("summary")) then ctx.show_result(T("done_title"), last_summary, true) end
+    end
+    y = y + 34
+    for k, s in ipairs(run.steps) do
+      local col = (s.status == "done" and U.ACCENT) or (s.status == "running" and U.BLUE) or (s.status == "failed" and U.RED) or U.GREY
+      U.text(MARK[s.status] or "○", x + 6, y + 2, 15, col, true)
+      local lab = F.label(s.id)
+      if s.status == "running" and ctx.job and ctx.job.label and s.id ~= "save" then
+        lab = lab .. "  ·  " .. ctx.job.label
+      end
+      local right = ""
+      if s.status == "skipped" then right = t("st_skipped")
+      elseif s.status == "cancelled" then right = t("st_cancelled")
+      elseif s.status == "running" then right = fmt_secs(reaper.time_precise() - (s.t0 or reaper.time_precise()))
+        if run.cancel then right = t("cancelling") end
+      elseif s.secs and (s.status == "done" or s.status == "failed") then right = fmt_secs(s.secs) end
+      local rw = U.text_w(right, 12)
+      U.text(U.fit(lab, w - rw - 40, 13, s.status == "running"), x + 28, y + 3, 13,
+        (s.status == "pending" or s.status == "skipped" or s.status == "cancelled") and U.MUTED or U.INK, s.status == "running")
+      U.text(right, x + w - rw - 4, y + 4, 12, U.MUTED)
+      if s.status == "running" and ctx.job and ctx.job.pct and ctx.job.pct > 0 then
+        U.set(U.PANEL); gfx.rect(x + 28, y + 21, w - 32, 3, 1)
+        U.set(U.ACCENT); gfx.rect(x + 28, y + 21, math.floor((w - 32) * ctx.job.pct / 100), 3, 1)
+      end
+      y = y + 26
+    end
+    y = y + 10
+    if run.finished then
+      if run.ok then
+        U.text(string.format(t("ready_in"), fmt_secs((run.t_end or 0) - (run.t0 or 0))), x, y, 14, U.ACCENT, true)
+        y = y + 24
+      else
+        local fs = run.failed and run.steps[run.failed]
+        if fs then
+          U.text(U.fit(string.format(t("stopped_at"), F.label(fs.id)), w, 14, true), x, y, 14, U.RED, true)
+          y = y + 22
+          local why = ctx.explain(fs.msg)
+          if why.cause then y = y + U.para(why.cause, x, y, w, 12, U.INK, 3) + 4 end
+          if why.kind == "generic" and fs.msg then y = y + U.para(fs.msg, x, y, w, 12, U.MUTED, 6) + 4 end
+          local h, acted = ctx.draw_solution(why, x, y, w, "err_action")
+          y = y + h + 6
+          if acted then return y end
+        end
+      end
+    end
+    return y + 4
+  end
+
+  -- bande de structure : une case par section, largeur proportionnelle aux mesures
+  local function draw_band(i, x, y, w)
+    local regs = i.regions
+    local total = 0
+    for _, r in ipairs(regs) do total = total + math.max(1, r.len) end
+    if total == 0 then return y end
+    local H = 34
+    local cur = L.pos()
+    local bx = x
+    for k, r in ipairs(regs) do
+      local bw = (k == #regs) and (x + w - bx) or math.max(6, math.floor(w * math.max(1, r.len) / total + 0.5))
+      local col = region_col(r)
+      local dt = doubt_text(r)
+      local over = U.over(bx, y, bw, H)
+      U.set(col, over and 0.95 or 0.72); gfx.rect(bx, y, bw - 2, H, 1)
+      if dt then
+        U.set(U.WARN); gfx.rect(bx, y, bw - 2, 5, 1)
+        U.set(U.WARN); gfx.roundrect(bx, y, bw - 3, H - 1, 4, 1)
+      end
+      if sel == k then
+        U.set(U.INK); gfx.roundrect(bx, y, bw - 3, H - 1, 4, 1); gfx.roundrect(bx + 1, y + 1, bw - 5, H - 3, 4, 1)
+      end
+      if bw > 22 then
+        local nm = U.fit(r.name, bw - 8, 11, true)
+        U.text(nm, bx + 4, y + 7, 11, U.DARK, true)
+        U.text(U.fit(tostring(r.len), bw - 8, 10), bx + 4, y + 20, 10, U.DARK)
+      end
+      local tip = string.format(t("sel_line"), r.name, r.bar, r.len) .. (dt and ("  —  " .. dt) or "")
+      U.tip(bx, y, bw - 2, H, tip, "band" .. k)
+      if over and U.clicked then sel = k; listen(r) end
+      bx = bx + bw
+    end
+    -- tête de lecture
+    local t0, t1 = regs[1].start, regs[#regs].stop
+    if cur >= t0 and cur <= t1 and t1 > t0 then
+      local px = x + math.floor(w * (cur - t0) / (t1 - t0))
+      U.set(U.INK); gfx.rect(px, y - 3, 2, H + 6, 1)
+    end
+    return y + H + 8
+  end
 
   function M.draw(x, y, w)
     if not info or reaper.time_precise() - (info.t or 0) > 2 then scan() end
     local i = info
-    if ctx.job then y = y + ctx.draw_job(x, y, w) end
-    -- état
+    local F = ctx.flow
+    local run = F.run and F.run.key == ctx.proj_key and F.run or nil
+    if ctx.job and not (run and not run.finished) then y = y + ctx.draw_job(x, y, w) end
+    -- titre
     local title = ctx.proj_name ~= "" and ctx.proj_name or "?"
     local NS = ctx.newsong
     local nw = NS and (U.text_w(NS.t("button"), 13) + 22) or 0
     U.text(U.fit(title, w - nw - 10, 18, true), x, y, 18, U.INK, true)
     if NS and U.button("newsong", NS.t("button"), x + w - nw, y - 3, nw, 26, (not i.has_audio) and "primary" or nil, 13)
       and not ctx.job then NS.start() return y end
-    y = y + 24
+    y = y + 26
     if ctx.flash and reaper.time_precise() - ctx.flash.t < 3 then
       y = y + (U.para(ctx.flash.txt, x, y, w, 12, ctx.flash.bad and U.WARN or U.ACCENT, 3) or 0) + 6
     end
@@ -403,44 +747,83 @@ return function(ctx)
       U.para(t("no_song"), x, y, w, 13, U.MUTED)
       return y + 40
     end
-    local parts = { i.prepared and t("prepared") or t("not_prepared") }
-    if i.prepared then parts[#parts + 1] = fmt_bpm(i.bpm) end
-    if i.bars > 0 then parts[#parts + 1] = string.format(t("bars"), i.bars) end
-    if i.key then parts[#parts + 1] = i.key end
-    local dirty_p = reaper.IsProjectDirty and reaper.IsProjectDirty(0) == 1
-    local st_txt, st_col
-    if (ctx.proj_file or "") == "" or dirty_p then st_txt, st_col = t("unsaved"), U.WARN
-    elseif saved_t and reaper.time_precise() - saved_t < 600 then st_txt, st_col = t("saved"), U.ACCENT end
-    U.set(i.prepared and U.ACCENT or U.WARN); gfx.circle(x + 5, y + 8, 4, 1, 1)
-    local line = table.concat(parts, " · ")
-    local sw = st_txt and (U.text_w(st_txt, 12) + 10) or 0
-    U.text(U.fit(line, w - 16 - sw, 13), x + 16, y, 13, U.MUTED)
-    if st_txt then U.text(st_txt, x + w - sw + 10, y + 1, 12, st_col) end
-    y = y + 22
-    if not i.prepared then
-      U.text(U.fit(i.single_mix and t("next_split") or t("next_prepare"), w, 12), x, y, 12, U.WARN)
-      y = y + 18
-    end
-    y = y + 4
-
-    -- 1. Préparer
-    U.heading(t("step1"), x, y)
-    y = y + 18
-    local gap = 6
-    local bw = (w - 3 * gap) / 4
+    local sub = {}
+    if i.bars > 0 then sub[#sub + 1] = string.format(t("bars"), i.bars) end
+    if i.key then sub[#sub + 1] = i.key end
+    if #sub > 0 then U.text(U.fit(table.concat(sub, " · "), w, 12), x, y - 4, 12, U.MUTED); y = y + 14 end
+    local ny, acted = draw_pills(i, x, y, w)
+    if acted then return ny end
+    y = ny + 4
     local busy = ctx.job ~= nil
-    local split_first = i.single_mix and not i.prepared
-    if U.button("sep", t("separate"), x, y, bw, 34, split_first and "primary" or nil, 13) and not busy then M.separate() end
-    if U.button("prep", t("prepare"), x + (bw + gap), y, bw, 34, (not split_first) and "primary" or nil, 13) and not busy then M.prepare() end
-    if U.button("rean", t("reanalyse"), x + 2 * (bw + gap), y, bw, 34, nil, 13) and not busy then M.reanalyse() end
-    if U.button("pub", t("publish"), x + 3 * (bw + gap), y, bw, 34, nil, 13) and not busy then M.publish() end
-    y = y + 46
 
-    -- 2. Structure
-    U.heading(t("step2"), x, y)
+    -- proposé après « + Nouveau morceau »
+    if ctx.propose_all and ctx.propose_all == ctx.proj_key and not run then
+      U.set(U.ACCENT, 0.18); gfx.rect(x, y, w, 40, 1)
+      U.set(U.ACCENT); gfx.rect(x, y, 4, 40, 1)
+      local b1 = U.text_w(t("doall"), 13) + 26
+      local b2 = U.text_w(t("later"), 12) + 22
+      U.para(t("propose"), x + 12, y + 4, w - b1 - b2 - 30, 12, U.INK, 2)
+      if U.button("later", t("later"), x + w - b2 - 4, y + 7, b2, 26, nil, 12) then ctx.propose_all = nil end
+      if U.button("doall", t("doall"), x + w - b2 - b1 - 10, y + 7, b1, 26, "primary", 13) and not busy then M.do_all() return y end
+      y = y + 48
+    end
+
+    -- étape suivante (grand bouton) + « Tout faire »
+    if run then
+      y = draw_flow(x, y, w)
+    else
+      local state, lab, tip
+      if dirty and i.prepared then state, lab, tip = "apply", t("apply_big"), t("tip_apply")
+      elseif i.single_mix and not i.prepared then state, lab, tip = "separate", t("separate"), t("tip_separate")
+      elseif not i.prepared then state, lab, tip = "prepare", t("prepare"), t("tip_prepare")
+      else state, lab, tip = "ready", t("ready"), t("tip_ready") end
+      local dw = math.max(120, math.floor(w * 0.3))
+      local pw = w - dw - 8
+      if U.button("primary", lab, x, y, pw, 46, state == "ready" and "on" or "primary", 17) and not busy then
+        if state == "apply" then M.prepare()
+        elseif state == "separate" then M.separate()
+        elseif state == "prepare" then M.prepare()
+        else ctx.goto_tab("stage") end
+        return y
+      end
+      if U.hover == "primary" then U.hover_tip = tip end
+      if U.button("doall", t("doall"), x + pw + 8, y, dw, 46, nil, 15) and not busy then M.do_all() return y end
+      y = y + 54
+      -- actions secondaires
+      local sec = {}
+      if state == "separate" then sec = { { "prep", t("prepare") } }
+      elseif state == "prepare" then sec = {}
+      else sec = { { "prep", t("reprepare") }, { "rean", t("reanalyse") }, { "pub", t("publish") } } end
+      if i.single_mix and state ~= "separate" then sec[#sec + 1] = { "sep", t("separate") } end
+      if #sec > 0 then
+        local gap, bx = 6, x
+        for _, b in ipairs(sec) do
+          local bw = U.text_w(b[2], 12) + 26
+          if bx > x and bx + bw > x + w then bx = x; y = y + 34 end
+          if U.button(b[1], b[2], bx, y, bw, 28, "ghost", 12) and not busy then
+            if b[1] == "prep" then M.prepare() elseif b[1] == "rean" then M.reanalyse()
+            elseif b[1] == "pub" then M.publish() elseif b[1] == "sep" then M.separate() end
+            return y
+          end
+          bx = bx + bw + gap
+        end
+        y = y + 38
+      end
+    end
+
+    -- structure
+    U.heading(t("structure") .. "  —  " .. t("structure_hint"), x, y)
+    local hx = x + w
     local aw = U.text_w(t("add"), 12) + 18
-    if #i.regions > 0 and U.button("addsec", t("add"), x + w - aw, y - 4, aw, 22, nil, 12) then add_at_cursor() return y end
-    y = y + 20
+    hx = hx - aw
+    if #i.regions > 0 and U.button("addsec", t("add"), hx, y - 4, aw, 22, nil, 12) then add_at_cursor() return y end
+    local rw2 = U.text_w(t("redo"), 12) + 16
+    hx = hx - rw2 - 6
+    if U.button("redo", t("redo"), hx, y - 4, rw2, 22, M.can_redo() and nil or "ghost", 12) and M.can_redo() then M.redo() return y end
+    local uw = U.text_w(t("undo"), 12) + 16
+    hx = hx - uw - 4
+    if U.button("undo", t("undo"), hx, y - 4, uw, 22, M.can_undo() and nil or "ghost", 12) and M.can_undo() then M.undo() return y end
+    y = y + 22
     if dirty then
       U.set(U.WARN, 0.2); gfx.rect(x, y, w, 30, 1)
       U.set(U.WARN); gfx.rect(x, y, 4, 30, 1)
@@ -452,16 +835,48 @@ return function(ctx)
     if #i.regions == 0 then
       U.text(t("no_regions"), x, y + 4, 13, U.MUTED)
       y = y + 26
+    else
+      if sel and not i.regions[sel] then sel = nil end
+      y = draw_band(i, x, y, w)
+      -- outils de la section choisie
+      if sel then
+        local r = i.regions[sel]
+        local tools = { { "ren", t("rename") }, { "mvl", nil, "left" }, { "mvr", nil, "right" } }
+        if sel < #i.regions then tools[#tools + 1] = { "merge", t("merge") } end
+        tools[#tools + 1] = { "split", t("split") }
+        tools[#tools + 1] = { "del", t("delete") }
+        local tw = 0
+        for _, b in ipairs(tools) do b.w = b[2] and (U.text_w(b[2], 12) + 18) or 28; tw = tw + b.w + 4 end
+        local lw = w - tw - 6
+        if lw < 200 then                          -- fenêtre étroite : libellé sur sa propre ligne
+          U.text(U.fit(string.format(t("sel_line"), r.name, r.bar, r.len), w, 13, true), x, y, 13, U.INK, true)
+          y = y + 20
+          lw = 0
+        else
+          U.text(U.fit(string.format(t("sel_line"), r.name, r.bar, r.len), lw, 13, true), x, y + 4, 13, U.INK, true)
+        end
+        local bx = (lw == 0) and x or (x + w - tw + 4)
+        for _, b in ipairs(tools) do
+          local clk
+          if b[2] then clk = U.button(b[1] .. "_sel", b[2], bx, y, b.w, 24, nil, 12)
+          else clk = U.ibutton(b[1] .. "_sel", b[3], bx, y, b.w, 24) end
+          if clk then
+            if b[1] == "ren" then rename(sel) elseif b[1] == "mvl" then move(sel, -1) elseif b[1] == "mvr" then move(sel, 1)
+            elseif b[1] == "merge" then merge(sel) elseif b[1] == "split" then split(sel) elseif b[1] == "del" then delete(sel) end
+            return y
+          end
+          bx = bx + b.w + 4
+        end
+        y = y + 32
+      end
     end
     local cur = L.pos()
     for k, r in ipairs(i.regions) do
       local rh = 26
       local inside = cur >= r.start - 0.01 and cur < r.stop - 0.01
-      if inside then U.set(U.PANEL); gfx.rect(x - 4, y, w + 8, rh - 2, 1) end
-      local col = U.GREY
-      if r.color and r.color ~= 0 then local rr, gg, bb = reaper.ColorFromNative(r.color & 0xFFFFFF); col = { rr, gg, bb } end
-      U.set(col); gfx.rect(x - 4, y + 3, 4, rh - 8, 1)
-      local odd = r.len ~= 4 and r.len ~= 8 and r.len ~= 16
+      if inside or sel == k then U.set(U.PANEL); gfx.rect(x - 4, y, w + 8, rh - 2, 1) end
+      U.set(region_col(r)); gfx.rect(x - 4, y + 3, 4, rh - 8, 1)
+      local dt = doubt_text(r)
       local right = string.format(t("bar_n"), r.bar) .. "  ·  " .. string.format(t("len_n"), r.len)
       local nbw = U.text_w(t("rename_btn"), 12) + 16
       local tools_w = nbw + 3 * 26 + 3 * 4
@@ -469,11 +884,9 @@ return function(ctx)
       local name_w = w - tools_w - rw - 24
       local over = U.over(x, y, name_w, rh)
       U.text(U.fit(r.name, name_w, 14, inside), x + 6, y + 4, 14, over and U.INK or { 220, 220, 224 }, inside)
-      if over and U.clicked then
-        reaper.SetEditCurPos(r.start, true, true)
-        if L.play_state() ~= "play" then reaper.OnPlayButton() end
-      end
-      U.text(right, x + w - tools_w - rw - 10, y + 5, 12, odd and U.WARN or U.MUTED)
+      if over then U.hover_tip = string.format(t("sel_line"), r.name, r.bar, r.len) .. (dt and ("  —  " .. dt) or "") end
+      if over and U.clicked then sel = k; listen(r) end
+      U.text(right, x + w - tools_w - rw - 10, y + 5, 12, dt and U.WARN or U.MUTED)
       local tx = x + w - tools_w
       if U.button("ren" .. k, t("rename_btn"), tx, y + 1, nbw, 22, nil, 12) then rename(k) return y end
       tx = tx + nbw + 4
@@ -486,22 +899,16 @@ return function(ctx)
     end
     y = y + 10
 
-    -- 3. Compléments
-    U.heading(t("step3"), x, y)
-    y = y + 20
-    local ly = i.lyrics
-    local ltxt = ly and string.format(t("lyrics"), ly.n, ly.file) or t("lyrics_none")
-    local ow = U.text_w(t("open_dir"), 12) + 18
-    U.text(U.fit(ltxt, w - ow - 10, 13), x, y + 4, 13, ly and U.INK or U.MUTED)
-    local d = (ly and ly.dir) or i.dirs[#i.dirs] or i.dirs[1]
-    if d and U.button("opendir", t("open_dir"), x + w - ow, y, ow, 24, nil, 12) then open_dir(d) end
-    y = y + 30
-    local p = i.pub
-    local ptxt = p and string.format(t("published"), p.chords and "✓" or "—", p.drums and "✓" or "—") or t("pub_unknown")
-    U.text(U.fit(ptxt, w, 13), x, y, 13, p and U.INK or U.MUTED)
-    y = y + 26
-    local cw = U.text_w(t("add_concert"), 13) + 24
-    if U.button("addconcert", t("add_concert"), x, y, cw, 28) then add_to_concert() return y end
+    -- dossier, concert
+    if not i.lyrics then
+      U.text(U.fit(t("lyrics_none"), w, 12), x, y, 12, U.MUTED)
+      y = y + 20
+    end
+    local ow = U.text_w(t("open_dir"), 12) + 22
+    local cw = U.text_w(t("add_concert"), 12) + 24
+    local d = (i.lyrics and i.lyrics.dir) or i.dirs[#i.dirs] or i.dirs[1]
+    if d and U.button("opendir", t("open_dir"), x, y, ow, 28, nil, 12) then open_dir(d) end
+    if U.button("addconcert", t("add_concert"), x + ow + 8, y, cw, 28, nil, 12) then add_to_concert() return y end
     return y + 36
   end
 

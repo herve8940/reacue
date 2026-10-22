@@ -1,5 +1,8 @@
 -- ReaCue : onglet « Réglages » / “Settings” tab : reacue_settings.json sans éditer le fichier.
 -- Écriture atomique, champs inconnus gardés ; s'applique à la prochaine préparation.
+-- Vue simple (langue, décompte, annonces, voix, sorties, détection de structure, licences) et
+-- « Réglages avancés » (volumes, tempo, séparation, dossiers, PIN, débit du décompte…) ;
+-- « Vérifier l'installation » ouvre l'assistant du premier lancement.
 return function(ctx)
   local L, U, T, R, SEP = ctx.L, ctx.U, ctx.T, ctx.R, ctx.SEP
   local TXT = {
@@ -13,14 +16,16 @@ return function(ctx)
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixe", tempo_beatmap = "variable",
       stems = "Séparation de stems", stems6 = "6 stems", stems4 = "4 stems",
       structure = "Détection de structure", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue seul",
-      structure_on = "SongFormer installé", structure_off = "SongFormer non installé : détection de ReaCue (Install ReaCue Structure)",
+      structure_on = "SongFormer installé", structure_off = "SongFormer non installé : détection simple de ReaCue",
       projects_dir = "Dossier des projets", concert_dir = "Dossier des concerts", default = "par défaut",
       dir_title = "ReaCue - Dossier", dir_field = "Dossier (vide = par défaut) :",
       pin = "Code PIN de la Régie", on = "oui", off = "non",
-      note = "Les changements s'appliquent à la prochaine préparation (bouton Préparer ou Reconstruire le concert).",
+      note = "Les changements s'appliquent à la prochaine préparation (« Analyser et préparer », « Re-préparer » ou « Reconstruire » le concert).",
       version = "Version installée : %s", saved = "enregistré",
       noncommercial = "Usage non commercial uniquement (poids MuQ CC BY-NC 4.0)",
       licences = "Licences", licences_tip = "Composants tiers, licences et avertissements",
+      simple = "Réglages simples", advanced = "Réglages avancés", check_install = "Vérifier l'installation",
+      count_rate = "Débit du décompte", rate_n = "%d mots/min", announce = "Annonces", install_sf = "Installer",
     },
     en = {
       general = "General", cues = "Count-in and spoken cues", outputs = "Click and voice", other = "Analysis, separation, folders",
@@ -32,14 +37,16 @@ return function(ctx)
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixed", tempo_beatmap = "variable",
       stems = "Stem separation", stems6 = "6 stems", stems4 = "4 stems",
       structure = "Structure detection", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue only",
-      structure_on = "SongFormer installed", structure_off = "SongFormer not installed: ReaCue's detection (Install ReaCue Structure)",
+      structure_on = "SongFormer installed", structure_off = "SongFormer not installed: ReaCue's simple detection",
       projects_dir = "Projects folder", concert_dir = "Concerts folder", default = "default",
       dir_title = "ReaCue - Folder", dir_field = "Folder (empty = default):",
       pin = "Stage control PIN code", on = "yes", off = "no",
-      note = "Changes apply at the next preparation (Prepare button or Rebuild the concert).",
+      note = "Changes apply at the next preparation (“Analyse and prepare”, “Prepare again” or “Rebuild” the concert).",
       version = "Installed version: %s", saved = "saved",
       noncommercial = "Non-commercial use only (MuQ weights CC BY-NC 4.0)",
       licences = "Licences", licences_tip = "Third-party components, licences and disclaimers",
+      simple = "Simple settings", advanced = "Advanced settings", check_install = "Check the installation",
+      count_rate = "Count speed", rate_n = "%d words/min", announce = "Spoken cues", install_sf = "Install",
     },
   }
   local function t(k) return ctx.tr(TXT, k) end
@@ -48,7 +55,7 @@ return function(ctx)
     language = "fr", announce_voice = nil, count_voice = nil, count_lang = "en", count_in_bars = 2, cue_lead_bars = 2,
     voice_cues = true, voice_count_in = true, voice_count_each = true, voice_volume = 0.8, click_volume = 0.5,
     click_to_master = true, click_hw_output = nil, tempo_mode = "auto", stems_model = "htdemucs_6s",
-    structure_engine = "auto", projects_dir = nil, concert_dir = nil,
+    structure_engine = "auto", projects_dir = nil, concert_dir = nil, count_rate = 240,
   }
   local data = nil
   local voices = nil
@@ -187,36 +194,43 @@ return function(ctx)
     return val, false
   end
 
+  function M.advanced() return reaper.GetExtState("ReaCue", "settings_adv") == "1" end
+  function M.set_advanced(on) reaper.SetExtState("ReaCue", "settings_adv", on and "1" or "", true) end
+
   function M.draw(x, y, w)
     if not data then M.load() end
+    local adv = M.advanced()
     local cx = x + math.floor(w * LW)
     local cw = w - math.floor(w * LW)
     local row = 32
     local v, ch
+
+    -- vue simple / avancée, vérification de l'installation
+    local b1 = U.text_w(t("check_install"), 12) + 22
+    local b2 = U.text_w(adv and t("simple") or t("advanced"), 12) + 22
+    if U.button("checkinst", t("check_install"), x, y - 2, b1, 26, nil, 12) then ctx.assistant.open(false) return y end
+    if U.button("adv", adv and t("simple") or t("advanced"), x + w - b2, y - 2, b2, 26, adv and "on" or nil, 12) then
+      M.set_advanced(not adv) return y
+    end
+    y = y + 36
 
     U.heading(t("general"), x, y); y = y + 20
     label(t("language"), x, y, w)
     v, ch = seg("lang", cx, y, cw, { { "fr", "Français" }, { "en", "English" } }, get("language"))
     if ch then M.set("language", v) end
     y = y + row
-    label(t("pin"), x, y, w)
-    if U.button("setpin", L.remote_pin(), cx, y, cw, 26, nil, 13) then ctx.change_pin() end
-    y = y + row + 6
+    if adv then
+      label(t("pin"), x, y, w)
+      if U.button("setpin", L.remote_pin(), cx, y, cw, 26, nil, 13) then ctx.change_pin() end
+      y = y + row
+    end
+    y = y + 6
 
     U.heading(t("cues"), x, y); y = y + 20
     label(t("count_in"), x, y, w)
     local n = math.floor(tonumber(get("count_in_bars")) or 2)
     v, ch = stepper("cin", cx, y, cw, n, string.format(t("bars_n"), n), 1, 0, 4)
     if ch then M.set("count_in_bars", v) end
-    y = y + row
-    label(t("cue_lead"), x, y, w)
-    n = math.floor(tonumber(get("cue_lead_bars")) or 2)
-    v, ch = stepper("cue", cx, y, cw, n, string.format(t("bars_n"), n), 1, 1, 4)
-    if ch then M.set("cue_lead_bars", v) end
-    y = y + row
-    label(t("count_lang"), x, y, w)
-    v, ch = seg("clang", cx, y, cw, { { "en", "one two three four" }, { "fr", "un deux trois quatre" } }, get("count_lang"), 11)
-    if ch then M.set("count_lang", v) end
     y = y + row
     label(t("voice_cues"), x, y, w)
     v, ch = seg("vcues", cx, y, cw, { { true, t("on") }, { false, t("off") } }, get("voice_cues") ~= false)
@@ -229,9 +243,26 @@ return function(ctx)
     label(t("announce_voice"), x, y, w)
     if U.button("avoice", get("announce_voice") or t("auto"), cx, y, cw, 26, nil, 12) then choose_voice("announce_voice", get("language")) end
     y = y + row
-    label(t("count_voice"), x, y, w)
-    if U.button("cvoice", get("count_voice") or t("auto"), cx, y, cw, 26, nil, 12) then choose_voice("count_voice", get("count_lang")) end
-    y = y + row + 6
+    if adv then
+      label(t("cue_lead"), x, y, w)
+      n = math.floor(tonumber(get("cue_lead_bars")) or 2)
+      v, ch = stepper("cue", cx, y, cw, n, string.format(t("bars_n"), n), 1, 1, 4)
+      if ch then M.set("cue_lead_bars", v) end
+      y = y + row
+      label(t("count_lang"), x, y, w)
+      v, ch = seg("clang", cx, y, cw, { { "en", "one two three four" }, { "fr", "un deux trois quatre" } }, get("count_lang"), 11)
+      if ch then M.set("count_lang", v) end
+      y = y + row
+      label(t("count_voice"), x, y, w)
+      if U.button("cvoice", get("count_voice") or t("auto"), cx, y, cw, 26, nil, 12) then choose_voice("count_voice", get("count_lang")) end
+      y = y + row
+      label(t("count_rate"), x, y, w)
+      local cr = math.floor(tonumber(get("count_rate")) or 240)
+      v, ch = stepper("count_rate", cx, y, cw, cr, string.format(t("rate_n"), cr), 20, 120, 360)
+      if ch then M.set("count_rate", v) end
+      y = y + row
+    end
+    y = y + 6
 
     U.heading(t("outputs"), x, y); y = y + 20
     label(t("hw"), x, y, w)
@@ -243,41 +274,52 @@ return function(ctx)
     v, ch = seg("master", cx, y, cw, { { true, t("on") }, { false, t("off") } }, get("click_to_master") ~= false)
     if ch then M.set("click_to_master", v) end
     y = y + row
-    for _, k in ipairs({ { "click_volume", "click_vol" }, { "voice_volume", "voice_vol" } }) do
-      label(t(k[2]), x, y, w)
-      local vol = tonumber(get(k[1])) or 0.5
-      v, ch = stepper(k[1], cx, y, cw, vol, string.format("%d %%", math.floor(vol * 100 + 0.5)), 0.1, 0, 1)
-      if ch then M.set(k[1], math.floor(v * 10 + 0.5) / 10) end
-      y = y + row
+    if adv then
+      for _, k in ipairs({ { "click_volume", "click_vol" }, { "voice_volume", "voice_vol" } }) do
+        label(t(k[2]), x, y, w)
+        local vol = tonumber(get(k[1])) or 0.5
+        v, ch = stepper(k[1], cx, y, cw, vol, string.format("%d %%", math.floor(vol * 100 + 0.5)), 0.1, 0, 1)
+        if ch then M.set(k[1], math.floor(v * 10 + 0.5) / 10) end
+        y = y + row
+      end
     end
     y = y + 6
 
     U.heading(t("other"), x, y); y = y + 20
-    label(t("tempo"), x, y, w)
-    v, ch = seg("tempo", cx, y, cw, { { "auto", t("tempo_auto") }, { "constant", t("tempo_constant") }, { "beatmap", t("tempo_beatmap") } },
-      get("tempo_mode"), 11)
-    if ch then M.set("tempo_mode", v) end
-    y = y + row
-    label(t("stems"), x, y, w)
-    v, ch = seg("stems", cx, y, cw, { { "htdemucs_6s", t("stems6") }, { "htdemucs", t("stems4") } }, get("stems_model"))
-    if ch then M.set("stems_model", v) end
-    y = y + row
     label(t("structure"), x, y, w)
     v, ch = seg("structure", cx, y, cw, { { "auto", t("structure_auto") }, { "reacue", t("structure_reacue") } },
       get("structure_engine"), 11)
     if ch then M.set("structure_engine", v) end
     y = y + row - 6
     local inst = R.structure_installed and R.structure_installed(R.install_dir(ctx.dir))
-    U.text(U.fit(inst and t("structure_on") or t("structure_off"), cw, 11), cx, y, 11, inst and U.ACCENT or U.MUTED)
+    if inst then
+      U.text(U.fit(t("structure_on"), cw, 11), cx, y, 11, U.ACCENT)
+    else
+      local ib = U.text_w(t("install_sf"), 11) + 16
+      U.text(U.fit(t("structure_off"), cw - ib - 6, 11), cx, y + 2, 11, U.MUTED)
+      if U.button("install_sf", t("install_sf"), cx + cw - ib, y - 2, ib, 20, nil, 11) then ctx.do_action("structure") end
+      y = y + 4
+    end
     y = y + 16
     U.text(U.fit(t("noncommercial"), cw, 11), cx, y, 11, U.WARN)
     y = y + 18
-    for _, k in ipairs({ "projects_dir", "concert_dir" }) do
-      label(t(k), x, y, w)
-      local cur = get(k)
-      local shown = cur or (t("default") .. " · " .. (k == "projects_dir" and L.projects_dir() or L.concert_dir()))
-      if U.button("dir_" .. k, U.fit(shown, cw - 12, 11), cx, y, cw, 26, nil, 11) then choose_dir(k) end
+    if adv then
+      label(t("tempo"), x, y, w)
+      v, ch = seg("tempo", cx, y, cw, { { "auto", t("tempo_auto") }, { "constant", t("tempo_constant") }, { "beatmap", t("tempo_beatmap") } },
+        get("tempo_mode"), 11)
+      if ch then M.set("tempo_mode", v) end
       y = y + row
+      label(t("stems"), x, y, w)
+      v, ch = seg("stems", cx, y, cw, { { "htdemucs_6s", t("stems6") }, { "htdemucs", t("stems4") } }, get("stems_model"))
+      if ch then M.set("stems_model", v) end
+      y = y + row
+      for _, k in ipairs({ "projects_dir", "concert_dir" }) do
+        label(t(k), x, y, w)
+        local cur = get(k)
+        local shown = cur or (t("default") .. " · " .. (k == "projects_dir" and L.projects_dir() or L.concert_dir()))
+        if U.button("dir_" .. k, U.fit(shown, cw - 12, 11), cx, y, cw, 26, nil, 11) then choose_dir(k) end
+        y = y + row
+      end
     end
     y = y + 4
     local h = U.para(t("note"), x, y, w, 12, U.MUTED)

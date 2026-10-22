@@ -236,11 +236,11 @@ MSG = {
                      "No usable region in the project: the saved structure is kept."),
     "regions_changed_publish": (
         "Tes régions REAPER ont changé depuis la dernière préparation : le prompteur garde la structure "
-        "enregistrée (pour rester d'accord avec les annonces et le click). Lance « ReaCue - Préparer le "
-        "morceau » pour reprendre tes régions partout.",
+        "enregistrée (pour rester d'accord avec les annonces et le click). Clique « Appliquer » (fenêtre "
+        "ReaCue, onglet Morceau) pour reprendre tes régions partout.",
         "Your REAPER regions changed since the last preparation: the prompter keeps the saved structure "
-        "(to stay in line with the cues and the click). Run “ReaCue - Prepare the song” to take your "
-        "regions everywhere."),
+        "(to stay in line with the cues and the click). Click “Apply” (ReaCue window, Song "
+        "tab) to take your regions everywhere."),
     # mode concert
     "concert_rpp_unreadable": ("Fichier RPP illisible.", "Unreadable RPP file."),
     "concert_project_missing": ("Projet introuvable pour « {name} » (cherché dans {dirs}).",
@@ -277,9 +277,9 @@ MSG = {
     "concert_extras_not_spawned": ("Calcul des accords/paroles/batterie non lancé : {e}",
                                    "Chords/lyrics/drums computation not started: {e}"),
     "new_song_open_hint": ("Dans REAPER : fenêtre ReaCue, onglet Concert → clic sur le nom du morceau (nouvel onglet), "
-                           "puis « Séparer stems » (un seul fichier) et « Préparer ».",
+                           "puis « Tout faire » (stems, structure, click, téléphones).",
                            "In REAPER: ReaCue window, Concert tab → click the song's name (new tab), then "
-                           "“Split stems” (single file) and “Prepare”."),
+                           "“Do everything” (stems, structure, click, phones)."),
     "concert_open_hint": ("Dans REAPER : action « ReaCue - Concert » → choisir le concert (nouvel onglet).",
                           "In REAPER: “ReaCue - Concert” action → choose the concert (new tab)."),
     "cli_running": ("Analyse et préparation en cours…", "Analysis and preparation in progress…"),

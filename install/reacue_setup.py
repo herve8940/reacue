@@ -29,7 +29,8 @@ SCRIPT_FILES = ("ReaCue_Bridge.lua", "ReaCue_run.lua", "ReaCue_Preparer.lua", "R
                 "ReaCue_stems.lua", "ReaCue_Separer_stems.lua", "ReaCue_concert_lib.lua", "ReaCue_qrcode.lua",
                 "ReaCue_Concert.lua", "ReaCue_Morceau_suivant.lua", "ReaCue_Morceau_precedent.lua",
                 "ReaCue.lua", "ReaCue_ui.lua", "ReaCue_tab_song.lua", "ReaCue_tab_concert.lua",
-                "ReaCue_tab_stage.lua", "ReaCue_tab_settings.lua", "ReaCue_newsong.lua")
+                "ReaCue_tab_stage.lua", "ReaCue_tab_settings.lua", "ReaCue_newsong.lua", "ReaCue_guide.lua",
+                "ReaCue_flow.lua", "ReaCue_assistant.lua")
 ACTIONS = (   # (identifiant de commande, fichier, nom FR, nom EN)
     ("REACUE_MAIN", "ReaCue.lua", "ReaCue", "ReaCue"),
     ("REACUE_PREPARE", "ReaCue_Preparer.lua", "ReaCue - Préparer le morceau", "ReaCue - Prepare the song"),

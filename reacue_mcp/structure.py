@@ -228,6 +228,28 @@ def sections_from_segments(segments: list[dict], downbeats: list[float], solo_ct
     return name_sections(snap_segments(segments, downbeats), solo_ctx)
 
 
+DOUBT_MOVED = 0.75               # frontière de SongFormer à >= 3/4 de mesure de la mesure retenue
+DOUBT_UNSURE = 0.3               # entre 0,3 et 0,75 mesure : frontière entre deux mesures
+
+
+def doubts(segments: list[dict], downbeats: list[float], sections: list[dict]) -> list[dict]:
+    """Sections dont le début est douteux (affichées en orange dans la fenêtre) :
+    « moved » = frontière déplacée par le calage (carrure, fusion), « unsure » = entre deux mesures.
+    sections : sortie de sections_from_segments (start_bar 1-based). Renvoie [{start_bar, reason, off}]."""
+    raw = [_bar_pos(float(s["start"]), downbeats) for s in segments
+           if _norm_label(s.get("label")) not in ("silence", "start", "end") or float(s["start"]) > downbeats[0]]
+    out = []
+    for sec in sections[1:]:
+        b = int(sec["start_bar"]) - 1
+        if not raw:
+            break
+        off = min(raw, key=lambda x: abs(x - b)) - b
+        reason = "moved" if abs(off) >= DOUBT_MOVED else "unsure" if abs(off) >= DOUBT_UNSURE else None
+        if reason:
+            out.append({"start_bar": int(sec["start_bar"]), "reason": reason, "off": round(off, 2)})
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Lancement de SongFormer (sous-processus) avec cache
 # --------------------------------------------------------------------------- #
@@ -425,7 +447,8 @@ def apply_engine(a, stems: list[dict] | None = None, title: str | None = None,
             raise RuntimeError(t("structure_empty"))
         a = resection(a, secs)
         info = {"engine": ENGINE, "cached": cached, "seconds": res.get("seconds"), "window_s": res.get("window_s"),
-                "message": t("structure_used_cached" if cached else "structure_used", s=res.get("seconds") or 0)}
+                "message": t("structure_used_cached" if cached else "structure_used", s=res.get("seconds") or 0),
+                "doubts": doubts(res["segments"], a.downbeats, secs)}
     except Exception as e:                      # noqa: BLE001 - la détection de ReaCue prend le relais
         a.warnings.append(t("structure_failed", e=e))
         info = {"engine": "reacue", "error": str(e), "fallback": True}
