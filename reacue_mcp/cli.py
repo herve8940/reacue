@@ -199,8 +199,18 @@ def main(argv=None):
     try:
         res = asyncio.run(_run(args.cmd, args))
         ok = not res.get("error")
+        se = res.get("structure_engine") or {}
+        extra = {}
+        if args.cmd == "prepare":
+            # moteur des sections, lu par la fenêtre (pastille « Structure ») : songformer | reacue | regions
+            extra["engine"] = ("regions" if res.get("structure_from_regions") or "structure_engine" not in res
+                               else se.get("engine") or "reacue")
+            if se.get("fallback"):
+                extra["fallback"] = True
+            if se.get("missing"):
+                extra["structure_missing"] = True
         _status("done" if ok else "error", cmd=args.cmd,
-                message=_message(res, res.pop("_title", None) or titles[args.cmd]))
+                message=_message(res, res.pop("_title", None) or titles[args.cmd]), **extra)
         return 0 if ok else 1
     except Exception as e:
         log.parent.mkdir(parents=True, exist_ok=True)

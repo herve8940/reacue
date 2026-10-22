@@ -93,19 +93,21 @@ else
 fi
 
 echo
-t "== 6/6 Analyse de structure (optionnel)" "== 6/6 Structure analysis (optional)"
+t "== 6/6 Analyse de structure (recommandé)" "== 6/6 Structure analysis (recommended)"
 STRUCT="${REACUE_STRUCTURE:-ask}"
 if [ "$STRUCT" = ask ] && [ -x .venv-structure/bin/python ]; then
   STRUCT=yes    # déjà installée : mise à jour
 fi
 if [ "$STRUCT" = ask ]; then
-  t "  Détecte couplets, refrains, ponts… avec SongFormer (IA, en local). Usage non commercial (licence des poids MuQ)." \
-    "  Detects verses, choruses, bridges… with SongFormer (AI, local). Non-commercial use (MuQ weights licence)."
-  read -r -p "$(t '  Installer l'"'"'analyse de structure (environ 3 Go à télécharger, 10 à 40 min, 8 Go de RAM conseillés) ? [o/N] ' \
-                  '  Install structure analysis (about 3 GB to download, 10 to 40 min, 8 GB RAM recommended)? [y/N] ')" A || true
-  case "$(echo "${A:-n}" | tr '[:upper:]' '[:lower:]')" in
-    o*|y*) STRUCT=yes ;;
-    *) STRUCT=no ;;
+  t "  Détecte couplets, refrains, ponts… avec SongFormer (IA, en local) : c'est l'analyse par défaut de ReaCue." \
+    "  Detects verses, choruses, bridges… with SongFormer (AI, local): ReaCue's default analysis."
+  t "  Usage non commercial (licence des poids MuQ) : il faudra taper « J'accepte » à l'étape suivante." \
+    "  Non-commercial use (MuQ weights licence): you will have to type “I accept” at the next step."
+  read -r -p "$(t '  Installer l'"'"'analyse de structure (environ 3 Go à télécharger, 10 à 40 min, 8 Go de RAM conseillés) ? [O/n] ' \
+                  '  Install structure analysis (about 3 GB to download, 10 to 40 min, 8 GB RAM recommended)? [Y/n] ')" A || true
+  case "$(echo "${A:-o}" | tr '[:upper:]' '[:lower:]')" in
+    n*) STRUCT=no ;;
+    *) STRUCT=yes ;;
   esac
 fi
 if [ "$STRUCT" = yes ]; then

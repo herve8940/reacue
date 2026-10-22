@@ -95,14 +95,15 @@ if ($Stems -eq "yes") {
 }
 
 Write-Host ""
-Write-Host (T "== 6/6 Analyse de structure (optionnel)" "== 6/6 Structure analysis (optional)")
+Write-Host (T "== 6/6 Analyse de structure (recommandé)" "== 6/6 Structure analysis (recommended)")
 if ($Structure -eq "ask" -and (Test-Path -LiteralPath (Join-Path $Here ".venv-structure\Scripts\python.exe"))) {
   $Structure = "yes"   # déjà installée : mise à jour
 }
 if ($Structure -eq "ask") {
-  Write-Host (T "  Détecte couplets, refrains, ponts… avec SongFormer (IA, en local). Usage non commercial (licence des poids MuQ)." "  Detects verses, choruses, bridges… with SongFormer (AI, local). Non-commercial use (MuQ weights licence).")
-  $A = Read-Host (T "  Installer l'analyse de structure (environ 3 Go à télécharger, 10 à 40 min, 8 Go de RAM conseillés) ? [o/N]" "  Install structure analysis (about 3 GB to download, 10 to 40 min, 8 GB RAM recommended)? [y/N]")
-  $Structure = if ($A -and ($A.ToLower().StartsWith("o") -or $A.ToLower().StartsWith("y"))) { "yes" } else { "no" }
+  Write-Host (T "  Détecte couplets, refrains, ponts… avec SongFormer (IA, en local) : c'est l'analyse par défaut de ReaCue." "  Detects verses, choruses, bridges… with SongFormer (AI, local): ReaCue's default analysis.")
+  Write-Host (T "  Usage non commercial (licence des poids MuQ) : il faudra taper « J'accepte » à l'étape suivante." "  Non-commercial use (MuQ weights licence): you will have to type “I accept” at the next step.")
+  $A = Read-Host (T "  Installer l'analyse de structure (environ 3 Go à télécharger, 10 à 40 min, 8 Go de RAM conseillés) ? [O/n]" "  Install structure analysis (about 3 GB to download, 10 to 40 min, 8 GB RAM recommended)? [Y/n]")
+  $Structure = if ($A -and $A.ToLower().StartsWith("n")) { "no" } else { "yes" }
 }
 if ($Structure -eq "yes") {
   & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Here "install\install_structure_windows.ps1") -Lang $L

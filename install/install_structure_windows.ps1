@@ -109,8 +109,10 @@ Write-Host (T "  installation de PyTorch et des dépendances (plusieurs minutes)
 if ($LASTEXITCODE -ne 0) { Fail "installation des dépendances impossible (voir ci-dessus)." "could not install the dependencies (see above)." }
 & uv pip install --python $Py --no-deps (Join-Path $TP "MuQ")
 if ($LASTEXITCODE -ne 0) { Fail "installation de MuQ impossible." "could not install MuQ." }
-Write-Host (T "  téléchargement des modèles (environ 2 Go) et test…" "  downloading the models (about 2 GB) and testing…")
+Write-Host (T "  recherche de modèles déjà téléchargés (ReaCue-labo, cache Hugging Face)…" "  looking for already-downloaded models (ReaCue-labo, Hugging Face cache)…")
+& $Py (Join-Path $Here "reacue_structure.py") reuse --lang $L
+Write-Host (T "  téléchargement des modèles manquants (jusqu'à 2 Go) et test…" "  downloading the missing models (up to 2 GB) and testing…")
 & $Py (Join-Path $Here "reacue_structure.py") check --lang $L
 if ($LASTEXITCODE -ne 0) { Fail "SongFormer ne fonctionne pas (voir ci-dessus)." "SongFormer does not work (see above)." }
-Write-Host (T "  Analyse de structure installée : utilisée automatiquement par « Préparer » (réglage « Détection de structure »)." "  Structure analysis installed: used automatically by “Prepare” (“Structure detection” setting).")
+Write-Host (T "  Analyse de structure installée : utilisée automatiquement par « Analyser et préparer » (réglage « Détection de structure »)." "  Structure analysis installed: used automatically by “Analyse and prepare” (“Structure detection” setting).")
 exit 0

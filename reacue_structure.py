@@ -9,6 +9,11 @@ Modèles : dans <ReaCue>/structure/SongFormer/src/SongFormer/ckpts et <ReaCue>/s
                                          [--window auto|420|120]
         -> {"segments": [{"start", "end", "label"}], "window_s", "seconds", "engine": "songformer"}
     <python> reacue_structure.py check [--lang fr|en]    # télécharge les modèles, teste, « STRUCTURE_OK »
+    <python> reacue_structure.py reuse [--lang fr|en] [--from <dossier>]...
+        # réutilise des modèles déjà téléchargés (copie ou lien, vérifiés par md5 / taille) au lieu de
+        # les retélécharger : ckpts d'une autre installation de SongFormer (ex. ~/Documents/ReaCue-labo)
+        # et cache Hugging Face par défaut (~/.cache/huggingface/hub, %USERPROFILE%/.cache/huggingface/hub).
+        # Les sources ne sont jamais modifiées ni supprimées.
 
 Fenêtre globale : 420 s (réglage du modèle) si la mémoire vive est >= 15 Go, sinon 120 s (moins précis
 mais tient en ~4 Go). Calcul sur CPU (GPU NVIDIA utilisé s'il est disponible).
@@ -148,6 +153,161 @@ def analyze(audio: str, out: str, status: str | None = None, window: str = "auto
         return 1
 
 
+# --------------------------------------------------------------------------- réutilisation des modèles
+CKPTS = ("SongFormer.safetensors", "MusicFM/pretrained_msd.pt", "MusicFM/msd_stats.json")
+HF_REPOS = ("models--OpenMuQ--MuQ-large-msd-iter", "models--facebook--wav2vec2-conformer-rope-large-960h-ft")
+
+
+def ckpts_dir(struct_dir: Path | None = None) -> Path:
+    return (struct_dir or STRUCT_DIR) / "SongFormer" / "src" / "SongFormer" / "ckpts"
+
+
+def _md5(path: Path) -> str:
+    import hashlib
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 22), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _md5_table(*dirs: Path) -> dict:
+    """md5sum.txt de SongFormer (« <md5>  <chemin relatif> ») ; premier fichier trouvé."""
+    for d in dirs:
+        f = d / "md5sum.txt"
+        if f.is_file():
+            out = {}
+            for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
+                parts = line.split()
+                if len(parts) >= 2:
+                    out[parts[-1].replace("\\", "/")] = parts[0].lower()
+            return out
+    return {}
+
+
+def ckpt_sources(extra: list | None = None, home: Path | None = None) -> list[Path]:
+    """Dossiers ckpts candidats : --from / REACUE_REUSE_DIRS, puis ~/Documents/ReaCue-labo (laboratoire)."""
+    home = home or Path.home()
+    cands = [Path(x) for x in (extra or [])]
+    cands += [Path(x) for x in os.environ.get("REACUE_REUSE_DIRS", "").split(os.pathsep) if x]
+    cands.append(home / "Documents" / "ReaCue-labo" / "SongFormer" / "src" / "SongFormer" / "ckpts")
+    out = []
+    for c in cands:
+        for d in (c, c / "src" / "SongFormer" / "ckpts", c / "SongFormer" / "src" / "SongFormer" / "ckpts"):
+            if d.is_dir() and (d / CKPTS[0]).is_file() and d not in out:
+                out.append(d)
+                break
+    return out
+
+
+def hf_sources(home: Path | None = None) -> list[Path]:
+    """Caches Hugging Face par défaut (macOS, Linux, Windows) : dossiers « hub »."""
+    home = home or Path.home()
+    cands = []
+    if os.environ.get("REACUE_HF_SOURCE"):
+        cands.append(Path(os.environ["REACUE_HF_SOURCE"]))
+    if os.environ.get("HF_HUB_CACHE"):
+        cands.append(Path(os.environ["HF_HUB_CACHE"]))
+    if os.environ.get("HF_HOME"):
+        cands.append(Path(os.environ["HF_HOME"]) / "hub")
+    if os.environ.get("XDG_CACHE_HOME"):
+        cands.append(Path(os.environ["XDG_CACHE_HOME"]) / "huggingface" / "hub")
+    cands.append(home / ".cache" / "huggingface" / "hub")
+    if os.environ.get("USERPROFILE"):
+        cands.append(Path(os.environ["USERPROFILE"]) / ".cache" / "huggingface" / "hub")
+    out = []
+    for c in cands:
+        if c.is_dir() and c not in out:
+            out.append(c)
+    return out
+
+
+def _place(src: Path, dst: Path):
+    """Lien physique si possible (même disque, aucune place en plus), sinon copie ; via un .part."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_name(dst.name + ".part")
+    if tmp.exists():
+        tmp.unlink()
+    try:
+        os.link(src, tmp)
+    except OSError:
+        import shutil
+        shutil.copyfile(src, tmp)
+    os.replace(tmp, dst)
+
+
+def _hf_repo_ok(repo: Path) -> bool:
+    """Snapshot complet : au moins un fichier, tous non vides (liens résolus)."""
+    snaps = repo / "snapshots"
+    if not snaps.is_dir():
+        return False
+    files = [f for f in snaps.rglob("*") if not f.is_dir()]
+    try:
+        return bool(files) and all(f.exists() and f.stat().st_size > 0 for f in files)
+    except OSError:
+        return False
+
+
+def reuse(sources: list | None = None, struct_dir: Path | None = None, hf_home: Path | None = None,
+          home: Path | None = None, log=print, lang: str = "fr") -> dict:
+    """Copie / lie les modèles déjà présents sur la machine vers l'emplacement attendu par ReaCue.
+    Renvoie {"ckpts": [fichiers placés], "hf": [dépôts placés], "skipped": [(élément, raison)]}."""
+    import shutil
+
+    def t(fr, en):
+        return en if lang == "en" else fr
+    struct_dir = Path(struct_dir or STRUCT_DIR)
+    dest = ckpts_dir(struct_dir)
+    hf_hub = Path(hf_home or os.environ.get("HF_HOME") or struct_dir / "hf") / "hub"   # comme load_app
+    res = {"ckpts": [], "hf": [], "skipped": []}
+    srcs = ckpt_sources(sources, home)
+    table = _md5_table(dest, *srcs)
+    for rel in CKPTS:
+        d = dest / rel
+        want = table.get(rel)
+        if d.is_file() and d.stat().st_size > 0 and (not want or _md5(d) == want):
+            continue                                   # déjà en place et intact
+        for s in srcs:
+            f = s / rel
+            if not f.is_file() or f.stat().st_size == 0:
+                continue
+            if want and _md5(f) != want:
+                res["skipped"].append((str(f), "md5"))
+                continue
+            if d.exists() and d.resolve() == f.resolve():
+                break
+            _place(f, d)
+            res["ckpts"].append(rel)
+            log(t(f"  modèle réutilisé : {rel} (depuis {s})", f"  model reused: {rel} (from {s})"))
+            break
+    for repo in HF_REPOS:
+        d = hf_hub / repo
+        if _hf_repo_ok(d):
+            continue
+        for s in hf_sources(home):
+            src = s / repo
+            if d.exists() and src.resolve() == d.resolve():
+                break
+            if not _hf_repo_ok(src):
+                if src.exists():
+                    res["skipped"].append((str(src), "incomplete"))
+                continue
+            if d.exists():
+                shutil.rmtree(d)                       # copie précédente incomplète (jamais la source)
+            d.parent.mkdir(parents=True, exist_ok=True)
+            tmp = d.with_name(d.name + ".part")
+            if tmp.exists():
+                shutil.rmtree(tmp)
+            shutil.copytree(src, tmp, symlinks=True)
+            os.replace(tmp, d)
+            res["hf"].append(repo)
+            log(t(f"  modèle réutilisé : {repo} (depuis {s})", f"  model reused: {repo} (from {s})"))
+            break
+    if not res["ckpts"] and not res["hf"]:
+        log(t("  aucun modèle déjà téléchargé à réutiliser.", "  no already-downloaded model to reuse."))
+    return res
+
+
 def check(lang: str = "fr", seconds: int = 20) -> int:
     def t(fr, en):
         return en if lang == "en" else fr
@@ -193,9 +353,18 @@ def main(argv=None) -> int:
     c = sub.add_parser("check")
     c.add_argument("--lang", default="fr", choices=["fr", "en"])
     c.add_argument("--seconds", type=int, default=20)
+    r = sub.add_parser("reuse")
+    r.add_argument("--lang", default="fr", choices=["fr", "en"])
+    r.add_argument("--from", dest="sources", action="append", default=[])
     args = ap.parse_args(argv)
     if args.cmd == "analyze":
         return analyze(args.input, args.out, args.status, args.window)
+    if args.cmd == "reuse":
+        try:
+            reuse(args.sources, lang=args.lang)
+        except Exception as e:                       # noqa: BLE001 - jamais bloquant : on téléchargera
+            print(("  réutilisation impossible : " if args.lang == "fr" else "  reuse failed: ") + repr(e))
+        return 0
     return check(args.lang, args.seconds)
 
 

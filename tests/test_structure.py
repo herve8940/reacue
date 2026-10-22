@@ -228,7 +228,7 @@ def test_apply_engine_fallbacks(tmp_path, monkeypatch):
     audio.write_bytes(b"RIFF")
     # non installé : détection de ReaCue, sans avertissement
     a, info = ST.apply_engine(make_analysis(audio), install_dir=tmp_path / "none", engine="auto")
-    assert info == {"engine": "reacue"} and not a.warnings and a.sections[0].name == "Couplet"
+    assert info == {"engine": "reacue", "missing": True} and not a.warnings and a.sections[0].name == "Couplet"
     inst = fake_install(tmp_path, SEGS, monkeypatch, fail=True)
     # réglage « reacue » : SongFormer pas lancé
     a, info = ST.apply_engine(make_analysis(audio), install_dir=inst, engine="reacue")
@@ -236,7 +236,7 @@ def test_apply_engine_fallbacks(tmp_path, monkeypatch):
     # échec du moteur : avertissement + structure de ReaCue conservée
     a, info = ST.apply_engine(make_analysis(audio), install_dir=inst, engine="auto")
     assert info["engine"] == "reacue" and "MemoryError" in info["error"]
-    assert a.sections[0].name == "Couplet" and "détection de ReaCue utilisée" in a.warnings[-1]
+    assert a.sections[0].name == "Couplet" and "→ structure ReaCue utilisée" in a.warnings[-1] and info["fallback"]
 
 
 def test_apply_engine_empty_result_falls_back(tmp_path, monkeypatch):
@@ -313,6 +313,18 @@ def test_installer_scripts_syntax():
     for f in ("install/install_mac.sh", "install/install_windows.ps1"):
         txt = (ROOT / f).read_text(encoding="utf-8-sig")
         assert "6/6" in txt and "5/5" not in txt and "install_structure_" in txt
+        # SongFormer proposé par défaut (réponse vide = oui), « J'accepte » reste exigé par install_structure_*
+        assert "[O/n]" in txt and "[Y/n]" in txt and "[o/N] ' \\\n                  '  Install structure" not in txt
+        assert "J'accepte" in txt
+    sh = (ROOT / "install" / "install_mac.sh").read_text(encoding="utf-8")
+    assert 'case "$(echo "${A:-o}"' in sh.split("6/6")[-1]
+    ps1 = (ROOT / "install" / "install_windows.ps1").read_text(encoding="utf-8-sig")
+    assert 'StartsWith("n")) { "no" } else { "yes" }' in ps1
+    # modèles déjà téléchargés réutilisés avant le test (qui télécharge le reste)
+    for f in ("install/install_structure_mac.sh", "install/install_structure_windows.ps1"):
+        txt = (ROOT / f).read_text(encoding="utf-8-sig")
+        assert "reacue_structure.py\") reuse" in txt or "reacue_structure.py reuse" in txt, f
+        assert txt.index(" reuse ") < txt.index(" check ")
     pwsh = shutil.which("pwsh")
     if pwsh:
         for f in ("install/install_structure_windows.ps1", "install/install_windows.ps1"):
@@ -401,3 +413,126 @@ def test_lua_settings_structure_and_installed(tmp_path):
     assert R.structure_installed(str(inst), False)
     W.frame(L, g)
     assert "SongFormer installé" in W.TL.texts(g), W.TL.texts(g)
+
+
+# --------------------------------------------------------------------------- cas réel
+# « Un jour en France » : 105,12 BPM, mesure 1 à 0,6668 s dans le fichier ; segments bruts de SongFormer
+# (Mac 16 Go, fenêtre 420 s). Frontières attendues exactement aux mesures 9/17/25/33/41/49/57/73.
+UJEF_BAR = 4 * 60 / 105.12
+UJEF_DB = [0.6668 + UJEF_BAR * i for i in range(85)]
+UJEF = [(0.0, 18.72, "intro"), (18.72, 37.08, "verse"), (37.08, 55.32, "verse"), (55.32, 73.56, "inst"),
+        (73.56, 91.80, "verse"), (91.80, 110.04, "bridge"), (110.04, 128.41, "chorus"),
+        (128.41, 164.89, "inst"), (164.89, 190.93, "outro"), (190.93, 192.01, "silence")]
+
+
+def test_real_case_un_jour_en_france():
+    segs = [{"start": a, "end": b, "label": l} for a, b, l in UJEF]
+    out = ST.sections_from_segments(segs, UJEF_DB)
+    assert [s["start_bar"] for s in out] == [1, 9, 17, 25, 33, 41, 49, 57, 73]
+    assert [s["name"] for s in out] == ["Intro", "Couplet 1", "Couplet 2", "Instrumental", "Couplet 3", "Pont",
+                                        "Refrain 1", "Instrumental", "Outro"]
+    # mêmes groupes (lettres) pour les couplets et les deux instrumentaux
+    lab = {s["name"]: s["label"] for s in out}
+    assert lab["Couplet 1"] == lab["Couplet 2"] == lab["Couplet 3"] and out[3]["label"] == out[7]["label"]
+    # avec stems : guitare lead nettement au-dessus et voix absente sur le 2e instrumental -> Solo
+    g = [-30.0] * 84
+    for i in range(56, 72):
+        g[i] = -12.0
+    voc = [0.8] * 84
+    for i in list(range(24, 32)) + list(range(56, 72)):
+        voc[i] = 0.0
+    out = ST.sections_from_segments(segs, UJEF_DB, {"guitar_db": g, "lead": True, "vocal": voc})
+    assert out[7]["name"] == "Solo" and out[3]["name"] == "Instrumental"
+
+
+# --------------------------------------------------------------------------- réutilisation des modèles
+def _rs():
+    sys.path.insert(0, str(ROOT))
+    import reacue_structure as RS
+    return RS
+
+
+def _fake_labo(home: Path, corrupt=False):
+    ck = home / "Documents" / "ReaCue-labo" / "SongFormer" / "src" / "SongFormer" / "ckpts"
+    (ck / "MusicFM").mkdir(parents=True)
+    import hashlib
+    files = {"SongFormer.safetensors": b"songformer-weights", "MusicFM/pretrained_msd.pt": b"musicfm-pt",
+             "MusicFM/msd_stats.json": b'{"m": 1}'}
+    lines = []
+    for rel, data in files.items():
+        (ck / rel).write_bytes(data)
+        lines.append(f"{hashlib.md5(data).hexdigest()}    {rel}")
+    if corrupt:
+        (ck / "SongFormer.safetensors").write_bytes(b"truncated")
+    (ck / "md5sum.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    hub = home / ".cache" / "huggingface" / "hub"
+    for repo in ("models--OpenMuQ--MuQ-large-msd-iter", "models--facebook--wav2vec2-conformer-rope-large-960h-ft"):
+        blob = hub / repo / "blobs" / "abc123"
+        blob.parent.mkdir(parents=True)
+        blob.write_bytes(b"weights-" + repo.encode())
+        snap = hub / repo / "snapshots" / "rev1"
+        snap.mkdir(parents=True)
+        (hub / repo / "refs").mkdir()
+        (hub / repo / "refs" / "main").write_text("rev1")
+        if os.name == "nt":
+            shutil.copy(blob, snap / "model.bin")
+        else:
+            (snap / "model.bin").symlink_to(Path("..") / ".." / "blobs" / "abc123")
+    return ck, hub
+
+
+def test_reuse_models_from_labo_and_hf_cache(tmp_path, monkeypatch):
+    RS = _rs()
+    for v in ("HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME", "USERPROFILE", "REACUE_REUSE_DIRS", "REACUE_HF_SOURCE"):
+        monkeypatch.delenv(v, raising=False)
+    home = tmp_path / "home"
+    ck, hub = _fake_labo(home)
+    struct = tmp_path / "ReaCue" / "structure"
+    logs = []
+    res = RS.reuse(struct_dir=struct, home=home, log=logs.append)
+    dest = RS.ckpts_dir(struct)
+    assert sorted(res["ckpts"]) == sorted(RS.CKPTS) and sorted(res["hf"]) == sorted(RS.HF_REPOS)
+    assert (dest / "SongFormer.safetensors").read_bytes() == b"songformer-weights"
+    assert (dest / "MusicFM" / "msd_stats.json").is_file()
+    m = struct / "hf" / "hub" / "models--OpenMuQ--MuQ-large-msd-iter" / "snapshots" / "rev1" / "model.bin"
+    assert m.read_bytes().startswith(b"weights-")           # lien relatif conservé et résolu
+    assert any("ReaCue-labo" in x for x in logs)
+    # sources intactes (jamais déplacées ni supprimées)
+    assert (ck / "SongFormer.safetensors").read_bytes() == b"songformer-weights" and (hub / RS.HF_REPOS[0]).is_dir()
+    # 2e passage : rien à faire
+    res = RS.reuse(struct_dir=struct, home=home, log=logs.append)
+    assert res["ckpts"] == [] and res["hf"] == []
+
+
+def test_reuse_rejects_bad_md5_and_incomplete_cache(tmp_path, monkeypatch):
+    RS = _rs()
+    for v in ("HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME", "USERPROFILE", "REACUE_REUSE_DIRS", "REACUE_HF_SOURCE"):
+        monkeypatch.delenv(v, raising=False)
+    home = tmp_path / "home"
+    ck, hub = _fake_labo(home, corrupt=True)
+    # snapshot vide (téléchargement interrompu) : pas copié
+    (hub / RS.HF_REPOS[1] / "snapshots" / "rev1" / "model.bin").unlink()
+    struct = tmp_path / "ReaCue" / "structure"
+    res = RS.reuse(struct_dir=struct, home=home, log=lambda *_: None)
+    assert "SongFormer.safetensors" not in res["ckpts"] and "MusicFM/pretrained_msd.pt" in res["ckpts"]
+    assert not (RS.ckpts_dir(struct) / "SongFormer.safetensors").exists()
+    assert res["hf"] == [RS.HF_REPOS[0]] and any(r == "md5" for _, r in res["skipped"])
+
+
+def test_reuse_from_windows_profile_and_cli(tmp_path, monkeypatch):
+    RS = _rs()
+    for v in ("HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME", "REACUE_REUSE_DIRS", "REACUE_HF_SOURCE"):
+        monkeypatch.delenv(v, raising=False)
+    prof = tmp_path / "Users" / "musicien"
+    _fake_labo(prof)
+    monkeypatch.setenv("USERPROFILE", str(prof))
+    assert prof / ".cache" / "huggingface" / "hub" in RS.hf_sources(home=tmp_path / "vide")
+    # sous-commande « reuse » : jamais bloquante (code 0), même sans rien à réutiliser
+    inst = tmp_path / "ReaCue"
+    inst.mkdir()
+    shutil.copy(ROOT / "reacue_structure.py", inst / "reacue_structure.py")
+    env = {**os.environ, "HOME": str(tmp_path / "vide"), "USERPROFILE": str(tmp_path / "vide")}
+    env.pop("HF_HOME", None)
+    r = subprocess.run([sys.executable, str(inst / "reacue_structure.py"), "reuse", "--lang", "en"],
+                       capture_output=True, text=True, env=env)
+    assert r.returncode == 0 and "no already-downloaded model" in r.stdout, r.stdout + r.stderr

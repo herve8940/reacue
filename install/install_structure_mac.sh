@@ -99,8 +99,11 @@ uv pip install --python .venv-structure/bin/python --only-binary :all: \
   || fail "installation des dépendances impossible (voir ci-dessus)." "could not install the dependencies (see above)."
 uv pip install --python .venv-structure/bin/python --no-deps "./$TP/MuQ" \
   || fail "installation de MuQ impossible." "could not install MuQ."
-t "  téléchargement des modèles (environ 2 Go) et test…" "  downloading the models (about 2 GB) and testing…"
+t "  recherche de modèles déjà téléchargés (ReaCue-labo, cache Hugging Face)…" \
+  "  looking for already-downloaded models (ReaCue-labo, Hugging Face cache)…"
+.venv-structure/bin/python reacue_structure.py reuse --lang "$L" || true
+t "  téléchargement des modèles manquants (jusqu'à 2 Go) et test…" "  downloading the missing models (up to 2 GB) and testing…"
 .venv-structure/bin/python reacue_structure.py check --lang "$L" || fail "SongFormer ne fonctionne pas (voir ci-dessus)." \
                                                                      "SongFormer does not work (see above)."
-t "  Analyse de structure installée : utilisée automatiquement par « Préparer » (réglage « Détection de structure »)." \
-  "  Structure analysis installed: used automatically by “Prepare” (“Structure detection” setting)."
+t "  Analyse de structure installée : utilisée automatiquement par « Analyser et préparer » (réglage « Détection de structure »)." \
+  "  Structure analysis installed: used automatically by “Analyse and prepare” (“Structure detection” setting)."

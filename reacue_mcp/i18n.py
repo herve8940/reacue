@@ -293,8 +293,8 @@ MSG = {
                        "Sections detected by SongFormer ({s} s), aligned on ReaCue's grid."),
     "structure_used_cached": ("Sections détectées par SongFormer (résultat mémorisé), calées sur la grille de ReaCue.",
                               "Sections detected by SongFormer (cached result), aligned on ReaCue's grid."),
-    "structure_failed": ("Analyse de structure SongFormer impossible ({e}) : détection de ReaCue utilisée.",
-                         "SongFormer structure analysis failed ({e}): ReaCue's detection used instead."),
+    "structure_failed": ("Analyse SongFormer impossible : {e} → structure ReaCue utilisée.",
+                         "SongFormer analysis failed: {e} → ReaCue structure used."),
 }
 
 

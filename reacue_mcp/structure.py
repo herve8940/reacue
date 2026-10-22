@@ -41,7 +41,9 @@ LABEL_BASE = {
 ALWAYS_NUMBERED = {"Couplet", "Refrain", "Pré-refrain"}
 MIN_BARS = 2                     # segment plus court : fusionné avec un voisin
 PHRASE = 4                       # carrure préférée quand une frontière en est à <= 1 mesure
-MERGE_SAME_MAX = 16              # deux segments consécutifs de même type fusionnés si <= 16 mesures
+MERGE_SAME_MAX = 16              # deux segments consécutifs de même type fusionnés si <= 16 mesures…
+MERGE_SAME_MIN = 8               # … et si l'un des deux fait moins de 8 mesures (8 + 8 : deux couplets)
+NEVER_NUMBERED = {"Instrumental", "Solo", "Intro", "Outro", "Break"}
 
 PROGRESS = None                  # callback(message) facultatif (CLI : fichier d'état lu par REAPER)
 
@@ -171,7 +173,8 @@ def _merge(res: list[dict]) -> list[dict]:
         # 2. deux segments consécutifs du même type, courts au total : une seule section
         for i in range(len(res) - 1):
             a, b = res[i], res[i + 1]
-            if a["label"] == b["label"] and b["end_bar"] - a["start_bar"] <= MERGE_SAME_MAX:
+            short = min(a["end_bar"] - a["start_bar"], b["end_bar"] - b["start_bar"]) < MERGE_SAME_MIN
+            if a["label"] == b["label"] and short and b["end_bar"] - a["start_bar"] <= MERGE_SAME_MAX:
                 res[i:i + 2] = [{"start_bar": a["start_bar"], "end_bar": b["end_bar"], "label": a["label"]}]
                 changed = True
                 break
@@ -213,7 +216,7 @@ def name_sections(snapped: list[dict], solo_ctx: dict | None = None) -> list[dic
     seen, letters, out = {}, {}, []
     for s, base in zip(snapped, bases):
         seen[base] = seen.get(base, 0) + 1
-        numbered = base in ALWAYS_NUMBERED or totals[base] > 1
+        numbered = base in ALWAYS_NUMBERED or (totals[base] > 1 and base not in NEVER_NUMBERED)
         name = f"{base} {seen[base]}" if numbered else base
         if base not in letters:
             letters[base] = chr(ord("A") + len(letters)) if len(letters) < 26 else "?"
@@ -389,7 +392,10 @@ def apply_engine(a, stems: list[dict] | None = None, title: str | None = None,
     from .analysis import resection
     engine = engine or engine_setting()
     info = {"engine": "reacue"}
-    if engine != "auto" or not available(install_dir):
+    if engine != "auto":
+        return a, info
+    if not available(install_dir):
+        info["missing"] = True               # la fenêtre propose « Installer » (pastille Structure)
         return a, info
     files = [str(s["file"]) for s in stems] if stems else [a.file]
     ref = files[0] if not stems else str(stems[0]["file"])
@@ -422,5 +428,5 @@ def apply_engine(a, stems: list[dict] | None = None, title: str | None = None,
                 "message": t("structure_used_cached" if cached else "structure_used", s=res.get("seconds") or 0)}
     except Exception as e:                      # noqa: BLE001 - la détection de ReaCue prend le relais
         a.warnings.append(t("structure_failed", e=e))
-        info = {"engine": "reacue", "error": str(e)}
+        info = {"engine": "reacue", "error": str(e), "fallback": True}
     return a, info
