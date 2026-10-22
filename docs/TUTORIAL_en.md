@@ -109,6 +109,7 @@ actions while REAPER is **closed**.
 | `Register ReaCue in Claude Desktop …? [y/N]` | `n` if you don't use Claude Desktop (you can do it later) |
 | `Install stem separation …? [y/N]` | `y` if you have songs as MP3 only (about 1 GB to download, 5 to 15 minutes); otherwise `n` |
 | `Install structure analysis …? [y/N]` | `y` for better sections with SongFormer (AI, about 3 GB to download, 10 to 40 minutes, 8 GB of RAM recommended, **non-commercial use**); otherwise `n` |
+| `To install, type exactly “I accept”` (after the licence summary) | Read the summary: the MuQ model weights are for **non-commercial use only** (CC BY-NC 4.0). If that suits you, type `I accept` then Enter; otherwise just Enter (nothing is installed). Details: [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) |
 
 **You should see** 6 steps scroll by (`== 1/6 Checks` … `== 6/6 Structure analysis`):
 
@@ -117,7 +118,7 @@ actions while REAPER is **closed**.
   (ReaCue is installed);
 - in step 5, if you answered `y`: PyTorch and Demucs being downloaded, two `model … ready` lines, two
   `speed … about N min for a 4-minute song` lines, then `Stem separation installed`;
-- in step 6, if you answered `y`: SongFormer, MuQ and MusicFM being downloaded, then PyTorch, the models
+- in step 6, if you answered `y`: the licence summary and the “I accept” prompt, then SongFormer, MuQ and MusicFM being downloaded, then PyTorch, the models
   (about 2 GB), a line `speed: about N min for a 4-minute song`, `STRUCTURE_OK` and `Structure analysis installed`.
 
 Press Enter to close the window.

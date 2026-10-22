@@ -12,11 +12,16 @@ count before each section. It also publishes a **web prompter** that each musici
 served by REAPER's built-in web interface: structure, chords (bass / guitars), timed lyrics (vocals) and a
 dedicated drummer view with the transcribed grooves and fills.
 
-Everything runs locally: no AI and no internet once installed. An optional mode lets you drive it in plain
+Everything runs locally: no cloud service and no internet once installed (the optional stem separation and
+structure analysis use AI models that also run on your computer). An optional mode lets you drive it in plain
 language with Claude (MCP server).
 
 > **New to ReaCue? Follow the step-by-step tutorial: [docs/TUTORIAL_en.md](docs/TUTORIAL_en.md)**
 > (French: [docs/TUTORIEL_fr.md](docs/TUTORIEL_fr.md)).
+
+> **Licences and disclaimers:** see [Licences, responsibilities and disclaimers](#licences-responsibilities-and-disclaimers)
+> and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — the optional structure analysis is for
+> **non-commercial use only**.
 
 > **Status: 0.12.0 beta.** Developed and used on macOS. Windows support is new and has **not yet been
 > tested on a real machine** — feedback welcome.
@@ -48,6 +53,7 @@ language with Claude (MCP server).
 - [Troubleshooting / FAQ](#troubleshooting--faq)
 - [Uninstall](#uninstall)
 - [For developers](#for-developers)
+- [Licences, responsibilities and disclaimers](#licences-responsibilities-and-disclaimers)
 - [Credits and licence](#credits-and-licence)
 
 ## Features
@@ -216,6 +222,10 @@ nearest bar of ReaCue's grid.
 
 **Install** (once): answer *yes* to the structure analysis question of the installer, or later
 double-click **`Install ReaCue Structure.command`** (macOS) / **`Install ReaCue Structure.bat`** (Windows).
+Before anything is downloaded, the installer shows the licences of the models and installs only if you type
+exactly **`I accept`** (`J'accepte` in French); otherwise nothing is installed. For an unattended
+installation, set `REACUE_STRUCTURE_ACCEPT=yes`. The acceptance is remembered in
+`structure/.licenses_accepted` (not asked again on updates).
 It creates a separate Python environment `.venv-structure` in the ReaCue folder, downloads SongFormer and
 its two dependencies (MuQ, MusicFM) at fixed versions into `structure/`, downloads the models once (into
 `structure/hf` and SongFormer's own folder), runs a short test and shows `STRUCTURE_OK` with the speed of
@@ -637,6 +647,28 @@ Project layout:
 | `tests/` | pytest suite (fake REAPER bridge, Lua run through `lupa`, installer, prompter page) |
 | `tools/` | **Development tools only** (not used by ReaCue): `concert_demo.py` (fictional demo projects for the concert tests), `struct_eval.py` (structure detection benchmark on your own songs, configured by a private JSON file), `asr_anchor.py` (lyrics timing file from speech recognition, heavy models, Linux), `make_screenshots.py` |
 
+## Licences, responsibilities and disclaimers
+
+*This section is not legal advice.*
+
+- **ReaCue** is released under the [MIT licence](LICENSE): it is provided **“as is”, without warranty of
+  any kind**; the authors are not liable for any damage arising from its use.
+- **Third-party components** (Demucs, SongFormer, MuQ, MusicFM, PyTorch, luaqrcode…) keep their own
+  licences, listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Only luaqrcode is included in this
+  repository (with its BSD licence header); **no model weights are redistributed here**: the installers
+  download them from their authors, and each user is responsible for complying with their licences.
+- **Structure analysis (SongFormer) — non-commercial use only.** It downloads the MuQ weights, licensed
+  **CC BY-NC 4.0 (non-commercial)**, and the MusicFM MSD checkpoint, whose licence is **not clearly stated**
+  by its authors. Do not use this optional component for a commercial product or service without the
+  rights holders' permission. The rest of ReaCue (including stem separation with Demucs, MIT) is not
+  affected; you can always use ReaCue without it (setting *Structure detection: ReaCue only*).
+- **Your music:** you alone are responsible for having the rights to the audio, stems and lyrics you
+  process with ReaCue. ReaCue provides **no audio and no lyrics**, and never downloads lyrics.
+- **Trademarks:** REAPER is a trademark of Cockos Incorporated; Claude is a trademark of Anthropic; other
+  names (e.g. Moises) belong to their owners. ReaCue is an independent project, **not affiliated with or
+  endorsed by** Cockos, Anthropic or any other company mentioned.
+- The **Settings** tab of the ReaCue window has a **Licences** button that opens this information.
+
 ## Credits and licence
 
 ReaCue by Hervé Naessens. MIT licence, see [LICENSE](LICENSE).
@@ -645,7 +677,7 @@ Stem separation by [Demucs](https://github.com/facebookresearch/demucs) (Alexand
 licence) on [PyTorch](https://pytorch.org/).
 
 Structure analysis (optional) by [SongFormer](https://github.com/ASLP-lab/SongFormer) (ASLP-lab, code
-and checkpoint CC BY 4.0; paper: *SongFormer: Scaling Music Structure Analysis with Heterogeneous
+CC BY 4.0, checkpoint shown as CC BY 4.0 on its Hugging Face page; paper: *SongFormer: Scaling Music Structure Analysis with Heterogeneous
 Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), which uses
 [MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab; code MIT, **weights MuQ-large-msd-iter
 CC BY-NC 4.0, non-commercial**) and [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
@@ -659,4 +691,4 @@ Built on [librosa](https://librosa.org/), [NumPy](https://numpy.org/), [SciPy](h
 [soundfile](https://github.com/bastibe/python-soundfile), the
 [Model Context Protocol](https://modelcontextprotocol.io/) Python SDK, [uv](https://docs.astral.sh/uv/)
 and, of course, [REAPER](https://www.reaper.fm/) by Cockos. ReaCue is not affiliated with Cockos or
-Anthropic.
+Anthropic. Full list: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); how to cite: [CITATION.cff](CITATION.cff).

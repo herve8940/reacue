@@ -26,6 +26,7 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
   Fail "uv introuvable : installe d'abord ReaCue (Install ReaCue.bat)." "uv not found: install ReaCue first (Install ReaCue.bat)."
 }
 Write-Host (T "  Séparation de stems (Demucs) dans $Here\.venv-demucs" "  Stem separation (Demucs) in $Here\.venv-demucs")
+Write-Host (T "  Licence : Demucs (Meta / A. Défossez) est sous licence MIT ; ses modèles sont téléchargés depuis Meta. Détails : THIRD_PARTY_NOTICES.md" "  Licence: Demucs (Meta / A. Défossez) is MIT-licensed; its models are downloaded from Meta. Details: THIRD_PARTY_NOTICES.md")
 $Py = Join-Path $Here ".venv-demucs\Scripts\python.exe"
 if (-not (Test-Path -LiteralPath $Py)) {
   & uv venv .venv-demucs --python 3.12

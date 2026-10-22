@@ -11,11 +11,16 @@ carte de tempo, régions nommées et colorées, click avec count-in, annonces vo
 sur son téléphone, servi par l'interface web intégrée de REAPER : structure, accords (basse / guitares),
 paroles calées (chant) et une vue batteur dédiée avec les grooves et les fills transcrits.
 
-Tout tourne en local : ni IA ni internet une fois installé. Un mode facultatif permet de piloter ReaCue en
-langage naturel avec Claude (serveur MCP).
+Tout tourne en local : aucun service en ligne et pas d'internet une fois installé (la séparation de stems et
+l'analyse de structure, facultatives, utilisent des modèles d'IA qui tournent eux aussi sur ton ordinateur).
+Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serveur MCP).
 
 > **Nouveau sur ReaCue ? Suis le tutoriel pas à pas : [docs/TUTORIEL_fr.md](docs/TUTORIEL_fr.md)**
 > (anglais : [docs/TUTORIAL_en.md](docs/TUTORIAL_en.md)).
+
+> **Licences et avertissements :** voir [Licences, responsabilités et avertissements](#licences-responsabilités-et-avertissements)
+> et [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — l'analyse de structure facultative est réservée à un
+> **usage non commercial**.
 
 > **État : 0.12.0 bêta.** Développé et utilisé sur macOS. La prise en charge de Windows est nouvelle et
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
@@ -47,6 +52,7 @@ langage naturel avec Claude (serveur MCP).
 - [Dépannage / FAQ](#dépannage--faq)
 - [Désinstallation](#désinstallation)
 - [Pour les développeurs](#pour-les-développeurs)
+- [Licences, responsabilités et avertissements](#licences-responsabilités-et-avertissements)
 - [Crédits et licence](#crédits-et-licence)
 
 ## Fonctionnalités
@@ -221,7 +227,10 @@ sont ; chaque frontière est ensuite calée sur la mesure la plus proche de la g
 
 **Installation** (une fois) : réponds *oui* à la question de l'installateur sur l'analyse de structure,
 ou plus tard double-clic sur **`Install ReaCue Structure.command`** (macOS) / **`Install ReaCue
-Structure.bat`** (Windows). Cela crée un environnement Python séparé `.venv-structure` dans le dossier de
+Structure.bat`** (Windows). Avant tout téléchargement, l'installateur affiche les licences des modèles et
+n'installe que si tu tapes exactement **`J'accepte`** (`I accept` en anglais) ; sinon rien n'est installé.
+Pour une installation sans question : `REACUE_STRUCTURE_ACCEPT=yes`. L'accord est mémorisé dans
+`structure/.licenses_accepted` (pas redemandé aux mises à jour). Cela crée un environnement Python séparé `.venv-structure` dans le dossier de
 ReaCue, télécharge SongFormer et ses deux dépendances (MuQ, MusicFM) à des versions figées dans
 `structure/`, télécharge les modèles une fois pour toutes (dans `structure/hf` et le dossier de
 SongFormer), fait un court essai et affiche `STRUCTURE_OK` avec la vitesse de ton ordinateur. Environ
@@ -669,6 +678,30 @@ Organisation :
 Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : voir
 [docs/MIGRATION_fr.md](docs/MIGRATION_fr.md).
 
+## Licences, responsabilités et avertissements
+
+*Cette section n'est pas un avis juridique.*
+
+- **ReaCue** est distribué sous [licence MIT](LICENSE) : il est fourni **« tel quel », sans aucune
+  garantie** ; ses auteurs ne sont pas responsables des dommages liés à son utilisation.
+- Les **composants tiers** (Demucs, SongFormer, MuQ, MusicFM, PyTorch, luaqrcode…) gardent leurs propres
+  licences, listées dans [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Seul luaqrcode est inclus dans ce
+  dépôt (avec son en-tête de licence BSD) ; **aucun poids de modèle n'est redistribué ici** : les
+  installateurs les téléchargent depuis leurs auteurs, et chaque utilisateur est responsable du respect de
+  leurs licences.
+- **Analyse de structure (SongFormer) — usage non commercial uniquement.** Elle télécharge les poids de
+  MuQ, sous licence **CC BY-NC 4.0 (non commerciale)**, et le modèle MSD de MusicFM, dont la licence
+  **n'est pas clairement indiquée** par ses auteurs. N'utilise pas ce composant facultatif pour un produit ou
+  un service commercial sans l'accord des ayants droit. Le reste de ReaCue (y compris la séparation de stems
+  avec Demucs, MIT) n'est pas concerné ; tu peux toujours utiliser ReaCue sans lui (réglage *Détection de
+  structure : ReaCue seul*).
+- **Ta musique :** tu es seul responsable des droits sur l'audio, les stems et les paroles que tu traites
+  avec ReaCue. ReaCue ne fournit **ni audio ni paroles**, et ne télécharge jamais de paroles.
+- **Marques :** REAPER est une marque de Cockos Incorporated ; Claude est une marque d'Anthropic ; les autres
+  noms (par exemple Moises) appartiennent à leurs propriétaires. ReaCue est un projet indépendant, **ni
+  affilié ni approuvé** par Cockos, Anthropic ou toute autre société citée.
+- L'onglet **Réglages** de la fenêtre ReaCue a un bouton **Licences** qui ouvre ces informations.
+
 ## Crédits et licence
 
 ReaCue par Hervé Naessens. Licence MIT, voir [LICENSE](LICENSE).
@@ -677,7 +710,7 @@ Séparation de stems par [Demucs](https://github.com/facebookresearch/demucs) (A
 licence MIT) sur [PyTorch](https://pytorch.org/).
 
 Analyse de structure (facultative) par [SongFormer](https://github.com/ASLP-lab/SongFormer) (ASLP-lab,
-code et modèle CC BY 4.0 ; article : *SongFormer: Scaling Music Structure Analysis with Heterogeneous
+code CC BY 4.0, modèle indiqué CC BY 4.0 sur sa page Hugging Face ; article : *SongFormer: Scaling Music Structure Analysis with Heterogeneous
 Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), qui utilise
 [MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab ; code MIT, **poids MuQ-large-msd-iter
 CC BY-NC 4.0, non commerciaux**) et [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
@@ -690,4 +723,5 @@ licence BSD 3 clauses ; l'en-tête de licence est conservé dans `reaper/ReaCue_
 S'appuie sur [librosa](https://librosa.org/), [NumPy](https://numpy.org/), [SciPy](https://scipy.org/),
 [soundfile](https://github.com/bastibe/python-soundfile), le SDK Python du
 [Model Context Protocol](https://modelcontextprotocol.io/), [uv](https://docs.astral.sh/uv/) et, bien sûr,
-[REAPER](https://www.reaper.fm/) de Cockos. ReaCue n'est affilié ni à Cockos ni à Anthropic.
+[REAPER](https://www.reaper.fm/) de Cockos. ReaCue n'est affilié ni à Cockos ni à Anthropic. Liste complète :
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) ; pour citer ReaCue : [CITATION.cff](CITATION.cff).

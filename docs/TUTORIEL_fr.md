@@ -111,6 +111,7 @@ les actions ReaCue que si REAPER est **fermé**.
 | `Déclarer ReaCue dans Claude Desktop … ? [o/N]` | `n` si tu n'utilises pas Claude Desktop (tu pourras le faire plus tard) |
 | `Installer la séparation de stems … ? [o/N]` | `o` si tu as des morceaux en MP3 seulement (environ 1 Go à télécharger, 5 à 15 minutes) ; sinon `n` |
 | `Installer l'analyse de structure … ? [o/N]` | `o` pour de meilleures sections avec SongFormer (IA, environ 3 Go à télécharger, 10 à 40 minutes, 8 Go de RAM conseillés, **usage non commercial**) ; sinon `n` |
+| `Pour installer, tape exactement « J'accepte »` (après le résumé des licences) | Lis le résumé : les poids du modèle MuQ sont réservés à un **usage non commercial** (CC BY-NC 4.0). Si ça te convient, tape `J'accepte` puis Entrée ; sinon Entrée seule (rien n'est installé). Détails : [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) |
 
 **Tu dois voir** défiler 6 étapes (`== 1/6 Vérifications` … `== 6/6 Analyse de structure`) :
 
@@ -119,7 +120,7 @@ les actions ReaCue que si REAPER est **fermé**.
   REAPER…` (ReaCue est installé) ;
 - à l'étape 5, si tu as répondu `o` : le téléchargement de PyTorch et Demucs, deux lignes `modèle … prêt`,
   deux lignes `vitesse … environ N min pour un morceau de 4 min`, puis `Séparation de stems installée` ;
-- à l'étape 6, si tu as répondu `o` : le téléchargement de SongFormer, MuQ et MusicFM, puis de PyTorch, des
+- à l'étape 6, si tu as répondu `o` : le résumé des licences et la demande « J'accepte », puis le téléchargement de SongFormer, MuQ et MusicFM, puis de PyTorch, des
   modèles (environ 2 Go), une ligne `vitesse : environ N min pour un morceau de 4 min`, `STRUCTURE_OK` et
   `Analyse de structure installée`.
 

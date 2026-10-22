@@ -27,6 +27,45 @@ command -v uv >/dev/null 2>&1 || fail "uv introuvable : installe d'abord ReaCue 
 t "  Machine : $(uname -m) — analyse de structure (SongFormer) dans $HERE/.venv-structure" \
   "  Machine: $(uname -m) — structure analysis (SongFormer) in $HERE/.venv-structure"
 
+# Licences : accord explicite AVANT tout téléchargement (voir THIRD_PARTY_NOTICES.md).
+# Installation non interactive : REACUE_STRUCTURE_ACCEPT=yes. Accord mémorisé dans structure/.licenses_accepted.
+LIC_ID="songformer-ccby4+muq-weights-ccbync4+musicfm-unclear/v1"
+ACCEPT_FILE=structure/.licenses_accepted
+if [ ! -f "$ACCEPT_FILE" ] || [ "$(head -n 1 "$ACCEPT_FILE")" != "$LIC_ID" ]; then
+  echo
+  t "  ┌─ Licences de l'analyse de structure ─────────────────────────────────────────" \
+    "  ┌─ Structure analysis licences ────────────────────────────────────────────────"
+  t "  │ SongFormer (ASLP-lab) : CC BY 4.0." "  │ SongFormer (ASLP-lab): CC BY 4.0."
+  t "  │ MuQ (Tencent) : code MIT, poids CC BY-NC 4.0 → USAGE NON COMMERCIAL UNIQUEMENT." \
+    "  │ MuQ (Tencent): code MIT, weights CC BY-NC 4.0 → NON-COMMERCIAL USE ONLY."
+  t "  │ MusicFM (ByteDance) : code MIT ; licence du modèle MSD non précisée par ses auteurs." \
+    "  │ MusicFM (ByteDance): code MIT; licence of the MSD checkpoint not stated by its authors."
+  t "  │ Les modèles sont téléchargés depuis leurs auteurs ; tu es responsable du respect" \
+    "  │ The models are downloaded from their authors; you are responsible for complying"
+  t "  │ de leurs licences. Détails : THIRD_PARTY_NOTICES.md (ceci n'est pas un avis juridique)." \
+    "  │ with their licences. Details: THIRD_PARTY_NOTICES.md (this is not legal advice)."
+  t "  └──────────────────────────────────────────────────────────────────────────────" \
+    "  └──────────────────────────────────────────────────────────────────────────────"
+  WANT="$(t "J'accepte" "I accept")"
+  if [ "${REACUE_STRUCTURE_ACCEPT:-}" = yes ]; then
+    t "  Licences acceptées (REACUE_STRUCTURE_ACCEPT=yes)." "  Licences accepted (REACUE_STRUCTURE_ACCEPT=yes)."
+  else
+    ANS=""
+    if [ -t 0 ]; then
+      read -r -p "$(t "  Pour installer, tape exactement « J'accepte » (sinon Entrée) : " \
+                      "  To install, type exactly “I accept” (otherwise Enter): ")" ANS || true
+    fi
+    Q="'"; ANS="${ANS//’/$Q}"     # apostrophe typographique acceptée / typographic apostrophe accepted
+    if [ "$ANS" != "$WANT" ]; then
+      t "  Licences non acceptées : rien n'a été installé ni téléchargé." \
+        "  Licences not accepted: nothing was installed or downloaded."
+      exit 3
+    fi
+  fi
+  mkdir -p structure
+  printf '%s\n%s\n' "$LIC_ID" "$(date '+%Y-%m-%d %H:%M:%S')" > "$ACCEPT_FILE"
+fi
+
 fetch() {  # fetch <owner/repo> <révision> <dossier cible>
   local repo="$1" rev="$2" dest="$3"
   if [ -f "$dest/.reacue_rev" ] && [ "$(cat "$dest/.reacue_rev")" = "$rev" ]; then return 0; fi

@@ -3,6 +3,21 @@
 ## 0.12.0-beta — 2026-10
 
 ### Added / Ajouts
+- **Licences, responsibilities and disclaimers / Licences, responsabilités et avertissements**:
+  new `THIRD_PARTY_NOTICES.md` (every third-party component and downloaded model, code and weights licences,
+  checked on 22/10/2026: SongFormer CC BY 4.0, **MuQ weights CC BY-NC 4.0 — non-commercial**, MusicFM MSD
+  checkpoint licence not clearly stated, Demucs MIT, luaqrcode BSD-3, Python packages from PyPI…), new
+  `CITATION.cff` (ReaCue + SongFormer, MuQ, MusicFM, Demucs), new section in README / LISEZMOI linked from the
+  top (MIT “as is”, no weights redistributed, non-commercial structure analysis, user responsible for the
+  rights on audio/stems/lyrics, trademarks: not affiliated with Cockos / Anthropic, not legal advice).
+  The structure installers (macOS / Windows, main installer step 6/6 and `Install ReaCue Structure`) show the
+  licence summary and install **only if the user types exactly “J'accepte” / “I accept”** (typographic
+  apostrophe accepted); unattended: `REACUE_STRUCTURE_ACCEPT=yes`; acceptance remembered in
+  `structure/.licenses_accepted`. Stem installers show a short licence note (Demucs MIT). Settings tab:
+  **Licences** button (opens `THIRD_PARTY_NOTICES.md`, or the GitHub page) and “non-commercial use only”
+  under *Structure detection*. `.gitignore`: model weight files (`*.safetensors`, `*.pt`, `*.pth`,
+  `*.ckpt`, `*.onnx`, `*.th`, `ckpts/`). Tests `tests/test_licences.py` (refusal, typed and environment
+  acceptance, memory, PowerShell, internal links, no weights tracked).
 - **Structure analysis with SongFormer (optional) / Analyse de structure avec SongFormer (facultative)**:
   new optional component installed by the main installer (new step 6/6, `REACUE_STRUCTURE=yes|no` /
   `-Structure yes|no|ask`) or by **`Install ReaCue Structure.command` / `.bat`**

@@ -32,6 +32,39 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 }
 Write-Host (T "  Analyse de structure (SongFormer) dans $Here\.venv-structure" "  Structure analysis (SongFormer) in $Here\.venv-structure")
 
+# Licences : accord explicite AVANT tout téléchargement (voir THIRD_PARTY_NOTICES.md).
+# Installation non interactive : variable d'environnement REACUE_STRUCTURE_ACCEPT=yes.
+# Accord mémorisé dans structure\.licenses_accepted.
+$LicId = "songformer-ccby4+muq-weights-ccbync4+musicfm-unclear/v1"
+$AcceptFile = Join-Path $Here "structure\.licenses_accepted"
+$accepted = (Test-Path -LiteralPath $AcceptFile) -and (((Get-Content -LiteralPath $AcceptFile -TotalCount 1) -as [string]) -eq $LicId)
+if (-not $accepted) {
+  Write-Host ""
+  Write-Host (T "  ┌─ Licences de l'analyse de structure ─────────────────────────────────────────" "  ┌─ Structure analysis licences ────────────────────────────────────────────────")
+  Write-Host (T "  │ SongFormer (ASLP-lab) : CC BY 4.0." "  │ SongFormer (ASLP-lab): CC BY 4.0.")
+  Write-Host (T "  │ MuQ (Tencent) : code MIT, poids CC BY-NC 4.0 → USAGE NON COMMERCIAL UNIQUEMENT." "  │ MuQ (Tencent): code MIT, weights CC BY-NC 4.0 → NON-COMMERCIAL USE ONLY.") -ForegroundColor Yellow
+  Write-Host (T "  │ MusicFM (ByteDance) : code MIT ; licence du modèle MSD non précisée par ses auteurs." "  │ MusicFM (ByteDance): code MIT; licence of the MSD checkpoint not stated by its authors.")
+  Write-Host (T "  │ Les modèles sont téléchargés depuis leurs auteurs ; tu es responsable du respect" "  │ The models are downloaded from their authors; you are responsible for complying")
+  Write-Host (T "  │ de leurs licences. Détails : THIRD_PARTY_NOTICES.md (ceci n'est pas un avis juridique)." "  │ with their licences. Details: THIRD_PARTY_NOTICES.md (this is not legal advice).")
+  Write-Host "  └──────────────────────────────────────────────────────────────────────────────"
+  $Want = T "J'accepte" "I accept"
+  if ($env:REACUE_STRUCTURE_ACCEPT -eq "yes") {
+    Write-Host (T "  Licences acceptées (REACUE_STRUCTURE_ACCEPT=yes)." "  Licences accepted (REACUE_STRUCTURE_ACCEPT=yes).")
+  } else {
+    $Ans = ""
+    if (-not [Console]::IsInputRedirected) {
+      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly “I accept” (otherwise Enter)")
+    }
+    if ($Ans) { $Ans = $Ans.Replace([string][char]0x2019, "'").Trim() }
+    if ($Ans -cne $Want) {
+      Write-Host (T "  Licences non acceptées : rien n'a été installé ni téléchargé." "  Licences not accepted: nothing was installed or downloaded.") -ForegroundColor Yellow
+      exit 3
+    }
+  }
+  New-Item -ItemType Directory -Path (Join-Path $Here "structure") -Force | Out-Null
+  Set-Content -LiteralPath $AcceptFile -Value @($LicId, (Get-Date -Format "yyyy-MM-dd HH:mm:ss")) -Encoding UTF8
+}
+
 function Fetch([string]$Repo, [string]$Rev, [string]$Dest) {
   $mark = Join-Path $Dest ".reacue_rev"
   if ((Test-Path -LiteralPath $mark) -and ((Get-Content -LiteralPath $mark -Raw).Trim() -eq $Rev)) { return $true }

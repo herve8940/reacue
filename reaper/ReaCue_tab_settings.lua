@@ -19,6 +19,8 @@ return function(ctx)
       pin = "Code PIN de la Régie", on = "oui", off = "non",
       note = "Les changements s'appliquent à la prochaine préparation (bouton Préparer ou Reconstruire le concert).",
       version = "Version installée : %s", saved = "enregistré",
+      noncommercial = "Usage non commercial uniquement (poids MuQ CC BY-NC 4.0)",
+      licences = "Licences", licences_tip = "Composants tiers, licences et avertissements",
     },
     en = {
       general = "General", cues = "Count-in and spoken cues", outputs = "Click and voice", other = "Analysis, separation, folders",
@@ -36,6 +38,8 @@ return function(ctx)
       pin = "Stage control PIN code", on = "yes", off = "no",
       note = "Changes apply at the next preparation (Prepare button or Rebuild the concert).",
       version = "Installed version: %s", saved = "saved",
+      noncommercial = "Non-commercial use only (MuQ weights CC BY-NC 4.0)",
+      licences = "Licences", licences_tip = "Third-party components, licences and disclaimers",
     },
   }
   local function t(k) return ctx.tr(TXT, k) end
@@ -265,6 +269,8 @@ return function(ctx)
     y = y + row - 6
     local inst = R.structure_installed and R.structure_installed(R.install_dir(ctx.dir))
     U.text(U.fit(inst and t("structure_on") or t("structure_off"), cw, 11), cx, y, 11, inst and U.ACCENT or U.MUTED)
+    y = y + 16
+    U.text(U.fit(t("noncommercial"), cw, 11), cx, y, 11, U.WARN)
     y = y + 18
     for _, k in ipairs({ "projects_dir", "concert_dir" }) do
       label(t(k), x, y, w)
@@ -277,9 +283,30 @@ return function(ctx)
     local h = U.para(t("note"), x, y, w, 12, U.MUTED)
     y = y + h + 4
     local st = (reaper.time_precise() - saved_t < 2) and t("saved") or ""
-    U.text(U.fit(string.format(t("version"), version()), w - 90, 11), x, y, 11, U.MUTED)
+    U.text(U.fit(string.format(t("version"), version()), w - 200, 11), x, y, 11, U.MUTED)
+    if U.button("licences", t("licences"), x + w - 190, y - 5, 96, 22, nil, 11) then M.open_licences() end
     if st ~= "" then U.text(st, x + w - U.text_w(st, 12, true), y, 12, U.ACCENT, true) end
     return y + 20
+  end
+
+  -- « Licences » : THIRD_PARTY_NOTICES.md du dossier d'installation, sinon la page GitHub
+  M.LICENCES_URL = "https://github.com/herve8940/reacue/blob/main/THIRD_PARTY_NOTICES.md"
+  function M.licences_target()
+    local dir = R.install_dir and R.install_dir(ctx.dir) or nil
+    local f = dir and (dir .. SEP .. "THIRD_PARTY_NOTICES.md")
+    if f and L.exists(f) then return f end
+    return M.LICENCES_URL
+  end
+  function M.open_licences()
+    local target = M.licences_target()
+    if R.is_windows() then
+      reaper.ExecProcess('cmd.exe /C start "" ' .. R.winq(target), -1)
+    elseif (reaper.GetOS and reaper.GetOS() or ""):match("^OSX") or (reaper.GetOS and reaper.GetOS() or ""):match("^macOS") then
+      os.execute("open " .. R.shq(target))
+    else
+      os.execute("xdg-open " .. R.shq(target) .. " &")
+    end
+    return target
   end
 
   return M
