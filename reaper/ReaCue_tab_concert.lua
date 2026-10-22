@@ -331,8 +331,8 @@ return function(ctx)
 
   local function draw_setlist(x, y, w)
     local name = ed.name or t("unnamed")
-    U.heading(U.fit(string.format(t("setlist"), name), w - 80, 12), x, y)
     local rw = U.text_w(t("rename"), 11) + 14
+    U.heading(U.fit(string.format(t("setlist"), name), w - rw - 8, 12), x, y)
     if U.button("rename", t("rename"), x + w - rw, y - 4, rw, 20, nil, 11) then
       local ok, v = reaper.GetUserInputs(t("name_title"), 1, t("name_field") .. ",extrawidth=120", name)
       if ok and v and v:gsub("%s", "") ~= "" then ed.name = v end

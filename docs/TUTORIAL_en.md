@@ -167,6 +167,8 @@ button opens the ReaCue window (a 2nd click closes it).
 ready; for an orange or red one, the button on the right sets it up (*Start*, *Preferences*, *Install*,
 *Create*…). **Finish** closes the assistant; it is also in *Settings → Check the installation*.
 
+<img src="images/window_assistant_en.png" width="420">
+
 **The ReaCue window** opens on the right tab by itself: **Stage** if the project is a concert, **Song** if it
 is a song, otherwise the last one used. Right-click in the window: dock it in REAPER or undock it (docked at
 the bottom, it becomes a compact transport bar). Top right, two dots: **bridge** (ReaCue answers in REAPER)
@@ -228,6 +230,8 @@ tracks every time it prepares a song: do not put several songs in the same proje
 click **Do everything** (step 10) — or **Later**. The big button shows the next step: **Split stems** (single
 file, step 9) or **Analyse and prepare** (stems). The song also appears in the **Concert** tab's list
 (orange until it is prepared; click its name to open it).
+
+<img src="images/window_newsong_en.png" width="420">
 
 > Copying the files avoids the “OFFLINE” problem with files left in *Downloads* on a Mac. After a successful
 > **Do everything**, **Split stems**, **Analyse and prepare** or **Apply** from the window, the song's project
@@ -337,6 +341,8 @@ on the same MP3, the import is immediate (no new separation).
    button now says **Ready ✓** and the **pills** are green: Stems ✓ · Structure: SongFormer ✓ · 120 BPM ·
    Chords ✓ · Drums ✓ · Lyrics · Prompter published ✓ · Saved ✓.
 
+<img src="images/window_doall_en.png" width="420">
+
 Step by step, the big button does the same (**Split stems** → **Analyse and prepare** → **Ready ✓**); below
 it: *Prepare again* (rebuilds everything keeping your structure), *Re-analyse from scratch* (tempo and
 structure computed again, your fixes are replaced), *Update the phones*. The action **ReaCue - Prepare the
@@ -387,6 +393,8 @@ its beginning.
 **To fix it, three ways (you can mix them):**
 
 **Way 1 — in the Song tab** (the easiest)
+
+<img src="images/window_structure_en.png" width="420">
 
 Select a section (click its box); its tools show under the band:
 
@@ -468,6 +476,10 @@ timing file `lyrics_timing.json` (see the *Lyrics* section of the README).
 5. Start playback in REAPER: the prompter follows the position (section, bar, beat).
 
 **You should see** a green dot (link with REAPER alive), the current section and the next one.
+
+<img src="images/prompter_drums_en.png" width="200"> <img src="images/prompter_vocals_en.png" width="200">
+
+<img src="images/prompter_vocals_en_tablet.png" width="600">
 
 Tips:
 
@@ -596,6 +608,8 @@ list → **Prepare the selection**). ReaCue prepares them **one after the other 
 project is opened in a tab, *Do everything*, saved, then the tab is closed. The progress shows (✓ ready, ●
 running with the step, ✗ failed with the reason); **Stop** stops after the current song.
 
+<img src="images/window_batch_en.png" width="420">
+
 From the **Song** tab, the **Add to a concert** button adds the open song to a setlist (new or existing)
 without leaving the song.
 
@@ -675,6 +689,8 @@ For a pedal or a keyboard shortcut: the actions **ReaCue - Next song** and **Rea
    the prompter opens; they choose their role.
 4. Click **Close** (or the QR, or Escape) to go back.
 
+<img src="images/window_qr_en.png" width="300">
+
 The address is computed at each click: if the computer's address changed, the QR is still right. If
 “Computer IP address not found” shows: the computer is not connected to any network.
 
@@ -684,6 +700,8 @@ The address is computed at each click: if the computer's address changed, the QR
 2. Tap a button (e.g. **Play**): the phone asks for the **PIN code**. It is shown in the Stage tab (button
    **PIN 1234**, and under the QR code) and in the Settings tab. Type it, **OK**.
 3. The button gets a green outline when REAPER has run the command.
+
+<img src="images/prompter_regie_en.png" width="200"> <img src="images/prompter_regie2_en.png" width="200">
 
 Stage control offers Play/Pause, Stop, Previous, Start, Next, the setlist, the sections and the
 **instruments** (16.8), with the same double tap during playback. The PIN is remembered on the phone; **Change code** to type it again. To change
@@ -703,6 +721,8 @@ Changes made directly in the concert project are **overwritten** by the rebuild.
 ### 16.7 Check before playing
 
 Before the soundcheck or the show, click **Check** in the Stage tab.
+
+<img src="images/window_check_en.png" width="420">
 
 1. A list appears, with a summary at the top: **All set ✓** (green), **N thing(s) to watch** (orange) or
    **N problem(s)** (red).
@@ -745,6 +765,8 @@ These manual choices last until the next song.
 **“Played live”: the concert's profile.** If the band really plays drums and bass, their stems must be muted
 for the whole concert. Click **Played live…**:
 
+<img src="images/window_live_en.png" width="420">
+
 1. Tick what the band plays for real (e.g. **Drums**, **Bass**): those stems are muted at the start of every
    song.
 2. **Per-song exceptions**: click a cell to turn it from **·** (profile) to **stem** (keep the stem on that
@@ -758,6 +780,8 @@ choices.
 
 On the phones, each musician sees at the top **“your stem is muted”** (orange) or **“your stem is playing”**
 (green). In **Stage control**, the same buttons: tap = mute / unmute, long press = solo, **Hear everything**.
+
+<img src="images/prompter_concert_en.png" width="200"> <img src="images/prompter_concert_vocals_en.png" width="200">
 
 With Claude: “in the Saturday 15 concert, drums and bass are played live, except the bass on Second Demo”
 (tool `set_live_profile`, no rebuild).

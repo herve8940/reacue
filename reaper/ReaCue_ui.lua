@@ -35,9 +35,21 @@ function U.text_w(s, size, bold)
 end
 
 -- texte coupé à la largeur w (avec « … »), sans couper un caractère UTF-8
+-- chemin trop long : début remplacé par « … » (la fin, le dossier, reste lisible) ; prefix gardé en entier
+function U.fit_path(prefix, path, w, size, bold)
+  prefix, path = tostring(prefix or ""), tostring(path or "")
+  if U.text_w(prefix .. path, size, bold) <= w then return prefix .. path end
+  while #path > 1 and U.text_w(prefix .. "…" .. path, size, bold) > w do
+    path = path:sub((utf8.offset(path, 2) or 2))
+  end
+  return prefix .. "…" .. path
+end
+
+-- U.on_cut(s) : appelé quand un texte est coupé (tests : aucun libellé coupé dans les captures)
 function U.fit(s, w, size, bold)
   s = tostring(s or "")
   if U.text_w(s, size, bold) <= w then return s end
+  if U.on_cut then U.on_cut(s) end
   while #s > 1 and U.text_w(s .. "…", size, bold) > w do
     local cut = utf8.offset(s, -1) or #s
     s = s:sub(1, math.max(1, cut - 1))
@@ -243,7 +255,15 @@ function U.para(s, x, y, w, size, col, max_lines)
   local n = 0
   for line in (tostring(s or "") .. "\n"):gmatch("(.-)\n") do
     local words, cur = {}, ""
-    for word in line:gmatch("%S+") do words[#words + 1] = word end
+    for word in line:gmatch("%S+") do
+      -- ponctuation française : « » : ; ! ? jamais seuls en début ou en fin de ligne
+      local prev = words[#words]
+      if prev and (word:sub(1, 2) == "»" or word:match("^[:;!?%)]") or prev:sub(-2) == "«" or prev:sub(-1) == "(") then
+        words[#words] = words[#words] .. " " .. word
+      else
+        words[#words + 1] = word
+      end
+    end
     if #words == 0 then n = n + 1 end
     for _, wd in ipairs(words) do
       local try = cur == "" and wd or (cur .. " " .. wd)
@@ -260,7 +280,10 @@ function U.para(s, x, y, w, size, col, max_lines)
       n = n + 1
     end
   end
-  if max_lines then n = math.min(n, max_lines) end
+  if max_lines and n > max_lines then
+    if U.on_cut then U.on_cut(s) end
+    n = max_lines
+  end
   return n * lh
 end
 

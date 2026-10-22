@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.0.1 — 2026-10-22 — docs : captures mises à jour / updated screenshots
+
+Documentation: every screenshot regenerated with the current code, in French **and** English, with made-up
+content only (demo songs, address 192.168.1.20, PIN 1234). / Toutes les captures régénérées avec le code
+actuel, en français **et** en anglais, contenu entièrement fictif.
+
+### Documentation
+- **Gallery at the top of README / LISEZMOI / Galerie en tête** (window, prompter, Stage control / fenêtre,
+  prompteur, Régie); the window table now shows every view (Song, Do everything, structure editing,
+  + New song, Concert, batch preparation, Stage, Played live, Check, QR, assistant, simple and advanced
+  settings). Tutorials FR / EN: same views, plus the prompter roles, concert mode (“your stem is muted”) and
+  Stage control.
+- New captures / nouvelles captures: `window_{check,newsong,qr}_{fr,en}`, all `window_*_en`,
+  `prompter_concert*`, `prompter_regie*` (top and bottom of Stage control). Rendering ×2 (sharper).
+- `tests/test_doc_screenshots.py` renders every window view in FR and EN and **fails on any cut label**
+  (`U.fit`, extra lines of `U.para`) or text overflowing the window; `REACUE_SHOTS=docs/images` writes the
+  PNG files. `tools/make_screenshots.py` adds a made-up three-song concert, the instruments state, Stage
+  control (remote alive, rehearsal, PIN) and checks the concert rank.
+
+### Fixed / Corrections (labels cut in the window or on the phones / libellés coupés)
+- Window / fenêtre: `U.on_cut` hook; long folder paths keep their end (`…/REAPER Media/Concerts`,
+  `U.fit_path`); the setlist heading uses the room left by *Rename*; the non-commercial notice wraps on two
+  lines; shorter texts « SongFormer non installé » (settings) and « non installée : détection simple (moins
+  précise) » (assistant); English colon without space (“Structure: SongFormer ✓”, “Solution:”);
+  paragraphs never start a line with « » », « : », « ; », « ! », « ? ».
+- Prompter / prompteur: long section and song names shrink (down to 60 %) instead of ending in « … »
+  (current / next section, drummer view, Stage control title); on phones, the top title wraps on two lines
+  without the key, and moves to its own line when « ton stem est coupé / joué » is shown; non-breaking
+  « 2e section = plage ».
+
 ## 1.0.0 — 2026-10-22
 
 First stable release / Première version stable. Contents of the 0.12.0 development cycle below.

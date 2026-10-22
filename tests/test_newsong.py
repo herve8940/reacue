@@ -132,13 +132,6 @@ def test_new_song_stems_folder_copy_project_and_collision(concert, tmp_path):
     assert "Morceau" in T and any("Nouveau morceau « Demo Ballad Live »" in t for t in T), T
     assert "Analyser et préparer" in T and "Tout faire" in T, T
     assert any(t.startswith("Morceau créé. Tout préparer maintenant") for t in T), T      # « Tout faire » proposé
-    W.shot(g, gx, "nouveau_morceau.png")
-    if W.SHOTS:
-        import shutil
-        out = Path("/mnt/user-data/outputs/reacue_fenetre")
-        if out.parent.exists():
-            out.mkdir(exist_ok=True)
-            shutil.copyfile(W.SHOTS / "nouveau_morceau.png", out / "nouveau_morceau.png")
     # l'onglet Concert le liste (pas encore préparé)
     W.press_text(L, g, "Concert", exact=True); W.frame(L, g)
     T = TL.texts(g)
