@@ -36,7 +36,7 @@ Time needed: 30 to 45 minutes the first time (installation included), then 5 to 
 7. [Create a project for a song](#7-create-a-project-for-a-song)
 8. [Import the audio: stems or a single MP3](#8-import-the-audio-stems-or-a-single-mp3)
 9. [Split an MP3 into stems](#9-split-an-mp3-into-stems)
-10. [Prepare the song](#10-prepare-the-song)
+10. [Prepare the song](#10-prepare-the-song-with-do-everything)
 11. [Check the structure](#11-check-the-structure)
 12. [Add the lyrics](#12-add-the-lyrics)
 13. [Open the prompter on the phones](#13-open-the-prompter-on-the-phones)
@@ -318,7 +318,7 @@ on the same MP3, the import is immediate (no new separation).
 
 ---
 
-## 10. Prepare the song: “Do everything”
+## 10. Prepare the song with Do everything
 
 1. **ReaCue** window, **Song** tab: click **Do everything** (right of the big button). No need to select
    anything.

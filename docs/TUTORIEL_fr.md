@@ -36,7 +36,7 @@ Durée : 30 à 45 minutes la première fois (installation comprise), puis 5 à 1
 7. [Créer le projet d'un morceau](#7-créer-le-projet-dun-morceau)
 8. [Importer l'audio : des stems ou un seul MP3](#8-importer-laudio--des-stems-ou-un-seul-mp3)
 9. [Séparer un MP3 en stems](#9-séparer-un-mp3-en-stems)
-10. [Préparer le morceau](#10-préparer-le-morceau)
+10. [Préparer le morceau](#10-préparer-le-morceau-avec-tout-faire)
 11. [Vérifier la structure](#11-vérifier-la-structure)
 12. [Ajouter les paroles](#12-ajouter-les-paroles)
 13. [Ouvrir le prompteur sur les téléphones](#13-ouvrir-le-prompteur-sur-les-téléphones)
@@ -328,7 +328,7 @@ l'action sur le même MP3, l'import est immédiat (pas de nouvelle séparation).
 
 ---
 
-## 10. Préparer le morceau : « Tout faire »
+## 10. Préparer le morceau avec Tout faire
 
 1. Fenêtre **ReaCue**, onglet **Morceau** : clique **Tout faire** (à droite du grand bouton). Pas besoin de
    sélectionner quoi que ce soit.
