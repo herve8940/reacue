@@ -316,7 +316,7 @@ audio synthétique et affiche `CHORDS_OK`.
 | Calage | le décodage suit les temps de la grille de ReaCue (changements sur les temps, surtout 1 et 3), puis au plus deux accords par mesure, comme avant |
 | Nommage | dièses / bémols selon la tonalité (nom du fichier, sinon estimée) ; basse des renversements épelée comme note de l'accord (`E/G#`, `Ab/C`) |
 | Lisibilité | 9e, 11e, 13e affichées comme la 7e correspondante (`G9` → `G7`) |
-| Temps | environ 30 s à 1 min par morceau sur un Mac Intel (processeur), moins de 1 Go de mémoire ; résultat mémorisé dans le dossier `.reacue` du morceau (un changement de grille ne relance que le décodage) |
+| Temps | environ 1 à 2 min par morceau de 4 min sur un Mac Intel (processeur), environ 1,2 Go de mémoire ; résultat mémorisé dans le dossier `.reacue` du morceau (un changement de grille ne relance que le décodage) |
 | Repli | modèle non installé, réglage `chords_engine` = `"reacue"`, erreur ou délai dépassé (10 min) → détection de ReaCue (message « Modèle d'accords indisponible : … ») ; après un échec, pas de nouvel essai sur le même audio pendant 1 h |
 
 **Comparer** les deux méthodes sur tes morceaux : `.venv/bin/python tools/compare_chords.py <dossier du

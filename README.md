@@ -304,8 +304,8 @@ Mac Intel: PyTorch 2.2.2, numpy < 2, nothing to compile), tests it on synthetic 
 The model listens to the stems **without vocals and drums** (or to the single file), its decoding follows
 ReaCue's beat grid, and the result keeps the usual format (at most two chords per bar, beats 1 and 3);
 sharps / flats follow the key, inversion basses are spelled as chord tones (`E/G#`, `Ab/C`), 9ths, 11ths
-and 13ths show as the matching 7th chord. About 30 s to 1 min per song on an Intel Mac CPU, under 1 GB of
-memory, cached in the song's `.reacue` folder. Fallback to ReaCue's detection when it is not installed,
+and 13ths show as the matching 7th chord. About 1 to 2 min per 4-minute song on an Intel Mac CPU, about
+1.2 GB of memory, cached in the song's `.reacue` folder. Fallback to ReaCue's detection when it is not installed,
 when `chords_engine` is `"reacue"`, or on error / timeout (10 min). Compare both methods on your songs:
 `.venv/bin/python tools/compare_chords.py <song folder or audio file>…`.
 
