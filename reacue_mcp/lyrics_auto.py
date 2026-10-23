@@ -122,17 +122,18 @@ def is_auto_file(path) -> bool:
 
 
 def target_folder(files: list[str]) -> Path | None:
-    """Dossier du morceau (comme la grille PDF, sheet.song_folder)."""
+    """Dossier du morceau (comme la grille PDF, sheet.song_folder), s'il fait partie des dossiers où ReaCue
+    (et la fenêtre REAPER) cherchent les paroles ; sinon le dossier du premier fichier."""
     from .sheet import song_folder
-    return song_folder([str(f) for f in files or []])
+    dirs = lyric_dirs(files)
+    sf = song_folder([str(f) for f in files or []])
+    if sf is not None and sf in dirs:
+        return sf
+    return dirs[0] if dirs else None
 
 
 def find_auto_file(files: list[str]) -> Path | None:
-    dirs = lyric_dirs(files)
-    tf = target_folder(files)
-    if tf is not None and tf not in dirs:
-        dirs.append(tf)
-    for d in dirs:
+    for d in lyric_dirs(files):
         try:
             for f in sorted(d.iterdir()):
                 if f.is_file() and f.name.lower() == AUTO_NAME.lower():

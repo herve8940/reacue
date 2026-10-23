@@ -41,6 +41,7 @@ return function(ctx)
       undo_restore = "ReaCue : annuler / rétablir la structure",
       p_stems = "Stems", p_structure = "Structure", p_songformer = "SongFormer", p_reacue = "ReaCue", p_manual = "manuelle",
       p_chords = "Accords", p_drums = "Batterie", p_lyrics = "Paroles : %d lignes", p_lyrics_none = "Paroles",
+      p_lyrics_auto = "Paroles : auto (%d lignes)",
       p_sheet = "Grille PDF",
       p_prompter = "Prompteur publié", p_prompter_none = "Prompteur", p_saved = "Enregistré", p_unsaved = "Non enregistré",
       p_tempo_none = "Tempo",
@@ -86,6 +87,7 @@ return function(ctx)
       undo_restore = "ReaCue: undo / redo the structure",
       p_stems = "Stems", p_structure = "Structure", p_songformer = "SongFormer", p_reacue = "ReaCue", p_manual = "manual",
       p_chords = "Chords", p_drums = "Drums", p_lyrics = "Lyrics: %d lines", p_lyrics_none = "Lyrics",
+      p_lyrics_auto = "Lyrics: auto (%d lines)",
       p_sheet = "PDF chart",
       p_prompter = "Prompter published", p_prompter_none = "Prompter", p_saved = "Saved", p_unsaved = "Not saved",
       p_tempo_none = "Tempo",
@@ -166,28 +168,41 @@ return function(ctx)
     return fn ~= "" and fn or nil
   end
 
+  -- Paroles de l'utilisateur (paroles*.txt|rtf, parole*, lyrics*), sinon brouillon automatique « paroles (auto).txt »
+  -- (Whisper, lyrics_auto.py) : { n = lignes chantées, file, dir, auto = true si brouillon }.
+  -- Comme read_lyrics de lyrics.py : lignes vides, étiquettes « [ … ] » et commentaires « # » non comptés.
+  local AUTO_NAME = "paroles (auto).txt"
   local function read_lyrics(dirs)
+    local function count(d, f, lf)
+      local src = L.read(d .. SEP .. f) or ""
+      local n = 0
+      if lf:match("%.rtf$") then
+        for _ in src:gmatch("\\par[^d]") do n = n + 1 end
+      else
+        for line in (src .. "\n"):gmatch("(.-)\r?\n") do
+          local s = line:gsub("^%s+", ""):gsub("%s+$", "")
+          if s ~= "" and not s:match("^%[") and not s:match("^#") then n = n + 1 end
+        end
+      end
+      return n
+    end
+    local auto = nil
     for _, d in ipairs(dirs) do
       local i = 0
       while true do
         local f = reaper.EnumerateFiles(d, i)
         if not f then break end
         local lf = f:lower()
-        if (lf:match("^paroles") or lf:match("^parole") or lf:match("^lyrics")) and (lf:match("%.txt$") or lf:match("%.rtf$")) then
-          local src = L.read(d .. SEP .. f) or ""
-          local n = 0
-          if lf:match("%.rtf$") then
-            for _ in src:gmatch("\\par[^d]") do n = n + 1 end
-          else
-            for line in (src .. "\n"):gmatch("(.-)\r?\n") do
-              local s = line:gsub("^%s+", ""):gsub("%s+$", "")
-              if s ~= "" and not s:match("^%[") then n = n + 1 end
-            end
-          end
-          return { n = n, file = f, dir = d }
+        if lf == AUTO_NAME then
+          auto = auto or { file = f, dir = d }
+        elseif (lf:match("^paroles") or lf:match("^parole") or lf:match("^lyrics")) and (lf:match("%.txt$") or lf:match("%.rtf$")) then
+          return { n = count(d, f, lf), file = f, dir = d }
         end
         i = i + 1
       end
+    end
+    if auto then
+      return { n = count(auto.dir, auto.file, AUTO_NAME), file = auto.file, dir = auto.dir, auto = true }
     end
     return nil
   end
@@ -631,7 +646,8 @@ return function(ctx)
       { "pill_tempo", i.prepared and fmt_bpm(i.bpm) or (t("p_tempo_none") .. " —"), i.prepared or false, "tempo" },
       { "pill_chords", t("p_chords") .. ((p and p.chords) and " ✓" or " —"), (p and p.chords) or false, "publish" },
       { "pill_drums", t("p_drums") .. ((p and p.drums) and " ✓" or " —"), (p and p.drums) or false, "publish" },
-      { "pill_lyrics", ly and string.format(t("p_lyrics"), ly.n) or (t("p_lyrics_none") .. " —"), ly and true or false, "lyrics" },
+      ly and ly.auto and { "pill_lyrics_auto", string.format(t("p_lyrics_auto"), ly.n), "warn", "lyrics" }
+        or { "pill_lyrics", ly and string.format(t("p_lyrics"), ly.n) or (t("p_lyrics_none") .. " —"), ly and true or false, "lyrics" },
       { "pill_sheet", t("p_sheet") .. (i.sheet and " ✓" or " —"), i.sheet and true or false, "sheet" },
       { "pill_prompter", p and (t("p_prompter") .. " ✓") or (t("p_prompter_none") .. " —"), p and true or false, "prompter" },
       { "pill_saved", saved and (t("p_saved") .. " ✓") or t("p_unsaved"), saved or "warn", "save" },
@@ -648,8 +664,11 @@ return function(ctx)
         elseif a == "structure" and not sf then ctx.do_action("structure")
         elseif a == "publish" then M.publish()
         elseif a == "lyrics" then
-          local d = (ly and ly.dir) or i.dirs[#i.dirs] or i.dirs[1]
-          if d then ctx.guide.open_path(d) end
+          if ly and ly.auto then ctx.guide.open_path(ly.dir .. SEP .. ly.file)   -- brouillon : l'ouvrir pour le corriger
+          else
+            local d = (ly and ly.dir) or i.dirs[#i.dirs] or i.dirs[1]
+            if d then ctx.guide.open_path(d) end
+          end
         elseif a == "prompter" then if p then ctx.open_qr() else M.publish() end
         elseif a == "sheet" then if i.sheet then ctx.guide.open_path(i.sheet) else M.publish() end
         elseif a == "save" then ctx.guide.save_project(); saved_t = reaper.time_precise() end
