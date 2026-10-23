@@ -330,6 +330,29 @@ def test_models_consistent():
         assert m.startswith("jonatasgrosman/wav2vec2-large-xlsr-53-")
 
 
+# --------------------------------------------------------------------------- outil de comparaison
+def test_compare_tool_never_prints_lyrics(monkeypatch, tmp_path, capsys):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import compare_words as CW
+    a = analysis(tmp_path)
+    (tmp_path / "paroles.txt").write_text("zorblat quimpe vaxu\nfrimbel dostra — klop !\n", encoding="utf-8")
+    (tmp_path / "paroles_calage.json").write_text(json.dumps({"1": "2:1-3:3", "2": "4:1-5:2"}), encoding="utf-8")
+    sess = tmp_path / "sess.json"
+    sess.write_text(json.dumps({"analysis": a.to_dict(), "item": {"file": a.file}}), encoding="utf-8")
+    monkeypatch.setattr(words, "available", lambda d=None: True)
+    monkeypatch.setattr(words, "write_voice", lambda a, items, wav: Path(wav))
+
+    def run(wav, jobs, lang, workdir, install_dir=None, **kw):
+        lyr = [{"t": j["t0"] + 0.2, "end": j["t1"] - 0.2, "text": j["text"]} for j in jobs]
+        return fake_result(lyr)
+    monkeypatch.setattr(words, "run_engine", run)
+    assert CW.main(["--session", str(sess), "-v"]) == 0
+    out = capsys.readouterr().out
+    assert "2/2 lignes" in out and "mot  1" in out
+    for w in ("zorblat", "quimpe", "vaxu", "frimbel", "dostra", "klop"):
+        assert w not in out
+
+
 # --------------------------------------------------------------------------- installation
 def test_requirements_words_same_torch_as_stems():
     req = (ROOT / "requirements-words.txt").read_text(encoding="utf-8")
