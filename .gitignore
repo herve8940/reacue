@@ -59,6 +59,10 @@ demucs_status.json
 /structure/
 .reacue/
 
+# Paroles mot par mot (modèles wav2vec2 téléchargés par l'installateur) / Word-by-word lyrics
+.venv-words/
+/words/
+
 # Poids de modèles : jamais dans le dépôt (téléchargés par l'utilisateur) / Model weights: never in the repository
 *.safetensors
 *.pt

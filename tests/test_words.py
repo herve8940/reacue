@@ -330,6 +330,76 @@ def test_models_consistent():
         assert m.startswith("jonatasgrosman/wav2vec2-large-xlsr-53-")
 
 
+# --------------------------------------------------------------------------- installation
+def test_requirements_words_same_torch_as_stems():
+    req = (ROOT / "requirements-words.txt").read_text(encoding="utf-8")
+    stems = (ROOT / "requirements-stems.txt").read_text(encoding="utf-8")
+    for pin in ('torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"',
+                'torchaudio==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"',
+                'numpy<2 ; sys_platform == "darwin" and platform_machine == "x86_64"',
+                "torch==2.5.1", "torchaudio==2.5.1"):
+        assert pin in req and pin in stems, pin
+    assert not [ln for ln in req.splitlines() if ln.strip().startswith("transformers")]
+
+
+def test_installers_words():
+    import os
+    import shutil
+    import subprocess
+    for f in ("install/install_words_mac.sh", "Install ReaCue Words.command"):
+        assert subprocess.run(["bash", "-n", str(ROOT / f)]).returncode == 0, f
+        assert os.access(ROOT / f, os.X_OK), f
+    sh = (ROOT / "install" / "install_words_mac.sh").read_text(encoding="utf-8")
+    ps = (ROOT / "install" / "install_words_windows.ps1").read_bytes()
+    assert ps.startswith(b"\xef\xbb\xbf") and b"\n" not in ps.replace(b"\r\n", b"")
+    bat = (ROOT / "Install ReaCue Words.bat").read_bytes()
+    assert b"install_words_windows.ps1" in bat and b"\n" not in bat.replace(b"\r\n", b"")
+    for txt in (sh, ps.decode("utf-8-sig")):
+        assert "requirements-words.txt" in txt and ".venv-words" in txt and "--only-binary" in txt
+        assert "reacue_words.py" in txt and " check " in txt and "Apache-2.0" in txt
+        assert "THIRD_PARTY_NOTICES.md" in txt and "J'accepte" not in txt          # poids Apache-2.0 : pas d'accord
+    assert "WORDS_OK" in (ROOT / "reacue_words.py").read_text(encoding="utf-8")
+    gi = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    assert ".venv-words/" in gi and "/words/" in gi
+    pwsh = shutil.which("pwsh")
+    if pwsh:
+        cmd = ("$e=$null;[void][System.Management.Automation.Language.Parser]::ParseFile("
+               f"'{ROOT / 'install' / 'install_words_windows.ps1'}',[ref]$null,[ref]$e);$e.Count")
+        r = subprocess.run([pwsh, "-NoProfile", "-Command", cmd], capture_output=True, text=True)
+        assert r.stdout.strip() == "0", (r.stdout, r.stderr)
+
+
+def test_mac_installer_sandbox(tmp_path):
+    """Faux macOS : uv enregistre ses appels ; le test final (faux python) écrit WORDS_OK."""
+    import os
+    import shutil
+    import subprocess
+    inst = tmp_path / "ReaCue"
+    (inst / "install").mkdir(parents=True)
+    shutil.copy(ROOT / "install" / "install_words_mac.sh", inst / "install")
+    shutil.copy(ROOT / "requirements-words.txt", inst)
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    calls = tmp_path / "calls.txt"
+    venv_py = inst / ".venv-words" / "bin" / "python"
+    for name, body in (("uname", 'if [ "$1" = -m ]; then echo x86_64; else echo Darwin; fi'),
+                       ("uv", f'echo uv "$@" >> "{calls}"; if [ "$1" = venv ]; then mkdir -p "{venv_py.parent}"; '
+                              f'printf \'#!/bin/bash\\necho py "$@" >> "{calls}"; echo WORDS_OK\\n\' > "{venv_py}"; '
+                              f'chmod +x "{venv_py}"; fi')):
+        f = bin_ / name
+        f.write_text("#!/bin/bash\n" + body + "\n")
+        f.chmod(0o755)
+    env = dict(os.environ, PATH=f"{bin_}:/usr/bin:/bin", HOME=str(tmp_path), REACUE_WORDS_LANGS="fr")
+    r = subprocess.run(["bash", str(inst / "install" / "install_words_mac.sh"), "en"], env=env,
+                       stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stdout + r.stderr
+    log = calls.read_text()
+    assert "uv venv .venv-words --python 3.12" in log
+    assert "--only-binary :all: -r requirements-words.txt" in log
+    assert "py reacue_words.py check --lang en --langs fr" in log
+    assert "Word-by-word lyrics installed" in r.stdout
+
+
 # --------------------------------------------------------------------------- reacue_words.py (avec torch)
 def test_forced_align_with_torch():
     torch = pytest.importorskip("torch")
