@@ -304,6 +304,14 @@ MSG = {
     "sheet_footer": ("Grille ReaCue : accords et paroles détectés automatiquement, à vérifier.",
                      "ReaCue chart: chords and lyrics detected automatically, please check."),
     "sheet_failed": ("Grille PDF non créée : {e}", "PDF chart not created: {e}"),
+    # paroles mot par mot (alignement forcé wav2vec2, composant optionnel)
+    "words_running": ("Paroles mot par mot… {s} s", "Word-by-word lyrics… {s} s"),
+    "words_timeout": ("le calage mot par mot n'a pas répondu en {min} min",
+                      "word-by-word timing did not answer within {min} min"),
+    "words_used": ("Paroles calées mot par mot ({n}/{total} lignes, modèle {lang}).",
+                   "Lyrics timed word by word ({n}/{total} lines, {lang} model)."),
+    "words_failed": ("Calage mot par mot impossible : {e} → paroles calées par ligne.",
+                     "Word-by-word timing failed: {e} → lyrics timed by line."),
     "structure_failed": ("Analyse SongFormer impossible : {e} → structure ReaCue utilisée.",
                          "SongFormer analysis failed: {e} → ReaCue structure used."),
 }

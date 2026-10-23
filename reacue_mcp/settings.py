@@ -32,6 +32,9 @@ DEFAULTS: dict = {
     "structure_engine": "auto",  # sections : "auto" (SongFormer s'il est installé, sinon ReaCue) | "reacue"
     "projects_dir": None,        # mode concert : dossier des projets des morceaux ; None = <Documents>/REAPER Media
     "concert_dir": None,         # mode concert : dossier des concerts ; None = <dossier des projets>/Concerts
+    # paroles mot par mot (composant optionnel .venv-words)
+    "words_engine": "auto",      # "auto" (calage mot par mot s'il est installé) | "off" (lignes seulement)
+    "words_language": "auto",    # langue chantée : "auto" (déduite du texte des paroles) | "fr" | "en"
 }
 
 LANGS = ("fr", "en")
@@ -59,6 +62,10 @@ def load_settings(path: Path | None = None) -> dict:
     out["count_lang"] = cl if cl in LANGS else "en"
     se = str(out.get("structure_engine") or "auto").lower()
     out["structure_engine"] = se if se in ("auto", "reacue") else "auto"
+    we = str(out.get("words_engine") or "auto").lower()
+    out["words_engine"] = we if we in ("auto", "off") else "auto"
+    wl = str(out.get("words_language") or "auto").lower()[:4]
+    out["words_language"] = wl if wl in ("auto", "fr", "en") else "auto"
     return out
 
 

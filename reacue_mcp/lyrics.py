@@ -15,7 +15,9 @@ Méthode (librosa / numpy uniquement, quelques secondes) — détaillée dans al
   4. rejouer un bloc n'est accepté que si l'audio (chroma + MFCC du stem voix) ressemble à celui de
      sa première occurrence ; sinon le passage reste sans ligne (la suite ne se décale pas) ;
   5. corrections manuelles / ancres exactes : paroles_calage.json (ou lyrics_timing.json) à côté des
-     paroles (voir ci-dessous).
+     paroles (voir ci-dessous) ;
+  6. si le composant facultatif « paroles mot par mot » est installé (.venv-words, voir words.py) : chaque
+     ligne calée reçoit "words": [{"w", "t", "end"}] par alignement forcé du texte sur le stem voix.
 
 paroles_calage.json / lyrics_timing.json — aucun texte, seulement des numéros de ligne et des positions sur la grille :
   clé   "12"   = ligne 12 (1-based, lignes non vides du fichier, étiquettes exclues), 1re occurrence ;
@@ -1029,7 +1031,7 @@ def cached_lyrics(a: Analysis, items: list[dict] | None, cache=None, path=None) 
     try:
         c = json.loads(cache.read_text(encoding="utf-8"))
         if c.get("key") == ck:
-            return c["lyrics"]
+            return _with_words(a, items, c["lyrics"], cache)
     except Exception:
         pass
     lines = read_lyrics(path)
@@ -1045,4 +1047,14 @@ def cached_lyrics(a: Analysis, items: list[dict] | None, cache=None, path=None) 
         cache.write_text(json.dumps({"key": ck, "lyrics": res}, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
-    return res
+    return _with_words(a, items, res, cache)
+
+
+def _with_words(a: Analysis, items: list[dict] | None, res: list[dict], cache: Path) -> list[dict]:
+    """Calage mot par mot (words.py, composant optionnel) à l'intérieur des lignes calées ; son propre cache
+    (<cache>_words.json) : le cache des lignes ne dépend pas du composant. Jamais bloquant."""
+    try:
+        from . import words
+        return words.add_words(a, items, res, cache=cache.with_name(cache.stem + "_words.json"))
+    except Exception:                                   # noqa: BLE001 - lignes seules
+        return res

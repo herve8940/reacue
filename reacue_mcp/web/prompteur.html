@@ -88,6 +88,9 @@
   .lyr .line { font-size: clamp(26px, 7.5vw, 58px); font-weight: 800; line-height: 1.12; margin: 4px 0; }
   .lyr .line.wait { color: var(--dim); }
   .lyr .line.ready { color: var(--warn); }
+  /* calage mot par mot : mots déjà chantés estompés, mot en cours surligné */
+  .lyr .line .wd.done { color: var(--dim); }
+  .lyr .line .wd.now { color: var(--warn); text-decoration: underline; text-decoration-thickness: .08em; text-underline-offset: .12em; }
   .lyr .sweep { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
   .lyr .sweep i { display: block; height: 100%; width: 0; background: var(--ok); }
   .lyr .nextl { font-size: clamp(18px, 5vw, 32px); font-weight: 600; color: var(--dim); margin-top: 8px; }
@@ -760,6 +763,21 @@ function renderChords(L, sec) {
 }
 
 // ---------------------------------------------------------------- paroles
+// ligne affichée en texte simple (sans mots surlignés)
+function setLine(el, text) { if (el.dataset.k) delete el.dataset.k; el.textContent = text; }
+// ligne en cours : avec le calage mot par mot ("words"), le mot chanté est surligné, les précédents estompés
+function lineWords(el, ln, t) {
+  const ws = ln.words;
+  if (!ws || !ws.length) { setLine(el, ln.text); return false; }
+  const key = `${ln.i}@${ln.t}`;
+  if (el.dataset.k !== key) {
+    el.innerHTML = ws.map(w => `<span class="wd">${esc(w.w)}</span>`).join(" ");
+    el.dataset.k = key;
+  }
+  let cur = -1; for (let j = 0; j < ws.length; j++) { if (ws[j].t <= t + 0.03) cur = j; else break; }
+  el.querySelectorAll(".wd").forEach((s, j) => { s.classList.toggle("done", j < cur); s.classList.toggle("now", j === cur); });
+  return true;
+}
 function renderLyrics(t, L) {
   const box = $("lyr"), ly = song.lyrics || [];
   const show = ly.length > 0 && (role === "vocals" || role === "all");
@@ -771,7 +789,7 @@ function renderLyrics(t, L) {
   const lineEl = $("lyLine");
   if (singing) {
     $("lyPrev").textContent = k > 0 ? ly[k - 1].text : "";
-    lineEl.textContent = cur.text; lineEl.className = "line";
+    lineWords(lineEl, cur, t); lineEl.className = "line";
     $("lySweep").style.width = `${Math.min(100, 100 * (t - cur.t) / (cur.end - cur.t))}%`;
     $("lyNext").textContent = nx ? nx.text : "";
     const gap = nx ? (nx.t - t) / beatLen : null;
@@ -783,10 +801,10 @@ function renderLyrics(t, L) {
     if (nx) {
       const beats = Math.max(0, Math.ceil((nx.t - t) / beatLen - 0.05));
       const m = song.beats_per_bar, ready = beats <= m;
-      lineEl.textContent = nx.text; lineEl.className = "line " + (ready ? "ready" : "wait");
+      setLine(lineEl, nx.text); lineEl.className = "line " + (ready ? "ready" : "wait");
       $("lyNext").textContent = ly[k + 2] ? ly[k + 2].text : "";
       $("lyWhen").innerHTML = ready ? `<b>${esc(S.inBeats(beats))}</b>` : esc(S.lyIn(Math.ceil(beats / m), nx.bar));
-    } else { lineEl.textContent = "—"; lineEl.className = "line wait"; $("lyNext").textContent = ""; $("lyWhen").textContent = S.lyEnd; }
+    } else { setLine(lineEl, "—"); lineEl.className = "line wait"; $("lyNext").textContent = ""; $("lyWhen").textContent = S.lyEnd; }
   }
   const shown = singing ? cur : nx;
   $("lyNum").textContent = shown ? `${S.lyLine(shown.line)}${shown.copy ? S.lyCopy : ""}${(shown.confidence ?? 1) < 0.35 ? S.lyUnsure : ""}` : "";

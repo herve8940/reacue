@@ -181,8 +181,10 @@ def _bar_index(song: dict, time: float) -> float:
 
 
 def bar_lyrics(song: dict) -> dict[int, str]:
-    """Bouts de paroles par mesure : les mots de chaque ligne sont répartis régulièrement entre son
-    début et sa fin (le calage donne les lignes, pas chaque mot)."""
+    """Bouts de paroles par mesure. Avec le calage mot par mot ("words" : temps réel de chaque mot), chaque
+    mot va dans la mesure où il commence (à quelques centisecondes près : une attaque un rien en avance
+    reste dans la mesure suivante) ; sinon les mots de la ligne sont répartis régulièrement entre son début
+    et sa fin."""
     parts: dict[int, list[str]] = {}
     for ln in song.get("lyrics") or []:
         words = str(ln.get("text") or "").split()
@@ -192,6 +194,14 @@ def bar_lyrics(song: dict) -> dict[int, str]:
         t1 = max(float(ln.get("end", t0)), t0 + 0.01)
         if not song.get("bar_times"):
             parts.setdefault(int(ln.get("bar", 1)), []).extend(words)
+            continue
+        timed = [w for w in (ln.get("words") or []) if isinstance(w, dict) and str(w.get("w") or "").strip()
+                 and isinstance(w.get("t"), (int, float))]
+        if timed:
+            for w in timed:
+                d = max(0.0, float(w.get("end", w["t"])) - float(w["t"]))
+                tw = float(w["t"]) + min(0.05, 0.25 * d)
+                parts.setdefault(int(_bar_index(song, tw)), []).extend(str(w["w"]).split())
             continue
         for k, w in enumerate(words):
             tw = t0 + (k + 0.5) / len(words) * (t1 - t0)
