@@ -712,38 +712,58 @@ def from_model(a: Analysis, y, res: dict, shift: float = 0.0) -> dict:
         f0s.append(float(lowfr[int(np.argmax(lowspec[:, i:i + 8].mean(1)))]) if lowspec.shape[1] > i else 100.0)
     for (t, b, st), lane in zip(toms, _tom_lanes(f0s)):
         put(lane, b, st, level("TT", t))
-    # charley fermé / ouvert
-    bar, s, ok = quantize(ons["HH"][:, 0] - off, db, steps)
-    for t, b, st, o in zip(ons["HH"][:, 0], bar, s, ok):
-        if not o:
-            continue
-        i = fr(t)
-        pre = float(cym[max(0, i - 7):max(1, i - 2)].mean())
-        pk = float(cym[max(0, i - 2):i + 7].max())
-        w = min(0.12, next_gap(t) - 0.015)
-        lane = "HH"
-        if w >= 0.05:
-            remain = float(cym[fr(t + w)]) - pre
-            if pk - pre > 3 and remain > 0.6 * (pk - pre):
-                lane = "HO"
-        put(lane, b, st, level("HH", t))
-    # cymbales : ride (flux régulier dans la section) ou crash
-    bar, s, ok = quantize(ons["CY"][:, 0] - off, db, steps)
-    cy = [(b, st, level("CY", t)) for t, b, st, o in zip(ons["CY"][:, 0], bar, s, ok) if o]
+    # charley et cymbales : décision par section (flux régulier = voie du groove), puis coup par coup
+    low_t = np.sort(np.concatenate([ons["SD"][:, 0], ons["BD"][:, 0]]))
+    hi = []                                   # (classe ADTOF, mesure, pas, niveau, tenue, ouvert, long)
+    for c in ("HH", "CY"):
+        bar, s, ok = quantize(ons[c][:, 0] - off, db, steps)
+        for t, b, st, o in zip(ons[c][:, 0], bar, s, ok):
+            if not o:
+                continue
+            i = fr(t)
+            pre = float(cym[max(0, i - 7):max(1, i - 2)].mean())
+            pk = float(cym[max(0, i - 2):i + 7].max())
+            dec = float(cym[fr(t + 0.18)]) - pk                        # tenue à 180 ms (ride / charley)
+            long_ = float(cym[fr(t + 0.3):fr(t + 0.45) + 1].min()) - pk  # creux à 300-450 ms (crash)
+            # ouvert : l'aigu tient jusqu'au coup suivant (baisse <= 60 dB/s, au moins 6 dB permis ;
+            # mesurable sur 50 ms au moins, 150 ms si une caisse claire ou une grosse caisse tombe en même
+            # temps : son timbre tient aussi un peu)
+            w = min(0.2, next_gap(t) - 0.015)
+            j = np.searchsorted(low_t, t - 0.03)
+            with_low = j < len(low_t) and abs(low_t[j] - t) <= 0.03
+            opened = False
+            if w >= (0.15 if with_low else 0.05):
+                drop = pk - float(cym[fr(t + w)])
+                opened = pk - pre > 3 and drop <= max(6.0, 60.0 * w)
+            hi.append((c, int(b), int(st), level(c, t), dec, long_, opened))
     spans = [(sc.start_bar, min(sc.end_bar, n_bars)) for sc in a.sections] or [(0, n_bars)]
     q = max(1, steps // bpb)
     for b0, b1 in spans:
-        mine = [x for x in cy if b0 <= x[0] < b1]
+        mine = [x for x in hi if b0 <= x[1] < b1]
         if not mine:
             continue
-        per_bar = {}
-        for b, st, lv in mine:
-            per_bar.setdefault(b, set()).add(st)
-        counts = [len(v) for v in per_bar.values()]
-        ride = np.median(counts) >= 3 and len(per_bar) >= 0.5 * max(1, b1 - b0)
-        med = float(np.median([lv for _, _, lv in mine]))
-        for b, st, lv in mine:
-            put("CR" if (not ride or (st < q and lv >= med + 4)) else "RD", b, st, lv)
+
+        def stream(cls):
+            per_bar = {}
+            for x in mine:
+                if x[0] == cls:
+                    per_bar.setdefault(x[1], set()).add(x[2])
+            return bool(per_bar) and np.median([len(v) for v in per_bar.values()]) >= 3 \
+                and len(per_bar) >= 0.5 * max(1, b1 - b0)
+        ride_cy = stream("CY")
+        # charley en flux dont le son tient (médiane > -12 dB à 180 ms) : c'est une ride
+        hh_dec = [x[4] for x in mine if x[0] == "HH"]
+        ride_hh = stream("HH") and not ride_cy and float(np.median(hh_dec)) > -12
+        med = float(np.median([x[3] for x in mine]))
+        for c, b, st, lv, dec, long_, opened in mine:
+            loud_long = lv >= max(-4.0, med + 4) and long_ > -10
+            if c == "CY":
+                lane = "RD" if ride_cy and not (st < q and lv >= med + 4) else "CR"
+            elif ride_hh:
+                lane = "CR" if loud_long else "RD"
+            else:
+                lane = "CR" if loud_long else ("HO" if opened else "HH")
+            put(lane, b, st, lv)
     # crash et charley / ride au même pas : on garde le crash
     for bar_ in bars:
         for lane in CYM:
