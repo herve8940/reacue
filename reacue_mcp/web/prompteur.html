@@ -27,6 +27,7 @@
   .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--hot); flex: none; }
   .dot.on { background: var(--ok); }
   .iconbtn { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 8px; padding: 5px 9px; font-size: 14px; }
+  .iconbtn.on { color: var(--ok); border-color: var(--ok); }
 
   /* section en cours */
   .now { position: relative; border-radius: 18px; background: var(--panel); padding: 14px 18px 16px;
@@ -401,7 +402,7 @@ const STR = {
       drums: ["Batterie", "groove, fills, crashs, carrures"], bass: ["Basse", "notes de basse, grille, entrées et sorties"],
       guitars: ["Guitare rythmique", "accords, grille, entrées et sorties"], lead_guitar: ["Guitare solo", "solos, accords, entrées"],
       vocals: ["Chant", "paroles défilantes, entrées de voix"], all: ["Vue générale", "structure et accords"], regie: ["Régie", "télécommande du concert (code PIN)"] },
-    fullscreen: "Plein écran", link: "Liaison avec REAPER", next: "Ensuite", footR: "touche le plan : liste on/off",
+    fullscreen: "Plein écran, écran toujours allumé", link: "Liaison avec REAPER", next: "Ensuite", footR: "touche le plan : liste on/off",
     noSong: "Pas de morceau préparé : dans REAPER, fenêtre ReaCue → « Analyser et préparer ».",
     noReaper: "REAPER ne répond pas : vérifie le Wi-Fi et l'interface web de REAPER.",
     bars: n => n > 1 ? `${n} mesures` : "1 mesure", barsWord: n => n > 1 ? "mesures" : "mesure",
@@ -465,7 +466,7 @@ const STR = {
       drums: ["Drums", "groove, fills, crashes, phrasing"], bass: ["Bass", "bass notes, chart, entries and exits"],
       guitars: ["Rhythm guitar", "chords, chart, entries and exits"], lead_guitar: ["Lead guitar", "solos, chords, entries"],
       vocals: ["Vocals", "scrolling lyrics, vocal entries"], all: ["Overview", "structure and chords"], regie: ["Stage control", "concert remote (PIN code)"] },
-    fullscreen: "Full screen", link: "Link to REAPER", next: "Next", footR: "tap the map: list on/off",
+    fullscreen: "Full screen, screen kept on", link: "Link to REAPER", next: "Next", footR: "tap the map: list on/off",
     noSong: "No song prepared: in REAPER, ReaCue window → “Analyse and prepare”.",
     noReaper: "REAPER is not responding: check the Wi-Fi and REAPER's web interface.",
     bars: n => n > 1 ? `${n} bars` : "1 bar", barsWord: n => n > 1 ? "bars" : "bar",
@@ -567,14 +568,56 @@ $("roleBtn").onclick = () => $("picker").classList.add("show");
 $("langBtn").onclick = () => setLang(LANG === "fr" ? "en" : "fr", true);
 $("strip").onclick = () => { const l = $("list"); l.classList.toggle("show"); store("reacue_list", l.classList.contains("show") ? "1" : "0"); };
 if (load("reacue_list") === "0") $("list").classList.remove("show");
+// Plein écran + écran toujours allumé. Le Wake Lock n'existe que sur une page sécurisée (https) ; REAPER
+// sert la page en http : repli « NoSleep » = petite vidéo muette et invisible en boucle (iPhone, Android).
+let awake = false, wake = null, sleepVid = null;
+const NS_WEBM = "data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAH9EU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggHn7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECfQAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYhjMvbWWA5xxZyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhDuaygDgibCBELqBEJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYhjMvbWWA5xxWfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDIuMDAwMDAwMDAwAB9DtnXD54EAo6OBAACAEAIAnQEqEAAQAABHCIWFiJmEiAICAAwNYAD+/6tQgKOZgQPoALEBAAEQEAAYADA/9AwAAAD+/6tQgBxTu2uRu4+zgQC3iveBAfGCAZ/wgQM=";
+const NS_MP4 = "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMrbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlV0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHNbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABeG1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAThzdGJsAAAAuHN0c2QAAAAAAAAAAQAAAKhhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAALmF2Y0MBQsAK/+EAFmdCwArZHsBEAAADAAQAAAMACDxImSABAAVoy4PLIAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAApAAAAKQAAAABhzdHRzAAAAAAAAAAEAAAACAABAAAAAABRzdHNzAAAAAAAAAAEAAAABAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAACAAAAAQAAABxzdHN6AAAAAAAAAAAAAAACAAAChgAAAAoAAAAUc3RjbwAAAAAAAAABAAADWwAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAACGZyZWUAAAKYbWRhdAAAAnAGBf//bNxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0wIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDE6MHgxMTEgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTAgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MCB3ZWlnaHRwPTAga2V5aW50PTI1MCBrZXlpbnRfbWluPTEgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAOZYiEBb///w9FAAFPf4AAAAAGQZo4CvqA";
+function noSleepVideo() {
+  if (sleepVid) return sleepVid;
+  const v = document.createElement("video");
+  v.id = "noSleep"; v.muted = true; v.loop = true; v.playsInline = true;
+  v.setAttribute("muted", ""); v.setAttribute("playsinline", ""); v.setAttribute("webkit-playsinline", "");
+  v.setAttribute("aria-hidden", "true");
+  v.style.cssText = "position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none";
+  for (const [src, type] of [[NS_WEBM, "video/webm"], [NS_MP4, "video/mp4"]]) {
+    const so = document.createElement("source"); so.src = src; so.type = type; v.appendChild(so);
+  }
+  document.body.appendChild(v);
+  return sleepVid = v;
+}
+async function keepAwake() {
+  if (!awake) return;
+  try {
+    if ("wakeLock" in navigator && window.isSecureContext) {
+      if (!wake) { wake = await navigator.wakeLock.request("screen"); wake.onrelease = () => wake = null; }
+      return;
+    }
+  } catch (e) {}
+  try { const v = noSleepVideo(); if (v.paused) await v.play(); } catch (e) {}
+}
+function allowSleep() {
+  awake = false;
+  if (wake) { try { wake.release(); } catch (e) {} wake = null; }
+  if (sleepVid) sleepVid.pause();
+  $("fsBtn").classList.remove("on");
+}
+const isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 $("fsBtn").onclick = () => {
   const d = document.documentElement;
-  if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-  else if (d.requestFullscreen) d.requestFullscreen().catch(() => {}); else if (d.webkitRequestFullscreen) d.webkitRequestFullscreen();
-  keepAwake();
+  if (awake) {                                   // 2e appui : on sort (plein écran et écran allumé)
+    if (isFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    allowSleep();
+    return;
+  }
+  awake = true; $("fsBtn").classList.add("on");
+  keepAwake();                                   // dans le geste de l'utilisateur (exigé pour la vidéo)
+  if (d.requestFullscreen) d.requestFullscreen().catch(() => {}); else if (d.webkitRequestFullscreen) d.webkitRequestFullscreen();
 };
-let wake = null;
-async function keepAwake() { try { if ("wakeLock" in navigator && !wake) { wake = await navigator.wakeLock.request("screen"); wake.onrelease = () => wake = null; } } catch (e) {} }
+let wasFull = false;
+const onFs = () => { const f = isFull(); if (wasFull && !f) allowSleep(); wasFull = f; };
+document.addEventListener("fullscreenchange", onFs);
+document.addEventListener("webkitfullscreenchange", onFs);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
 
 // ---------------------------------------------------------------- données du morceau

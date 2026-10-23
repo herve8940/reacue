@@ -83,3 +83,50 @@ def test_vocals_word_highlight(words):
     ws = ln["words"]
     k = max(j for j, w in enumerate(ws) if w["t"] <= pos + 0.03)
     assert n_spans == len(ws) and now == [ws[k]["w"]] and done == k
+
+
+@pytest.mark.parametrize("secure_api", [False, True])
+def test_fullscreen_keeps_screen_on(secure_api):
+    """Bouton plein écran : écran gardé allumé (Wake Lock sur page sécurisée, sinon petite vidéo muette en
+    boucle, cas de REAPER en http) ; 2e appui : tout est relâché."""
+    import make_screenshots as M
+    try:
+        from playwright.sync_api import sync_playwright
+        M.FakeReaper.song, M.FakeReaper.pos = M.demo_song("fr"), 0.0
+        srv, base = M.serve()
+        errors = []
+        try:
+            with sync_playwright() as p:
+                browser = p.chromium.launch()
+                page = browser.new_page(viewport=M.PHONE)
+                page.on("pageerror", lambda e: errors.append(str(e)))
+                if secure_api:
+                    page.add_init_script("""window.__locks = 0; Object.defineProperty(navigator, 'wakeLock',
+                      { value: { request: async () => { window.__locks++; return { release() { window.__locks--; } }; } } });""")
+                else:   # comme en http sur le réseau local : pas de Wake Lock
+                    page.add_init_script("Object.defineProperty(window, 'isSecureContext', { value: false });")
+                page.goto(f"{base}/prompteur.html?role=vocals&lang=fr")
+                page.wait_for_function("document.getElementById('nowName').textContent !== '—'", timeout=8000)
+                page.click("#fsBtn")
+                page.wait_for_timeout(400)
+                on = page.evaluate("document.getElementById('fsBtn').classList.contains('on')")
+                vid = page.evaluate("(() => { const v = document.getElementById('noSleep'); return v ? !v.paused : null; })()")
+                locks = page.evaluate("window.__locks || 0")
+                page.click("#fsBtn")
+                page.wait_for_timeout(200)
+                off = page.evaluate("!document.getElementById('fsBtn').classList.contains('on')")
+                vid2 = page.evaluate("(() => { const v = document.getElementById('noSleep'); return v ? !v.paused : null; })()")
+                locks2 = page.evaluate("window.__locks || 0")
+                browser.close()
+        finally:
+            srv.shutdown()
+    except Exception as e:
+        if "Executable doesn't exist" in str(e):
+            pytest.skip("Chromium non installé")
+        raise
+    assert not errors, errors
+    assert on and off
+    if secure_api:
+        assert locks == 1 and locks2 == 0 and vid is None
+    else:
+        assert vid is True and vid2 is False
