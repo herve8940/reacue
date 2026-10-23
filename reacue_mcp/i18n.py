@@ -327,14 +327,14 @@ MSG = {
     # paroles automatiques (Whisper, composant optionnel) : brouillon « paroles (auto).txt »
     "lyrics_auto_running": ("Paroles automatiques (Whisper)… {s} s", "Automatic lyrics (Whisper)… {s} s"),
     "lyrics_auto_timeout": ("Whisper n'a pas répondu en {min} min", "Whisper did not answer within {min} min"),
-    "lyrics_auto_created": ("Paroles automatiques : brouillon « {name} » créé ({n} lignes, langue {lang}), à corriger.",
-                            "Automatic lyrics: draft “{name}” created ({n} lines, language {lang}), please correct it."),
+    "lyrics_auto_created": ("Paroles automatiques : brouillon « {name} » créé ({n} lignes, langue {code}), à corriger.",
+                            "Automatic lyrics: draft “{name}” created ({n} lines, language {code}), please correct it."),
     "lyrics_auto_empty": ("Paroles automatiques : aucun chant reconnu dans le stem voix.",
                           "Automatic lyrics: no singing recognised in the vocal stem."),
     "lyrics_auto_failed": ("Paroles automatiques impossibles : {e} → pas de paroles.",
                            "Automatic lyrics failed: {e} → no lyrics."),
-    "lyrics_auto_header1": ("Brouillon automatique (Whisper {model}, langue {lang}) : à corriger, à l'oreille.",
-                            "Automatic draft (Whisper {model}, language {lang}): please correct it by ear."),
+    "lyrics_auto_header1": ("Brouillon automatique (Whisper {model}, langue {code}) : à corriger, à l'oreille.",
+                            "Automatic draft (Whisper {model}, language {code}): please correct it by ear."),
     "lyrics_auto_header2": ("Corrige ce fichier sur place, ou renomme-le paroles.txt. Une ligne = une phrase "
                             "chantée, ligne vide = nouveau bloc ; les lignes « # » sont ignorées.",
                             "Correct this file in place, or rename it lyrics.txt. One line = one sung phrase, "

@@ -305,7 +305,7 @@ def block_gap(a) -> float:
 def format_draft(lines: list[dict], gap: float = 4.0, model: str = MODEL, lang: str = "?") -> str:
     """Texte du brouillon : commentaires « # » en tête, une ligne par phrase, ligne vide entre les blocs."""
     from .i18n import t
-    out = ["# " + t("lyrics_auto_header1", model=model, lang=lang), "# " + t("lyrics_auto_header2"), ""]
+    out = ["# " + t("lyrics_auto_header1", model=model, code=lang), "# " + t("lyrics_auto_header2"), ""]
     prev = None
     for ln in lines:
         if prev is not None and float(ln["t"]) - float(prev["end"]) > gap:
@@ -505,7 +505,7 @@ def ensure_auto_lyrics(a, items: list[dict] | None, files: list[str] | None = No
         if p is None:                                    # créé entre-temps : on garde celui-là
             p = folder / AUTO_NAME
         LAST_INFO.update({"state": "created", "file": str(p), **info,
-                          "message": t("lyrics_auto_created", name=AUTO_NAME, n=info["lines"], lang=info["lang"])})
+                          "message": t("lyrics_auto_created", name=AUTO_NAME, n=info["lines"], code=info["lang"])})
         return p
     except Exception as e:                               # noqa: BLE001 - pas de paroles, comme avant
         LAST_INFO.update({"state": "error", "error": str(e), "message": t("lyrics_auto_failed", e=e)})

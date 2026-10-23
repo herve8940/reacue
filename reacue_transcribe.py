@@ -221,8 +221,11 @@ def load(name: str = DEFAULT_MODEL, root: Path | None = None, device: str | None
         model = whisper.load_model(name, device=device, download_root=str(root))   # contrôle SHA-256
     else:
         model = whisper.load_model(str(p), device=device)
-        if name in getattr(whisper, "_ALIGNMENT_HEADS", {}):
-            model.set_alignment_heads(whisper._ALIGNMENT_HEADS[name])
+        if name in getattr(whisper, "_ALIGNMENT_HEADS", {}):   # têtes d'alignement officielles (mots)
+            try:
+                model.set_alignment_heads(whisper._ALIGNMENT_HEADS[name])
+            except RuntimeError:                      # dimensions différentes : têtes par défaut
+                pass
     model.eval()
     return model
 
