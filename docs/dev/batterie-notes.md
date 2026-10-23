@@ -24,5 +24,19 @@ Classes manquantes d'ADTOF complétées par le signal (déjà dans drums.py) :
   maison ; quantification sur la grille, sous-classes par le signal, puis `_cymbal_lanes` / `group`
   réutilisés => même format.
 
+## Validation ici (conteneur Linux, 2 cœurs, torch 2.2.2 CPU depuis PyPI, vrai modèle cloné de GitHub)
+- `reacue_drums.py check` : BD / SD / HH 100 % sur la batterie synthétique ; inférence ~2,6 s pour 33 s
+  d'audio (=> ~20 s pour 4 min, + ~5 s de chargement ; 1er appel plus lent : compilation numba de librosa).
+- Bout en bout (tests/drum_synth.demo_score, 20 mesures, intro/couplet/refrain, charley ouvert, ride,
+  crash, fills de toms) : règles 194/260 coups exacts (voie + pas), **ADTOF 245/260** ; ratés = toms
+  synthétiques (sinusoïdes) que le modèle prend pour du charley — artefact probable du son de synthèse.
+- Shuffle 100 BPM (triolets) : règles 60/156 (grille 16), **ADTOF 156/156 en grille 12** (une grosse caisse
+  en trop par mesure : double déclenchement sur le kick synthétique long).
+
 ## Avancement
-- [ ] module + script + installeurs + tests
+- [x] lanceur reacue_drums.py, moteur dans drums.py (quantification, triolets, sous-classes, repli, cache)
+- [x] voie HO dans le prompteur, installeurs Mac/Windows, requirements-drums.txt, docs, licences
+- [x] tests/test_drums_model.py (faux ADTOF + faux torch), tools/compare_drums.py
+- [ ] non fait : purge de .venv-drums/drums par reacue_setup.py --purge (le dossier d'installation reste),
+      pastille « Batterie » / réglage dans l'onglet Réglages Lua (réglage via reacue_settings.json seulement),
+      avertissement de repli remonté à l'interface (il est dans le JSON : clé « warning » ; server.py non modifié).
