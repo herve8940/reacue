@@ -1,5 +1,23 @@
 # Changelog
 
+## Non publié / Unreleased
+
+### Paroles mot par mot / Word-by-word lyrics (optional component)
+- New optional component `.venv-words` (`Install ReaCue Words.command` / `.bat`, `install/install_words_*`,
+  `requirements-words.txt`, `reacue_words.py`): forced alignment of the known lyrics on the vocal stem
+  (`torchaudio.functional.forced_align`, wav2vec2 XLSR-53 fine-tuned in French / English by J. Grosman,
+  Apache-2.0; same PyTorch versions as Demucs, no `transformers`). / Nouveau composant facultatif : chaque mot
+  est placé à son vrai moment, à l'intérieur des lignes déjà calées (le calage par ligne reste l'ancrage et
+  le repli).
+- Lyrics entries get an optional `words: [{"w", "t", "end"}]` field (file time, converted to the REAPER
+  timeline by `prompter.lyrics_on_timeline`); existing formats unchanged. Separate cache
+  (`<cache>_words.json`); any failure keeps the line timing.
+- Prompter (Vocals): the current word is highlighted, sung words are dimmed. / Prompteur : mot en cours
+  surligné. PDF chart: each word goes in the bar where it is sung. / Grille PDF : vrais temps des mots.
+- Settings `words_engine` (`auto` | `off`) and `words_language` (`auto` | `fr` | `en`, auto = guessed from
+  the lyrics text).
+- `tools/compare_words.py`: before / after on the last prepared song, never prints the lyrics.
+
 ## 1.0.1 — 2026-10-22 — docs : captures mises à jour / updated screenshots
 
 Documentation: every screenshot regenerated with the current code, in French **and** English, with made-up

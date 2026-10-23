@@ -40,6 +40,7 @@ without the rights holders' permission. The rest of ReaCue is not affected.
 | **SongFormer** (`SongFormer.safetensors`) | Analyse de structure (facultatif) / structure analysis (optional) | [ASLP-lab/SongFormer](https://github.com/ASLP-lab/SongFormer), [HF ASLP-lab/SongFormer](https://huggingface.co/ASLP-lab/SongFormer) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (attribution obligatoire / attribution required) | Page HF : badge CC BY 4.0, pas d'étiquette de licence formelle / HF page: CC BY 4.0 badge, no formal licence tag |
 | **MuQ** `OpenMuQ/MuQ-large-msd-iter` | Dépendance de SongFormer / SongFormer dependency | [tencent-ailab/MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab), [HF OpenMuQ/MuQ-large-msd-iter](https://huggingface.co/OpenMuQ/MuQ-large-msd-iter) | MIT | **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — non commercial** (fichier `LICENSE_weights` du dépôt et étiquette HF / `LICENSE_weights` file and HF tag) |
 | **MusicFM** MSD (`pretrained_msd.pt`, `msd_stats.json`) | Dépendance de SongFormer / SongFormer dependency | [minzwon/musicfm](https://github.com/minzwon/musicfm) (Minz Won, Yun-Ning Hung, Duc Le — ByteDance), [HF minzwon/MusicFM](https://huggingface.co/minzwon/MusicFM) | MIT (+ Apache-2.0 pour `modules/flash_conformer.py`) | **Incertaine / uncertain** : le dépôt HF est étiqueté MIT mais n'a pas de carte et rien n'est dit sur `pretrained_msd.pt` ; ce modèle est entraîné sur le Million Song Dataset, et le README des auteurs ne publie volontairement que le modèle FMA « pour éviter des complications de licence ». / The HF repo is tagged MIT but has no model card and says nothing about `pretrained_msd.pt`; this checkpoint is trained on the Million Song Dataset, and the authors' README says they chose to release the FMA model “to avoid potential licensing complications”. |
+| **wav2vec2 XLSR-53 français / anglais** `jonatasgrosman/wav2vec2-large-xlsr-53-french`, `jonatasgrosman/wav2vec2-large-xlsr-53-english` | Paroles calées mot par mot (facultatif) / word-by-word lyrics timing (optional) | [HF jonatasgrosman/wav2vec2-large-xlsr-53-french](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-french), [HF jonatasgrosman/wav2vec2-large-xlsr-53-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english) (Jonatas Grosman), affinés à partir de / fine-tuned from [facebook/wav2vec2-large-xlsr-53](https://huggingface.co/facebook/wav2vec2-large-xlsr-53) (Meta AI) sur / on Common Voice (CC0) | — (pas de code : ReaCue lit les poids avec PyTorch / torchaudio ; no code: ReaCue reads the weights with PyTorch / torchaudio) | Apache-2.0 (étiquette des pages HF des modèles et du modèle de base / tag of the model pages and of the base model; à revérifier sur ces pages, non consultables depuis l'environnement de développement le 23 octobre 2026 / to be re-checked on those pages, not reachable from the development environment on 23 October 2026) |
 | Configuration `facebook/wav2vec2-conformer-rope-large-960h-ft` | Configuration lue par MusicFM (pas de poids) / config read by MusicFM (no weights) | [Hugging Face](https://huggingface.co/facebook/wav2vec2-conformer-rope-large-960h-ft) (Meta) | — | Apache-2.0 (étiquette HF / HF tag) |
 
 ## Code source téléchargé par l'installateur / Source code fetched by the installer
@@ -49,7 +50,7 @@ MusicFM (MIT / Apache-2.0) — téléchargés dans `structure/`, jamais redistri
 
 ## Paquets Python / Python packages
 
-Installés par l'installateur depuis PyPI dans `.venv`, `.venv-demucs` ou `.venv-structure` ; jamais
+Installés par l'installateur depuis PyPI dans `.venv`, `.venv-demucs`, `.venv-structure` ou `.venv-words` ; jamais
 redistribués par ce dépôt. Licences relevées sur PyPI le 22/10/2026. / Installed from PyPI by the
 installer; never redistributed by this repository.
 
@@ -61,14 +62,14 @@ installer; never redistributed by this repository.
 | numpy | tous / all | BSD-3-Clause (+ 0BSD, MIT, Zlib, CC0-1.0 pour des parties incluses / for bundled parts) |
 | scipy | tous / all | BSD |
 | demucs | `.venv-demucs` | MIT |
-| torch | `.venv-demucs`, `.venv-structure` | BSD-3-Clause (+ Apache-2.0 / LLVM exception et autres pour des parties incluses / for bundled parts) |
-| torchaudio, torchvision | `.venv-demucs`, `.venv-structure` | BSD |
+| torch | `.venv-demucs`, `.venv-structure`, `.venv-words` | BSD-3-Clause (+ Apache-2.0 / LLVM exception et autres pour des parties incluses / for bundled parts) |
+| torchaudio, torchvision | `.venv-demucs`, `.venv-structure`, `.venv-words` (torchaudio) | BSD |
 | numba, llvmlite | `.venv`, `.venv-structure` | BSD (llvmlite : BSD-2-Clause + Apache-2.0 with LLVM exception) |
 | omegaconf | `.venv-structure` | BSD |
 | hydra-core | `.venv-structure` | MIT |
 | einops | `.venv-structure` | MIT |
 | x-transformers, x-clip, ema-pytorch | `.venv-structure` | MIT |
-| transformers, safetensors, huggingface-hub | `.venv-structure` | Apache-2.0 |
+| transformers, safetensors, huggingface-hub | `.venv-structure` ; `.venv-words` (safetensors, huggingface-hub) | Apache-2.0 |
 | nnAudio | `.venv-structure` | MIT |
 | easydict | `.venv-structure` | **LGPL-3.0** (bibliothèque utilisée telle quelle, non modifiée, non redistribuée / used unmodified, not redistributed) |
 | pandas | `.venv-structure` | BSD 3-Clause |
@@ -99,5 +100,9 @@ dependencies follow their own licences (see PyPI).
   Vector Quantization*, arXiv:2501.01108, 2025. https://arxiv.org/abs/2501.01108
 - Minz Won, Yun-Ning Hung, Duc Le, *A Foundation Model for Music Informatics*, arXiv:2311.03318, 2023.
   https://arxiv.org/abs/2311.03318
+- Alexis Conneau, Alexei Baevski, Ronan Collobert, Abdelrahman Mohamed, Michael Auli (Meta AI), *Unsupervised
+  Cross-lingual Representation Learning for Speech Recognition* (XLSR-53), arXiv:2006.13979, 2020.
+  https://arxiv.org/abs/2006.13979 — modèles affinés / fine-tuned models : Jonatas Grosman, *Fine-tuned XLSR-53 large
+  model for speech recognition in French / English*, Hugging Face, 2021.
 - Simon Rouard, Francisco Massa, Alexandre Défossez, *Hybrid Transformers for Music Source Separation*,
   ICASSP 2023, arXiv:2211.08553. https://arxiv.org/abs/2211.08553

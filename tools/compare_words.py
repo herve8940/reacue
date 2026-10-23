@@ -82,11 +82,17 @@ def main(argv=None) -> int:
     if args.lang:
         os.environ["REACUE_WORDS_LANG"] = args.lang
 
-    # AVANT : calage par ligne seul (cache des lignes de ReaCue réutilisé s'il est à jour)
+    # AVANT : calage par ligne seul (recalculé dans un cache temporaire, comme ReaCue le ferait)
+    old = os.environ.get("REACUE_WORDS_ENGINE")
     os.environ["REACUE_WORDS_ENGINE"] = "off"
-    with tempfile.TemporaryDirectory(prefix="reacue_cmp_") as tmp:
-        before = LY.cached_lyrics(a, items, cache=Path(tmp) / "lines.json", path=path) or []
-    os.environ.pop("REACUE_WORDS_ENGINE", None)
+    try:
+        with tempfile.TemporaryDirectory(prefix="reacue_cmp_") as tmp:
+            before = LY.cached_lyrics(a, items, cache=Path(tmp) / "lines.json", path=path) or []
+    finally:
+        if old is None:
+            os.environ.pop("REACUE_WORDS_ENGINE", None)
+        else:
+            os.environ["REACUE_WORDS_ENGINE"] = old
     if not before:
         print("Aucune ligne calée.")
         return 1

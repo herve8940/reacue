@@ -544,6 +544,30 @@ seulement des numéros de ligne et des positions sur la grille :
 
 Clique ensuite *Mettre à jour les téléphones* (onglet Morceau).
 
+### Paroles mot par mot (facultatif)
+
+Par défaut, ReaCue sait où commence et finit chaque **ligne**, pas chaque mot : la grille PDF répartit les
+mots régulièrement dans la ligne. Le composant facultatif **paroles mot par mot** place chaque mot à son vrai
+moment par *alignement forcé* du texte connu sur le stem voix, avec un modèle de reconnaissance de la parole
+(wav2vec2 XLSR-53 affiné en **français** ou en **anglais**, licence Apache-2.0), sur ton ordinateur.
+Le calage par ligne reste l'ancrage (reprises, chœurs, lignes non chantées, ancres de `paroles_calage.json`) :
+les mots sont cherchés **à l'intérieur** de chaque ligne ; une ligne mal reconnue garde le calage par ligne.
+
+- **Installer** : double-clic sur `Install ReaCue Words.command` (Mac) ou `Install ReaCue Words.bat`
+  (Windows), ou `bash install/install_words_mac.sh`. Environnement séparé `.venv-words` (mêmes versions de
+  PyTorch que la séparation de stems : rien à retélécharger si elle est installée, sinon ≈ 1 Go), puis les
+  deux modèles (≈ 1,3 Go chacun) ; à la fin : `WORDS_OK` et la vitesse de ton ordinateur. Une seule langue :
+  `REACUE_WORDS_LANGS=fr bash install/install_words_mac.sh`.
+- **Utilisation** : automatique à la prochaine publication du prompteur (*Mettre à jour les téléphones*,
+  *Analyser et préparer*). La langue est déduite du texte des paroles (réglage `words_language` pour la
+  forcer). Compte environ 1 à 3 minutes par morceau sur un Mac Intel (une seule fois : résultat mémorisé).
+- **Résultat** : sur le prompteur (rôle Chant), le mot en cours est surligné et les mots déjà chantés sont
+  estompés ; dans la grille PDF, chaque mot va dans la mesure où il est vraiment chanté.
+- **Comparer** : `.venv/bin/python tools/compare_words.py` (dernier morceau préparé) affiche, ligne par
+  ligne, les positions avant / après sans jamais afficher le texte ; `--clicks controle.wav` écrit la voix
+  avec un clic à chaque début de mot, pour vérifier à l'oreille.
+- **Désactiver** : réglage `words_engine` = `"off"`.
+
 ## Réglages
 
 Le plus simple : l'onglet **Réglages** de la fenêtre ReaCue (écrit tout de suite, les autres clés du fichier
@@ -568,6 +592,8 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `tempo_mode` | `"auto"` | `auto`, `constant` (un seul tempo) ou `beatmap` (un tempo par mesure) |
 | `stems_model` | `"htdemucs_6s"` | modèle de séparation de stems : `"htdemucs_6s"` (6 stems) ou `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections : `"auto"` (SongFormer s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
+| `words_engine` | `"auto"` | paroles : `"auto"` (mot par mot si le composant est installé) ou `"off"` (lignes seulement) |
+| `words_language` | `"auto"` | langue chantée pour le calage mot par mot : `"auto"` (déduite du texte), `"fr"` ou `"en"` |
 | `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
 
@@ -750,6 +776,9 @@ Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : 
   un service commercial sans l'accord des ayants droit. Le reste de ReaCue (y compris la séparation de stems
   avec Demucs, MIT) n'est pas concerné ; tu peux toujours utiliser ReaCue sans lui (réglage *Détection de
   structure : ReaCue seul*).
+- **Paroles mot par mot (facultatif)** : modèles wav2vec2 XLSR-53 de Jonatas Grosman (Apache-2.0, à partir
+  du modèle XLSR-53 de Meta, Apache-2.0), téléchargés depuis Hugging Face par l'installateur ; pas de
+  restriction non commerciale.
 - **Ta musique :** tu es seul responsable des droits sur l'audio, les stems et les paroles que tu traites
   avec ReaCue. ReaCue ne fournit **ni audio ni paroles**, et ne télécharge jamais de paroles.
 - **Marques :** REAPER est une marque de Cockos Incorporated ; Claude est une marque d'Anthropic ; les autres
@@ -771,6 +800,12 @@ Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), qui utilise
 CC BY-NC 4.0, non commerciaux**) et [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
 ByteDance ; code MIT ; la licence de son modèle MSD n'est pas indiquée par ses auteurs). Téléchargés par
 l'installateur à des versions figées, jamais inclus dans ce dépôt.
+
+Paroles mot par mot (facultatif) : alignement forcé avec `torchaudio.functional.forced_align` et les modèles
+[wav2vec2-large-xlsr-53-french](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-french) /
+[-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english) de Jonatas Grosman
+(Apache-2.0), affinés à partir de XLSR-53 (Meta AI, Apache-2.0 ; [arXiv:2006.13979](https://arxiv.org/abs/2006.13979)).
+Téléchargés par l'installateur, jamais inclus dans ce dépôt.
 
 QR codes par [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach et contributeurs,
 licence BSD 3 clauses ; l'en-tête de licence est conservé dans `reaper/ReaCue_qrcode.lua`).

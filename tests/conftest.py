@@ -16,6 +16,8 @@ _RES = Path(tempfile.mkdtemp(prefix="reacue_res_"))
 os.environ["REAPER_RESOURCE_PATH"] = str(_RES)
 # jamais le vrai SongFormer pendant les tests (même s'il est installé à côté du dépôt)
 os.environ["REACUE_STRUCTURE_ENGINE"] = "reacue"
+# ni le vrai calage mot par mot (tests/test_words.py simule le moteur)
+os.environ["REACUE_WORDS_ENGINE"] = "off"
 
 import pytest  # noqa: E402
 

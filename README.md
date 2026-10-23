@@ -520,6 +520,22 @@ positions on the bar grid:
 
 Then click *Update the phones* (Song tab).
 
+### Word-by-word lyrics (optional)
+
+By default ReaCue knows where each **line** starts and ends, not each word. The optional **word-by-word
+lyrics** component places every word at its real time by *forced alignment* of the known text on the vocal
+stem, with a speech model (wav2vec2 XLSR-53 fine-tuned in **French** or **English**, Apache-2.0), on your
+computer. Line timing stays the anchor (repeats, backing vocals, unsung lines, `lyrics_timing.json` anchors):
+words are searched **inside** each line; a poorly recognised line keeps its line timing.
+
+- **Install**: double-click `Install ReaCue Words.command` (Mac) or `Install ReaCue Words.bat` (Windows).
+  Separate `.venv-words` environment (same PyTorch versions as stem separation), then the two models
+  (≈ 1.3 GB each; one language only: `REACUE_WORDS_LANGS=en bash install/install_words_mac.sh`).
+- **Use**: automatic at the next prompter update; the language is guessed from the lyrics text
+  (`words_language` setting to force it). About 1–3 minutes per song on an Intel Mac, once (cached).
+- **Result**: on the prompter (Vocals role) the current word is highlighted; in the PDF chart each word goes
+  in the bar where it is sung. `tools/compare_words.py` shows before / after without ever printing the lyrics.
+
 ## Settings
 
 Easiest: the **Settings** tab of the ReaCue window (written at once, other keys of the file kept).
@@ -544,6 +560,8 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `tempo_mode` | `"auto"` | `auto`, `constant` (one tempo) or `beatmap` (one tempo per bar) |
 | `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems) or `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
+| `words_engine` | `"auto"` | lyrics: `"auto"` (word by word when the component is installed) or `"off"` (lines only) |
+| `words_language` | `"auto"` | sung language for word timing: `"auto"` (guessed from the text), `"fr"` or `"en"` |
 | `projects_dir` | `null` | concert mode: folder searched for song projects by name; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | concert mode: folder of the concerts; `null` = `<projects folder>/Concerts` |
 
@@ -715,6 +733,8 @@ Project layout:
   by its authors. Do not use this optional component for a commercial product or service without the
   rights holders' permission. The rest of ReaCue (including stem separation with Demucs, MIT) is not
   affected; you can always use ReaCue without it (setting *Structure detection: ReaCue only*).
+- **Word-by-word lyrics (optional)**: J. Grosman's wav2vec2 XLSR-53 models (Apache-2.0, from Meta's
+  XLSR-53, Apache-2.0), downloaded from Hugging Face by the installer; no non-commercial restriction.
 - **Your music:** you alone are responsible for having the rights to the audio, stems and lyrics you
   process with ReaCue. ReaCue provides **no audio and no lyrics**, and never downloads lyrics.
 - **Trademarks:** REAPER is a trademark of Cockos Incorporated; Claude is a trademark of Anthropic; other
