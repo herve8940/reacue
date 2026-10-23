@@ -13,6 +13,11 @@ Méthode (librosa / numpy / scipy uniquement, quelques secondes) :
      1 et 3 ; le 4e temps, souvent anticipé, compte moins) ; a posteriori = confiance ;
   5. regroupement : un accord par mesure, deux si la seconde moitié change franchement (confirmé
      sur le temps 3, pas une simple note de passage), « N.C. » quand rien d'harmonique ne joue.
+
+Modèle entraîné (facultatif, chord_model.py + reacue_chords.py dans .venv-chords) : s'il est installé,
+cached_chords l'utilise d'abord (stems sans voix ni batterie, décodage calé sur les temps de ReaCue),
+puis chords_from_segments cale ses accords sur les mesures (même format de sortie) ; la méthode
+ci-dessus reste le repli automatique.
 """
 from __future__ import annotations
 
@@ -562,36 +567,239 @@ def detect_chords(a: Analysis, items: list[dict] | None = None, key: dict | str 
     return out
 
 
-def chords_cache_key(a: Analysis, items: list[dict] | None, key=None) -> str:
-    """Clé de cache : fichiers + décalages + grille + tonalité + version de l'algorithme."""
+# --------------------------------------------------------------------------- #
+# Accords du modèle entraîné (chord_model) -> grille par mesure
+# --------------------------------------------------------------------------- #
+# qualité Harte -> suffixe affiché (vocabulaire complet)
+HARTE_SUFFIX = {
+    "maj": "", "min": "m", "dim": "dim", "aug": "aug", "5": "5", "1": "",
+    "7": "7", "maj7": "maj7", "min7": "m7", "hdim7": "m7b5", "dim7": "dim7", "minmaj7": "m(maj7)",
+    "maj6": "6", "min6": "m6", "9": "9", "maj9": "maj9", "min9": "m9", "11": "11", "13": "13",
+    "sus2": "sus2", "sus4": "sus4", "sus4(b7)": "7sus4", "sus4(b7,9)": "9sus4", "7(#9)": "7#9",
+    "maj(9)": "add9", "maj(*3)": "5",
+}
+# simplification « lisible en live » : les 9e, 11e et 13e se jouent comme la 7e correspondante
+SIMPLE_SUFFIX = {"9": "7", "maj9": "maj7", "m9": "m7", "11": "7sus4", "13": "7", "9sus4": "7sus4",
+                 "7#9": "7", "add9": "", "m(maj7)": "m"}
+# degré de la basse (renversement) -> demi-tons au-dessus de la fondamentale
+DEGREE = {"1": 0, "b2": 1, "2": 2, "b3": 3, "3": 4, "4": 5, "#4": 6, "b5": 6, "5": 7, "#5": 8, "b6": 8,
+          "6": 9, "bb7": 9, "b7": 10, "7": 11, "9": 2, "b9": 1}
+_PC = {n: i for i, n in enumerate(SHARPS)} | {n: i for i, n in enumerate(FLATS)} | {"Cb": 11, "Fb": 4, "E#": 5,
+                                                                                  "B#": 0}
+
+
+def parse_harte(label: str) -> tuple[int, str, int] | None:
+    """« A:min/b3 » -> (fondamentale 9, qualité "min", basse 0) ; « N » / « X » -> None."""
+    s = str(label or "").strip()
+    if not s or s in ("N", "X") or ":" not in s and s[:1] not in "ABCDEFG":
+        return None
+    root, _, rest = s.partition(":")
+    rest = rest or "maj"
+    q, _, inv = rest.partition("/")
+    if root not in _PC:
+        return None
+    r = _PC[root]
+    bass = (r + DEGREE.get(inv, 0)) % 12 if inv else r
+    return r, q or "maj", bass
+
+
+def _suffix(q: str, simple: bool) -> str:
+    suf = HARTE_SUFFIX.get(q)
+    if suf is None:                     # qualité hors dictionnaire : couleur de la tierce
+        suf = "m" if q.startswith("min") else "dim" if q.startswith("dim") else ""
+    if simple:
+        suf = SIMPLE_SUFFIX.get(suf, suf)
+    return suf
+
+
+def _tones(r: int, q: str) -> list[int]:
+    base = {"min": (0, 3, 7), "dim": (0, 3, 6), "aug": (0, 4, 8), "sus2": (0, 2, 7), "sus4": (0, 5, 7),
+            "hdim7": (0, 3, 6, 10), "dim7": (0, 3, 6, 9), "min7": (0, 3, 7, 10), "maj7": (0, 4, 7, 11),
+            "7": (0, 4, 7, 10), "min9": (0, 3, 7, 10, 2), "9": (0, 4, 7, 10, 2), "maj9": (0, 4, 7, 11, 2)}
+    iv = base.get(q) or ((0, 3, 7) if q.startswith("min") else (0, 4, 7))
+    return [(r + i) % 12 for i in iv]
+
+
+def speller(kp: tuple[int, bool]):
+    """Nom des notes selon la tonalité : notes de la gamme avec les altérations de la tonalité ; hors
+    gamme, bémol pour les emprunts (bII, bIII, bVI, bVII en majeur) et dièse pour les notes « montantes »
+    (#IV, sensible et 6te majeure du mineur, tierce du IV majeur emprunté en mineur…)."""
+    tonic, minor = kp
+    flats = _use_flats(tonic, minor)
+    scale = {(tonic + d) % 12 for d in ((0, 2, 3, 5, 7, 8, 10) if minor else (0, 2, 4, 5, 7, 9, 11))}
+    up = {(tonic + d) % 12 for d in ((1, 4, 6, 9, 11) if minor else (6,))}
+    if minor:
+        up.discard((tonic + 1) % 12)     # bII (napolitain) : bémol
+
+    def name(pc: int) -> str:
+        pc %= 12
+        if pc in scale:
+            return (FLATS if flats else SHARPS)[pc]
+        return (SHARPS if pc in up else FLATS)[pc]
+    return name
+
+
+def _segments_key(segs: list[tuple]) -> tuple[int, bool]:
+    """Tonalité estimée sur les accords du modèle (notes des accords pondérées par la durée, basse double)."""
+    ch, bs = np.zeros((1, 12)), np.zeros((1, 12))
+    for st, en, p, _ in segs:
+        if p is None:
+            continue
+        d = en - st
+        for pc in _tones(p[0], p[1]):
+            ch[0, pc] += d
+        bs[0, p[2]] += d
+    if ch.sum() <= 0:
+        return 0, False
+    return _estimate_key(ch, bs)
+
+
+def chords_from_segments(a: Analysis, segments: list[dict], key: dict | str | None = None,
+                         simple: bool = True, min_conf2: float = 0.35) -> list[dict]:
+    """Segments du modèle [{start, end, label (Harte), confidence}] (temps du stem de référence) ->
+    grille par mesure, même format que detect_chords : [{"bar", "chords": [{"beat", "chord", "bass",
+    "confidence"}]}] ; au plus deux accords par mesure (temps 1 et temps du milieu en mesure paire).
+
+    Chaque demi-mesure prend l'accord qui y dure le plus longtemps ; le 2e accord n'est gardé que s'il
+    diffère du 1er, occupe plus de la moitié de sa demi-mesure et que sa confiance >= min_conf2.
+    simple : 9e / 11e / 13e affichées comme la 7e correspondante (C9 -> C7, Cmaj9 -> Cmaj7…)."""
+    segs = []
+    for s in segments or []:
+        try:
+            st, en = float(s["start"]), float(s["end"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if en > st:
+            segs.append((st, en, parse_harte(s.get("label")), float(s.get("confidence", 0.5) or 0.0)))
+    segs.sort(key=lambda x: x[0])
+    kp = parse_key(key) or _segments_key(segs)
+    spell = speller(kp)
+    m = max(1, int(a.beats_per_bar))
+    half = m // 2 if m % 2 == 0 and m >= 4 else None
+    db = [float(x) for x in a.downbeats]
+    starts = np.array([s[0] for s in segs]) if segs else np.zeros(0)
+
+    def tally(t0: float, t1: float) -> dict:
+        """{étiquette: [durée, confiance × durée]} sur [t0, t1)."""
+        out = {}
+        i = max(0, int(np.searchsorted(starts, t0, side="right")) - 1)
+        while i < len(segs) and segs[i][0] < t1:
+            st, en, p, c = segs[i]
+            ov = min(en, t1) - max(st, t0)
+            if ov > 0:
+                lab = None if p is None else (p[0], _suffix(p[1], simple), p[2])
+                e = out.setdefault(lab, [0.0, 0.0])
+                e[0] += ov
+                e[1] += c * ov
+            i += 1
+        return out
+
+    def best(tl: dict):
+        if not tl:
+            return None, 0.0, 0.0
+        lab, (d, cd) = max(tl.items(), key=lambda kv: kv[1][0])
+        return lab, d, cd / d if d > 0 else 0.0
+
+    def entry(beat: int, lab, conf: float) -> dict:
+        if lab is None:
+            return {"beat": beat, "chord": NC, "bass": None, "confidence": round(min(1.0, conf), 2)}
+        r, suf, b = lab
+        name = spell(r) + suf
+        if b != r:
+            name += "/" + spell(b)
+        return {"beat": beat, "chord": name, "bass": spell(b), "confidence": round(min(1.0, conf), 2)}
+
+    out = []
+    for k in range(len(db) - 1):
+        t0, t1 = db[k], db[k + 1]
+        if not half:
+            lab, d, c = best(tally(t0, t1))
+            out.append({"bar": k + 1, "chords": [entry(1, lab, c if d > 0 else 0.0)]})
+            continue
+        tm = t0 + (t1 - t0) * half / m
+        l1, d1, c1 = best(tally(t0, tm))
+        l2, d2, c2 = best(tally(tm, t1))
+        whole, dw, cw = best(tally(t0, t1))
+        if l1 != l2 and d2 > 0.5 * (t1 - tm) and d1 > 0 and c2 >= min_conf2:
+            chords = [entry(1, l1, c1), entry(half + 1, l2, c2)]
+        else:
+            chords = [entry(1, whole, cw if dw > 0 else 0.0)]
+        out.append({"bar": k + 1, "chords": chords})
+    return out
+
+
+def model_chords(a: Analysis, items: list[dict] | None = None, key=None, simple: bool = True,
+                 install_dir=None) -> tuple[list[dict], dict]:
+    """Grille d'accords par le modèle entraîné (chord_model) ; lève une exception en cas d'échec."""
+    from . import chord_model
+    segs, info = chord_model.model_segments(a, _sources(a, items), install_dir)
+    grid = chords_from_segments(a, segs, key, simple)
+    if not grid:
+        raise RuntimeError("empty")
+    from .i18n import t
+    return grid, {**info, "message": t("chords_model_used")}
+
+
+def chords_cache_key(a: Analysis, items: list[dict] | None, key=None, engine: str = "reacue") -> str:
+    """Clé de cache : fichiers + décalages + grille + tonalité + version de l'algorithme + moteur."""
     import hashlib
     import json
     srcs = _sources(a, items)
     k = parse_key(key)
-    return hashlib.md5(json.dumps([[s[1] for s in srcs], [round(s[2], 4) for s in srcs],
-                                   [round(float(x), 4) for x in a.downbeats], a.beats_per_bar,
-                                   list(k) if k else None, VERSION]).encode()).hexdigest()
+    parts = [[s[1] for s in srcs], [round(s[2], 4) for s in srcs],
+             [round(float(x), 4) for x in a.downbeats], a.beats_per_bar, list(k) if k else None, VERSION]
+    if engine != "reacue":              # détection de ReaCue : clé inchangée (caches existants valables)
+        from . import chord_model
+        parts += [engine, chord_model.MODEL_REV, chord_model.CACHE_VERSION, chord_model.audio_key(
+            chord_model.harmonic_sources(srcs))]
+    return hashlib.md5(json.dumps(parts).encode()).hexdigest()
 
 
 def cached_chords(a: Analysis, items: list[dict] | None, key=None, cache=None) -> list[dict]:
-    """detect_chords avec cache disque (un seul morceau mémorisé, comme stem_activity)."""
+    """Grille d'accords avec cache disque (un seul morceau mémorisé, comme stem_activity).
+
+    Moteur : le modèle entraîné (chord_model, composant facultatif) s'il est installé et que le réglage
+    `chords_engine` vaut "auto" ; sinon, ou en cas d'échec, la détection de ReaCue (detect_chords).
+    chord_model.LAST décrit le moteur utilisé (et l'erreur éventuelle)."""
     import json
+    import sys
     from pathlib import Path
+    from . import chord_model
     if cache is None:
         from .bridge import BRIDGE_DIR
         cache = BRIDGE_DIR / "prompter_chords.json"
     cache = Path(cache)
-    ck = chords_cache_key(a, items, key)
     try:
         c = json.loads(cache.read_text(encoding="utf-8"))
-        if c.get("key") == ck:
-            return c["chords"]
     except Exception:
-        pass
+        c = {}
+
+    def save(ck, res):
+        try:
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text(json.dumps({"key": ck, "chords": res}), encoding="utf-8")
+        except OSError:
+            pass
+    info = {"engine": "reacue"}
+    if chord_model.wanted():
+        ck = chords_cache_key(a, items, key, chord_model.ENGINE)
+        if c.get("key") == ck:
+            chord_model.LAST = {"engine": chord_model.ENGINE, "cached": True}
+            return c["chords"]
+        try:
+            res, info = model_chords(a, items, key)
+            chord_model.LAST = info
+            save(ck, res)
+            return res
+        except Exception as e:          # noqa: BLE001 - la détection de ReaCue prend le relais
+            from .i18n import t
+            info = {"engine": "reacue", "fallback": True, "error": str(e), "message": t("chords_model_failed", e=e)}
+            print(info["message"], file=sys.stderr)
+    ck = chords_cache_key(a, items, key)
+    if c.get("key") == ck:
+        chord_model.LAST = {**info, "cached": True}
+        return c["chords"]
     res = detect_chords(a, items, key)
-    try:
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        cache.write_text(json.dumps({"key": ck, "chords": res}), encoding="utf-8")
-    except OSError:
-        pass
+    chord_model.LAST = info
+    save(ck, res)
     return res

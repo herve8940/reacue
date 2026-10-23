@@ -304,6 +304,14 @@ MSG = {
     "sheet_footer": ("Grille ReaCue : accords et paroles détectés automatiquement, à vérifier.",
                      "ReaCue chart: chords and lyrics detected automatically, please check."),
     "sheet_failed": ("Grille PDF non créée : {e}", "PDF chart not created: {e}"),
+    # accords : modèle entraîné (Jiang et al. 2019, composant optionnel)
+    "chords_model_running": ("Accords (modèle)… {s} s", "Chords (model)… {s} s"),
+    "chords_model_timeout": ("le modèle d'accords n'a pas répondu en {min} min",
+                             "the chord model did not answer within {min} min"),
+    "chords_model_failed": ("Modèle d'accords indisponible : {e} → détection d'accords de ReaCue utilisée.",
+                            "Chord model unavailable: {e} → ReaCue's chord detection used."),
+    "chords_model_used": ("Accords reconnus par le modèle (Jiang et al. 2019), calés sur la grille de ReaCue.",
+                          "Chords recognised by the model (Jiang et al. 2019), aligned on ReaCue's grid."),
     "structure_failed": ("Analyse SongFormer impossible : {e} → structure ReaCue utilisée.",
                          "SongFormer analysis failed: {e} → ReaCue structure used."),
 }
