@@ -812,3 +812,27 @@ def test_published_pills_match_stem_titles(concert, tmp_path, title, ok):
     want = ("Accords ✓", "Batterie ✓", "Prompteur publié ✓") if ok else ("Accords —", "Batterie —", "Prompteur —")
     for p in want:
         assert p in T, (title, p, T)
+
+
+def test_sheet_pill_opens_pdf_or_publishes(concert, tmp_path):
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path, structure=True)
+    www = Path(g.RES) / "reaper_www_root" / "reacue_song.json"
+    www.write_text(json.dumps({"version": 1, "title": "Song One-A minor-120bpm"}), encoding="utf-8")
+    open_window(L, g)
+    frame(L, g); frame(L, g)
+    assert "Grille PDF —" in TL.texts(g)
+    # pas encore de grille : clic = mettre à jour les téléphones (qui écrit la grille)
+    press_text(L, g, "Grille PDF —", exact=True)
+    assert "-m reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
+    status(g, state="done", cmd="publish", message="ok")
+    frame(L, g); press_text(L, g, "OK", exact=True)
+    pdf = tmp_path / "Song One" / "Grille - Song One-A minor-120bpm.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    g.state.t = g.state.t + 3                      # relecture du dossier (toutes les 2 s)
+    frame(L, g); frame(L, g)
+    assert "Grille PDF ✓" in TL.texts(g), TL.texts(g)
+    n = len(g.state.shell)
+    press_text(L, g, "Grille PDF ✓", exact=True)
+    cmds = list(g.state.shell.values())[n:]
+    assert any(str(pdf) in c for c in cmds), cmds

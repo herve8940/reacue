@@ -64,6 +64,8 @@ def _message(res: dict, title: str) -> str:
         lines.append("")
         sep = ": " if get_lang() == "en" else " : "
         lines.append(t("cli_published") + (sep + ", ".join(bits) if bits else ""))
+        if p.get("pdf"):
+            lines.append(t("cli_pdf", name=Path(p["pdf"]).name))
         if p.get("warning"):
             lines.append("  ! " + p["warning"])
     warns = [w for w in res.get("warnings") or [] if not is_bpm_from_name_warning(w)]

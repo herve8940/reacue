@@ -41,6 +41,7 @@ return function(ctx)
       undo_restore = "ReaCue : annuler / rétablir la structure",
       p_stems = "Stems", p_structure = "Structure", p_songformer = "SongFormer", p_reacue = "ReaCue", p_manual = "manuelle",
       p_chords = "Accords", p_drums = "Batterie", p_lyrics = "Paroles : %d lignes", p_lyrics_none = "Paroles",
+      p_sheet = "Grille PDF",
       p_prompter = "Prompteur publié", p_prompter_none = "Prompteur", p_saved = "Enregistré", p_unsaved = "Non enregistré",
       p_tempo_none = "Tempo",
       lyrics_none = "Pas de paroles : dépose paroles.txt dans le dossier du morceau.",
@@ -85,6 +86,7 @@ return function(ctx)
       undo_restore = "ReaCue: undo / redo the structure",
       p_stems = "Stems", p_structure = "Structure", p_songformer = "SongFormer", p_reacue = "ReaCue", p_manual = "manual",
       p_chords = "Chords", p_drums = "Drums", p_lyrics = "Lyrics: %d lines", p_lyrics_none = "Lyrics",
+      p_sheet = "PDF chart",
       p_prompter = "Prompter published", p_prompter_none = "Prompter", p_saved = "Saved", p_unsaved = "Not saved",
       p_tempo_none = "Tempo",
       lyrics_none = "No lyrics: drop lyrics.txt in the song's folder.",
@@ -222,7 +224,20 @@ return function(ctx)
     if not title or not title_matches(title, titles) then return nil end
     local chords = src:find('"chords"%s*:%s*%[%s*{') ~= nil
     local drums = src:find('"drums"%s*:%s*{') ~= nil
-    return { chords = chords, drums = drums }
+    return { chords = chords, drums = drums, title = title }
+  end
+
+  -- grille PDF écrite par le serveur à chaque publication (sheet.py : « Grille - <titre>.pdf »)
+  local function find_sheet(dirs, title)
+    local safe = title:gsub('[\\/:*?"<>|]+', " "):gsub("^%s+", ""):gsub("%s+$", "")
+    for k = #dirs, 1, -1 do
+      for _, pre in ipairs({ "Grille - ", "Chart - " }) do
+        local p = dirs[k] .. SEP .. pre .. safe .. ".pdf"
+        local f = io.open(p, "rb")
+        if f then f:close(); return p end
+      end
+    end
+    return nil
   end
 
   local function scan()
@@ -274,6 +289,7 @@ return function(ctx)
     for _, r in ipairs(regs) do r.doubt = info.doubts[r.bar] end
     info.lyrics = read_lyrics(dirs)
     info.pub = published(titles)
+    info.sheet = info.pub and find_sheet(dirs, info.pub.title) or nil
     info.t = reaper.time_precise()
     return info
   end
@@ -616,6 +632,7 @@ return function(ctx)
       { "pill_chords", t("p_chords") .. ((p and p.chords) and " ✓" or " —"), (p and p.chords) or false, "publish" },
       { "pill_drums", t("p_drums") .. ((p and p.drums) and " ✓" or " —"), (p and p.drums) or false, "publish" },
       { "pill_lyrics", ly and string.format(t("p_lyrics"), ly.n) or (t("p_lyrics_none") .. " —"), ly and true or false, "lyrics" },
+      { "pill_sheet", t("p_sheet") .. (i.sheet and " ✓" or " —"), i.sheet and true or false, "sheet" },
       { "pill_prompter", p and (t("p_prompter") .. " ✓") or (t("p_prompter_none") .. " —"), p and true or false, "prompter" },
       { "pill_saved", saved and (t("p_saved") .. " ✓") or t("p_unsaved"), saved or "warn", "save" },
     }
@@ -634,6 +651,7 @@ return function(ctx)
           local d = (ly and ly.dir) or i.dirs[#i.dirs] or i.dirs[1]
           if d then ctx.guide.open_path(d) end
         elseif a == "prompter" then if p then ctx.open_qr() else M.publish() end
+        elseif a == "sheet" then if i.sheet then ctx.guide.open_path(i.sheet) else M.publish() end
         elseif a == "save" then ctx.guide.save_project(); saved_t = reaper.time_precise() end
         return y + row_h, true
       end

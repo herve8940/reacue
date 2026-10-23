@@ -57,8 +57,10 @@ class FakeVoice:
 
 
 @pytest.fixture
-def env(monkeypatch, bridge_dir, resdir):
+def env(monkeypatch, bridge_dir, resdir, tmp_path):
     fb = FakeBridge()
+    # grille PDF : dans un dossier temporaire (les fichiers de test pointent vers /songs/…)
+    monkeypatch.setattr(server.sheet, "song_folder", lambda files: tmp_path / "song")
     monkeypatch.setattr(server.bridge, "call", fb.call)
     monkeypatch.setattr(server.bridge, "alive", fb.alive)
     monkeypatch.setattr(server, "analyze_stems", lambda *a, **k: fake_analysis())
