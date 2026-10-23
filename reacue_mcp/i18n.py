@@ -304,6 +304,10 @@ MSG = {
     "sheet_footer": ("Grille ReaCue : accords et paroles détectés automatiquement, à vérifier.",
                      "ReaCue chart: chords and lyrics detected automatically, please check."),
     "sheet_failed": ("Grille PDF non créée : {e}", "PDF chart not created: {e}"),
+    # batterie : transcription par modèle (ADTOF, composant optionnel)
+    "drums_model_failed": ("Transcription de batterie par modèle (ADTOF) impossible : {e} → méthode ReaCue utilisée.",
+                           "Drum transcription by model (ADTOF) failed: {e} → ReaCue method used."),
+    "drums_model_timeout": ("ADTOF n'a pas répondu en {min} min", "ADTOF did not answer within {min} min"),
     "structure_failed": ("Analyse SongFormer impossible : {e} → structure ReaCue utilisée.",
                          "SongFormer analysis failed: {e} → ReaCue structure used."),
 }

@@ -16,6 +16,8 @@ _RES = Path(tempfile.mkdtemp(prefix="reacue_res_"))
 os.environ["REAPER_RESOURCE_PATH"] = str(_RES)
 # jamais le vrai SongFormer pendant les tests (même s'il est installé à côté du dépôt)
 os.environ["REACUE_STRUCTURE_ENGINE"] = "reacue"
+# ni le vrai modèle de batterie (ADTOF)
+os.environ["REACUE_DRUMS_ENGINE"] = "reacue"
 
 import pytest  # noqa: E402
 
