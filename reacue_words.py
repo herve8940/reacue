@@ -105,7 +105,16 @@ def _cache_dirs() -> list[Path]:
 
 
 def model_files(lang: str, download: bool = True) -> dict:
-    """{"config", "vocab", "preproc" (ou None), "weights"} : chemins locaux du modèle de la langue."""
+    """{"config", "vocab", "preproc" (ou None), "weights"} : chemins locaux du modèle de la langue.
+    Un dossier <ReaCue>/words/models/<langue>/ (config.json, vocab.json, poids) est prioritaire : modèle
+    copié à la main (machine sans internet) ou autre modèle wav2vec2 CTC de même format."""
+    local = WORDS_DIR / "models" / lang
+    if (local / "config.json").is_file() and (local / "vocab.json").is_file():
+        for w in WEIGHTS:
+            if (local / w).is_file():
+                pre = local / "preprocessor_config.json"
+                return {"config": str(local / "config.json"), "vocab": str(local / "vocab.json"),
+                        "preproc": str(pre) if pre.is_file() else None, "weights": str(local / w)}
     from huggingface_hub import hf_hub_download
     repo = MODELS[lang]
 

@@ -138,10 +138,11 @@ def make_jobs(lyrics: list[dict]) -> list[dict]:
 # --------------------------------------------------------------------------- #
 # Fusion du résultat dans les paroles
 # --------------------------------------------------------------------------- #
-def merge(a, lyrics: list[dict], result: dict, min_score: float = MIN_LINE_SCORE) -> tuple[list[dict], int]:
+def merge(a, lyrics: list[dict], result: dict, min_score: float | None = None) -> tuple[list[dict], int]:
     """Ajoute "words" aux lignes bien alignées (copie) ; resserre début / fin des lignes non ancrées.
     Renvoie (paroles, nombre de lignes calées mot par mot)."""
     from .lyrics import _bar_pos
+    min_score = MIN_LINE_SCORE if min_score is None else min_score
     by_id = {}
     for ln in (result or {}).get("lines") or []:
         if isinstance(ln, dict) and "id" in ln:
@@ -344,7 +345,7 @@ def add_words(a, items: list[dict] | None, lyrics: list[dict] | None, cache=None
         out, n = merge(a, lyrics, res)
         LAST_INFO.update({"engine": ENGINE, "lang": lang, "lines": n, "total": len(lyrics), "cached": cached,
                           "seconds": res.get("seconds"),
-                          "message": t("words_used", n=n, total=len(lyrics), lang=lang)})
+                          "message": t("words_used", n=n, total=len(lyrics), model=lang)})
         return out
     except Exception as e:                                   # noqa: BLE001 - le calage par ligne reste
         LAST_INFO.update({"engine": "lines", "error": str(e), "message": t("words_failed", e=e)})

@@ -46,6 +46,19 @@ def test_bar_chords_and_lyrics():
     assert sheet.bar_lyrics(s) == {5: "un deux", 6: "trois quatre"}
 
 
+def test_bar_lyrics_uses_word_times():
+    # mesure 5 = 12-14 s, mesure 6 = 14-16 s : « un » seul en mesure 5, le reste en mesure 6 (dont « deux »,
+    # attaqué 20 ms avant la barre : reste dans la mesure 6) ; la répartition régulière aurait donné 2 + 2
+    words = [{"w": "un", "t": 12.1, "end": 12.8}, {"w": "deux", "t": 13.98, "end": 14.4},
+             {"w": "trois", "t": 14.5, "end": 15.0}, {"w": "quatre", "t": 15.2, "end": 15.9}]
+    s = song(lyrics=[{"t": 12.1, "end": 15.9, "text": "un deux trois quatre", "bar": 5, "words": words}])
+    assert sheet.bar_lyrics(s) == {5: "un", 6: "deux trois quatre"}
+    # mots vides ou mal formés : ignorés ; aucun mot exploitable -> répartition régulière (comportement d'avant)
+    s = song(lyrics=[{"t": BT[6], "end": BT[8], "text": "un deux trois quatre", "bar": 5,
+                      "words": [{"w": "", "t": 12.0}, {"w": "x"}]}])
+    assert sheet.bar_lyrics(s) == {5: "un deux", 6: "trois quatre"}
+
+
 def test_key_from_name_or_estimated():
     assert sheet.song_key(song()) == ("Am", False)
     assert sheet.song_key(song(key=None)) == ("Am", True)
