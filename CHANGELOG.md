@@ -17,6 +17,24 @@
 - Settings `words_engine` (`auto` | `off`) and `words_language` (`auto` | `fr` | `en`, auto = guessed from
   the lyrics text).
 - `tools/compare_words.py`: before / after on the last prepared song, never prints the lyrics.
+### Paroles automatiques / Automatic lyrics (optional, Whisper)
+- When the song folder has no lyrics file, ReaCue transcribes the vocal stem with **Whisper** (openai-whisper,
+  code and weights MIT, `large-v3-turbo`, ≈ 1.6 GB, in `words/whisper/`) inside `.venv-words`
+  (`reacue_transcribe.py`, `reacue_mcp/lyrics_auto.py`) and writes a draft **`paroles (auto).txt`** in the
+  song folder, then used like a normal lyrics file (line timing, then word by word). / Sans fichier de
+  paroles, brouillon automatique à corriger.
+- The user's file (`paroles.txt`, `lyrics.txt`…) always wins; the draft is created once and never
+  overwritten (correct it in place or rename it). Lines starting with `#` are now comments in lyrics files.
+- Against hallucinations on singing: voice activity on the stem (only sung parts are transcribed),
+  `condition_on_previous_text=False`, no-speech / log-prob thresholds, removal of typical captions and of
+  looping repetitions; one line per sung phrase (long segments split), empty line between blocks.
+- `Install ReaCue Words` also installs Whisper (`requirements-whisper.txt`, `--no-deps`; numba 0.62.1 /
+  llvmlite 0.45.1 / tiktoken 0.9.0 wheels for Mac Intel) and downloads the model; re-running it completes an
+  existing install (`REACUE_WHISPER=0` to skip). Fallback: official Hugging Face weights converted locally.
+- ReaCue window: orange pill *Paroles : auto (N lignes)* / *Lyrics: auto (N lines)* (click: open the draft);
+  PDF chart footer mentions automatic lyrics. Setting `lyrics_auto` (`auto` | `off`). Never blocking: any
+  failure = no lyrics, as before (failure remembered, no retry at every publication).
+- `tools/transcribe_lyrics.py`: transcription by hand, prints statistics only (never the text).
 ### Accords : modèle entraîné (facultatif) / Chords: trained model (optional)
 - New optional component **chord recognition** (`Install ReaCue Chords.command` / `.bat`,
   `install/install_chords_{mac.sh,windows.ps1}`, `requirements-chords.txt`, separate `.venv-chords`):

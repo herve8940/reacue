@@ -46,6 +46,7 @@ downloads weights under **CC BY-NC-SA 4.0 (non-commercial)**. The rest of ReaCue
 | **wav2vec2 XLSR-53 français / anglais** `jonatasgrosman/wav2vec2-large-xlsr-53-french`, `jonatasgrosman/wav2vec2-large-xlsr-53-english` | Paroles calées mot par mot (facultatif) / word-by-word lyrics timing (optional) | [HF jonatasgrosman/wav2vec2-large-xlsr-53-french](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-french), [HF jonatasgrosman/wav2vec2-large-xlsr-53-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english) (Jonatas Grosman), affinés à partir de / fine-tuned from [facebook/wav2vec2-large-xlsr-53](https://huggingface.co/facebook/wav2vec2-large-xlsr-53) (Meta AI) sur / on Common Voice (CC0) | — (pas de code : ReaCue lit les poids avec PyTorch / torchaudio ; no code: ReaCue reads the weights with PyTorch / torchaudio) | Apache-2.0 (étiquette des pages HF des modèles et du modèle de base / tag of the model pages and of the base model; à revérifier sur ces pages, non consultables depuis l'environnement de développement le 23 octobre 2026 / to be re-checked on those pages, not reachable from the development environment on 23 October 2026) |
 | **Reconnaissance d'accords / chord recognition** — Jiang et al., ISMIR 2019 (5 réseaux `joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s0…s4.best.sdict`, ~29 Mo) | Accords du prompteur et de la grille PDF (facultatif) / prompter and PDF chart chords (optional) | [music-x-lab/ISMIR2019-Large-Vocabulary-Chord-Recognition](https://github.com/music-x-lab/ISMIR2019-Large-Vocabulary-Chord-Recognition) (Junyan Jiang, Ke Chen, Wei Li, Gus Xia — Music X Lab), révision figée / pinned revision `481f4ce7`, téléchargée dans `chords/model` | MIT (© 2023 Music X Lab) | MIT : les poids sont fournis dans le même dépôt GitHub, sous la même licence, sans licence séparée (vérifié le 23 octobre 2026). Entraîné sur des annotations publiques et des enregistrements commerciaux non redistribués. / MIT: the weights ship in the same GitHub repository, under the same licence, with no separate licence (checked on 23 October 2026). Trained on public annotations and commercial recordings that are not redistributed. |
 | **ADTOF** Frame_RNN (`adtof_frame_rnn_pytorch_weights.pth`, 16 Mo / MB) | Transcription de batterie (facultatif) / drum transcription (optional) | [MZehren/ADTOF](https://github.com/MZehren/ADTOF) (Mickaël Zehren, Marco Alunno, Paolo Bientinesi) ; poids convertis pour PyTorch par / weights converted to PyTorch by [xavriley/ADTOF-pytorch](https://github.com/xavriley/ADTOF-pytorch) (Xavier Riley), téléchargés depuis GitHub / downloaded from GitHub | ADTOF : **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** ; ADTOF-pytorch : **aucune licence indiquée / no licence stated** | **CC BY-NC-SA 4.0 — non commercial** (poids d'origine d'ADTOF, fichier `LICENSE` du dépôt ; la conversion PyTorch en dérive / original ADTOF weights, repository `LICENSE` file; the PyTorch conversion derives from them) |
+| **Whisper** `large-v3-turbo` (`large-v3-turbo.pt`, ≈ 1,6 Go / GB) | Paroles automatiques : brouillon « paroles (auto).txt » quand le morceau n'a pas de fichier de paroles (facultatif) / automatic lyrics: draft when the song has no lyrics file (optional) | [openai/whisper](https://github.com/openai/whisper) (OpenAI) — téléchargé par l'installateur depuis le serveur d'OpenAI (contrôle SHA-256), repli / fallback [HF openai/whisper-large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo) converti localement / converted locally | MIT (openai-whisper, PyPI) | MIT (« Whisper's code and model weights are released under the MIT License », README d'openai/whisper ; carte du modèle HF : MIT / HF model card: MIT) |
 | Configuration `facebook/wav2vec2-conformer-rope-large-960h-ft` | Configuration lue par MusicFM (pas de poids) / config read by MusicFM (no weights) | [Hugging Face](https://huggingface.co/facebook/wav2vec2-conformer-rope-large-960h-ft) (Meta) | — | Apache-2.0 (étiquette HF / HF tag) |
 
 ## Code source téléchargé par l'installateur / Source code fetched by the installer
@@ -79,7 +80,10 @@ installer; never redistributed by this repository.
 | demucs | `.venv-demucs` | MIT |
 | torch | `.venv-demucs`, `.venv-structure`, `.venv-words` | BSD-3-Clause (+ Apache-2.0 / LLVM exception et autres pour des parties incluses / for bundled parts) |
 | torchaudio, torchvision | `.venv-demucs`, `.venv-structure`, `.venv-words` (torchaudio) | BSD |
-| numba, llvmlite | `.venv`, `.venv-structure` | BSD (llvmlite : BSD-2-Clause + Apache-2.0 with LLVM exception) |
+| numba, llvmlite | `.venv`, `.venv-structure`, `.venv-words` | BSD (llvmlite : BSD-2-Clause + Apache-2.0 with LLVM exception) |
+| openai-whisper | `.venv-words` | MIT |
+| tiktoken | `.venv-words` | MIT |
+| more-itertools | `.venv-words` | MIT |
 | omegaconf | `.venv-structure` | BSD |
 | hydra-core | `.venv-structure` | MIT |
 | einops | `.venv-structure` | MIT |
@@ -90,7 +94,7 @@ installer; never redistributed by this repository.
 | pandas | `.venv-structure` | BSD 3-Clause |
 | matplotlib | `.venv-structure` | Licence matplotlib (de type PSF / PSF-based) |
 | requests | `.venv-structure` | Apache-2.0 |
-| tqdm | `.venv-structure` | MPL-2.0 AND MIT |
+| tqdm | `.venv-structure`, `.venv-words` | MPL-2.0 AND MIT |
 | uv (installateur / installer, Astral) | outil / tool | MIT OR Apache-2.0 |
 | Tests : pytest, lupa, playwright | développement / development | MIT, MIT, Apache-2.0 |
 
@@ -123,6 +127,8 @@ dependencies follow their own licences (see PyPI).
   Cross-lingual Representation Learning for Speech Recognition* (XLSR-53), arXiv:2006.13979, 2020.
   https://arxiv.org/abs/2006.13979 — modèles affinés / fine-tuned models : Jonatas Grosman, *Fine-tuned XLSR-53 large
   model for speech recognition in French / English*, Hugging Face, 2021.
+- Alec Radford, Jong Wook Kim, Tao Xu, Greg Brockman, Christine McLeavey, Ilya Sutskever (OpenAI), *Robust Speech
+  Recognition via Large-Scale Weak Supervision* (Whisper), arXiv:2212.04356, 2022. https://arxiv.org/abs/2212.04356
 - Mickaël Zehren, Marco Alunno, Paolo Bientinesi, *ADTOF: A large dataset of non-synthetic music for
   automatic drum transcription*, ISMIR 2021, pp. 818–824 ; *High-Quality and Reproducible Automatic Drum
   Transcription from Crowdsourced Data*, Signals 4(4), 768–787, 2023. https://doi.org/10.3390/signals4040042

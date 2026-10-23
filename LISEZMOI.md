@@ -616,6 +616,31 @@ les mots sont cherchés **à l'intérieur** de chaque ligne ; une ligne mal reco
   avec un clic à chaque début de mot, pour vérifier à l'oreille.
 - **Désactiver** : réglage `words_engine` = `"off"`.
 
+### Paroles automatiques (facultatif)
+
+Pas de fichier de paroles ? Si le composant `.venv-words` contient aussi **Whisper** (OpenAI, code et modèle
+sous licence MIT), ReaCue transcrit le stem voix sur ton ordinateur et écrit un **brouillon**
+`paroles (auto).txt` dans le dossier du morceau, utilisé ensuite comme un fichier de paroles normal (calage
+par ligne, puis mot par mot). C'est un brouillon : la reconnaissance du chant fait des erreurs.
+
+- **Ton fichier d'abord** : `paroles.txt` (ou `lyrics.txt`…) est toujours prioritaire. Le brouillon n'est créé
+  qu'une fois et n'est **jamais écrasé** : corrige-le sur place, ou renomme-le `paroles.txt` une fois corrigé,
+  puis *Mettre à jour les téléphones*. Les lignes qui commencent par `#` (en tête du brouillon) sont ignorées.
+- **Fenêtre ReaCue** : pastille orange *Paroles : auto (N lignes)* ; clic = ouvrir le brouillon. La grille
+  PDF le signale en bas de page.
+- **Installer** (ou compléter une installation existante, sans tout refaire) : relance
+  `Install ReaCue Words.command` / `.bat` (ou `bash install/install_words_mac.sh`) : il ajoute Whisper et
+  télécharge le modèle `large-v3-turbo` (≈ 1,6 Go) dans `words/whisper/`. Sans Whisper :
+  `REACUE_WHISPER=0 bash install/install_words_mac.sh`.
+- **Durée** : plusieurs minutes par morceau sur un Mac Intel (une seule fois). Seules les zones chantées du
+  stem voix sont transcrites (pas de texte inventé sur les silences) ; une ligne = une phrase chantée, ligne
+  vide entre deux blocs séparés par un long silence. Langue détectée (français / anglais surtout) ou forcée
+  par `words_language`.
+- **Essayer à la main** : `.venv/bin/python tools/transcribe_lyrics.py` (dernier morceau préparé) affiche
+  seulement des statistiques (lignes, mots, langue, temps de calcul), jamais le texte ; `--write` écrit le
+  brouillon s'il n'existe pas.
+- **Désactiver** : réglage `lyrics_auto` = `"off"`.
+
 ## Réglages
 
 Le plus simple : l'onglet **Réglages** de la fenêtre ReaCue (écrit tout de suite, les autres clés du fichier
@@ -642,6 +667,7 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `structure_engine` | `"auto"` | sections : `"auto"` (SongFormer s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
 | `words_engine` | `"auto"` | paroles : `"auto"` (mot par mot si le composant est installé) ou `"off"` (lignes seulement) |
 | `words_language` | `"auto"` | langue chantée pour le calage mot par mot : `"auto"` (déduite du texte), `"fr"` ou `"en"` |
+| `lyrics_auto` | `"auto"` | sans fichier de paroles : `"auto"` (brouillon `paroles (auto).txt` par Whisper s'il est installé) ou `"off"` |
 | `chords_engine` | `"auto"` | accords : `"auto"` (modèle d'accords s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
 | `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
@@ -828,6 +854,9 @@ Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : 
 - **Paroles mot par mot (facultatif)** : modèles wav2vec2 XLSR-53 de Jonatas Grosman (Apache-2.0, à partir
   du modèle XLSR-53 de Meta, Apache-2.0), téléchargés depuis Hugging Face par l'installateur ; pas de
   restriction non commerciale.
+- **Paroles automatiques (facultatif)** : openai-whisper et modèle Whisper `large-v3-turbo` d'OpenAI
+  (code et poids **MIT**), téléchargés par l'installateur ; la transcription se fait sur ton ordinateur, à
+  partir de tes propres fichiers, et le brouillon reste dans le dossier du morceau.
 - **Reconnaissance d'accords (facultative)** : modèle de Jiang et al. (Music X Lab), code et poids sous
   licence **MIT**, téléchargés depuis GitHub par `Install ReaCue Chords` ; aucune restriction commerciale
   connue.
@@ -861,6 +890,10 @@ Paroles mot par mot (facultatif) : alignement forcé avec `torchaudio.functional
 [-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english) de Jonatas Grosman
 (Apache-2.0), affinés à partir de XLSR-53 (Meta AI, Apache-2.0 ; [arXiv:2006.13979](https://arxiv.org/abs/2006.13979)).
 Téléchargés par l'installateur, jamais inclus dans ce dépôt.
+
+Paroles automatiques (facultatif) : [Whisper](https://github.com/openai/whisper) (OpenAI, code et poids MIT ;
+[arXiv:2212.04356](https://arxiv.org/abs/2212.04356)), modèle `large-v3-turbo`, téléchargé par l'installateur,
+jamais inclus dans ce dépôt.
 
 QR codes par [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach et contributeurs,
 licence BSD 3 clauses ; l'en-tête de licence est conservé dans `reaper/ReaCue_qrcode.lua`).

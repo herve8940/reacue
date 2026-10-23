@@ -480,6 +480,12 @@ défilent avec le morceau.
 Les lignes sont calées automatiquement sur le stem de voix. Si une ligne tombe mal, tu peux la caler à la
 main avec un fichier d'ancres `paroles_calage.json` (voir la section *Paroles* du LISEZMOI).
 
+**Pas de texte sous la main ?** Si les *paroles automatiques* sont installées (Whisper, avec
+`Install ReaCue Words`), ReaCue transcrit le stem voix et écrit un brouillon **`paroles (auto).txt`** dans
+le dossier du morceau ; la pastille devient orange : **Paroles : auto (N lignes)**. Clique dessus pour ouvrir
+le brouillon, corrige-le à l'oreille (sur place, ou renomme-le `paroles.txt`), puis **Mettre à jour les
+téléphones**. Ton propre `paroles.txt` reste toujours prioritaire, et le brouillon n'est jamais écrasé.
+
 ---
 
 ## 13. Ouvrir le prompteur sur les téléphones

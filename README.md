@@ -577,6 +577,28 @@ words are searched **inside** each line; a poorly recognised line keeps its line
 - **Result**: on the prompter (Vocals role) the current word is highlighted; in the PDF chart each word goes
   in the bar where it is sung. `tools/compare_words.py` shows before / after without ever printing the lyrics.
 
+### Automatic lyrics (optional)
+
+No lyrics file? If the `.venv-words` component also contains **Whisper** (OpenAI, code and model under the
+MIT licence), ReaCue transcribes the vocal stem on your computer and writes a **draft** `paroles (auto).txt`
+in the song folder, then used like a normal lyrics file (line timing, then word by word). It is a draft:
+speech recognition makes mistakes on singing.
+
+- **Your file first**: `lyrics.txt` (or `paroles.txt`…) always wins. The draft is created once and **never
+  overwritten**: correct it in place, or rename it `lyrics.txt` once corrected, then *Update the phones*.
+  Lines starting with `#` (at the top of the draft) are ignored.
+- **ReaCue window**: orange pill *Lyrics: auto (N lines)*; click = open the draft. The PDF chart mentions it
+  in its footer.
+- **Install** (or complete an existing install without redoing everything): run `Install ReaCue Words`
+  again (or `bash install/install_words_mac.sh`): it adds Whisper and downloads the `large-v3-turbo` model
+  (≈ 1.6 GB) into `words/whisper/`. Without Whisper: `REACUE_WHISPER=0 bash install/install_words_mac.sh`.
+- **Time**: several minutes per song on an Intel Mac (once). Only the sung parts of the vocal stem are
+  transcribed (no invented text on silences); one line = one sung phrase, empty line between blocks
+  separated by a long silence. Language detected (mostly French / English) or forced with `words_language`.
+- **Try it by hand**: `.venv/bin/python tools/transcribe_lyrics.py` (last prepared song) prints statistics
+  only (lines, words, language, computing time), never the text; `--write` writes the draft if missing.
+- **Turn off**: setting `lyrics_auto` = `"off"`.
+
 ## Settings
 
 Easiest: the **Settings** tab of the ReaCue window (written at once, other keys of the file kept).
@@ -603,6 +625,7 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
 | `words_engine` | `"auto"` | lyrics: `"auto"` (word by word when the component is installed) or `"off"` (lines only) |
 | `words_language` | `"auto"` | sung language for word timing: `"auto"` (guessed from the text), `"fr"` or `"en"` |
+| `lyrics_auto` | `"auto"` | without a lyrics file: `"auto"` (draft `paroles (auto).txt` by Whisper when installed) or `"off"` |
 | `chords_engine` | `"auto"` | chords: `"auto"` (chord model when installed) or `"reacue"` (ReaCue's own detection) |
 | `projects_dir` | `null` | concert mode: folder searched for song projects by name; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | concert mode: folder of the concerts; `null` = `<projects folder>/Concerts` |
@@ -777,6 +800,9 @@ Project layout:
   affected; you can always use ReaCue without it (setting *Structure detection: ReaCue only*).
 - **Word-by-word lyrics (optional)**: J. Grosman's wav2vec2 XLSR-53 models (Apache-2.0, from Meta's
   XLSR-53, Apache-2.0), downloaded from Hugging Face by the installer; no non-commercial restriction.
+- **Automatic lyrics (optional)**: OpenAI's openai-whisper and Whisper `large-v3-turbo` model (code and
+  weights **MIT**), downloaded by the installer; transcription runs on your computer, from your own files,
+  and the draft stays in the song folder.
 - **Chord recognition (optional):** model by Jiang et al. (Music X Lab), code and weights under the **MIT**
   licence, downloaded from GitHub by `Install ReaCue Chords`; no known commercial restriction.
 - **Drum transcription (ADTOF) — non-commercial use only.** Optional component whose weights are licensed
@@ -802,6 +828,10 @@ Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), which uses
 CC BY-NC 4.0, non-commercial**) and [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
 ByteDance; code MIT; the licence of its MSD checkpoint is not stated by its authors). Downloaded by the
 installer at fixed versions, never included in this repository.
+
+Automatic lyrics (optional): [Whisper](https://github.com/openai/whisper) (OpenAI, code and weights MIT;
+[arXiv:2212.04356](https://arxiv.org/abs/2212.04356)), `large-v3-turbo` model, downloaded by the installer,
+never included in this repository.
 
 QR codes by [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach and contributors,
 3-clause BSD licence; the licence header is kept in `reaper/ReaCue_qrcode.lua`).
