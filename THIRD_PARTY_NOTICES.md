@@ -41,12 +41,16 @@ without the rights holders' permission. The rest of ReaCue is not affected.
 | **MuQ** `OpenMuQ/MuQ-large-msd-iter` | Dépendance de SongFormer / SongFormer dependency | [tencent-ailab/MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab), [HF OpenMuQ/MuQ-large-msd-iter](https://huggingface.co/OpenMuQ/MuQ-large-msd-iter) | MIT | **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — non commercial** (fichier `LICENSE_weights` du dépôt et étiquette HF / `LICENSE_weights` file and HF tag) |
 | **MusicFM** MSD (`pretrained_msd.pt`, `msd_stats.json`) | Dépendance de SongFormer / SongFormer dependency | [minzwon/musicfm](https://github.com/minzwon/musicfm) (Minz Won, Yun-Ning Hung, Duc Le — ByteDance), [HF minzwon/MusicFM](https://huggingface.co/minzwon/MusicFM) | MIT (+ Apache-2.0 pour `modules/flash_conformer.py`) | **Incertaine / uncertain** : le dépôt HF est étiqueté MIT mais n'a pas de carte et rien n'est dit sur `pretrained_msd.pt` ; ce modèle est entraîné sur le Million Song Dataset, et le README des auteurs ne publie volontairement que le modèle FMA « pour éviter des complications de licence ». / The HF repo is tagged MIT but has no model card and says nothing about `pretrained_msd.pt`; this checkpoint is trained on the Million Song Dataset, and the authors' README says they chose to release the FMA model “to avoid potential licensing complications”. |
 | **wav2vec2 XLSR-53 français / anglais** `jonatasgrosman/wav2vec2-large-xlsr-53-french`, `jonatasgrosman/wav2vec2-large-xlsr-53-english` | Paroles calées mot par mot (facultatif) / word-by-word lyrics timing (optional) | [HF jonatasgrosman/wav2vec2-large-xlsr-53-french](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-french), [HF jonatasgrosman/wav2vec2-large-xlsr-53-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english) (Jonatas Grosman), affinés à partir de / fine-tuned from [facebook/wav2vec2-large-xlsr-53](https://huggingface.co/facebook/wav2vec2-large-xlsr-53) (Meta AI) sur / on Common Voice (CC0) | — (pas de code : ReaCue lit les poids avec PyTorch / torchaudio ; no code: ReaCue reads the weights with PyTorch / torchaudio) | Apache-2.0 (étiquette des pages HF des modèles et du modèle de base / tag of the model pages and of the base model; à revérifier sur ces pages, non consultables depuis l'environnement de développement le 23 octobre 2026 / to be re-checked on those pages, not reachable from the development environment on 23 October 2026) |
+| **Reconnaissance d'accords / chord recognition** — Jiang et al., ISMIR 2019 (5 réseaux `joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s0…s4.best.sdict`, ~29 Mo) | Accords du prompteur et de la grille PDF (facultatif) / prompter and PDF chart chords (optional) | [music-x-lab/ISMIR2019-Large-Vocabulary-Chord-Recognition](https://github.com/music-x-lab/ISMIR2019-Large-Vocabulary-Chord-Recognition) (Junyan Jiang, Ke Chen, Wei Li, Gus Xia — Music X Lab), révision figée / pinned revision `481f4ce7`, téléchargée dans `chords/model` | MIT (© 2023 Music X Lab) | MIT : les poids sont fournis dans le même dépôt GitHub, sous la même licence, sans licence séparée (vérifié le 23 octobre 2026). Entraîné sur des annotations publiques et des enregistrements commerciaux non redistribués. / MIT: the weights ship in the same GitHub repository, under the same licence, with no separate licence (checked on 23 October 2026). Trained on public annotations and commercial recordings that are not redistributed. |
 | Configuration `facebook/wav2vec2-conformer-rope-large-960h-ft` | Configuration lue par MusicFM (pas de poids) / config read by MusicFM (no weights) | [Hugging Face](https://huggingface.co/facebook/wav2vec2-conformer-rope-large-960h-ft) (Meta) | — | Apache-2.0 (étiquette HF / HF tag) |
 
 ## Code source téléchargé par l'installateur / Source code fetched by the installer
 
 Révisions figées (voir `reacue_mcp/structure.py`) / Pinned revisions: SongFormer (CC BY 4.0), MuQ (MIT),
 MusicFM (MIT / Apache-2.0) — téléchargés dans `structure/`, jamais redistribués par ce dépôt.
+Reconnaissance d'accords / chord recognition : dépôt music-x-lab (MIT, voir `reacue_mcp/chord_model.py`)
+téléchargé dans `chords/model` ; son code est importé tel quel par `reacue_chords.py` (sans modification).
+/ fetched into `chords/model`; its code is imported unmodified by `reacue_chords.py`.
 
 ## Paquets Python / Python packages
 
@@ -79,6 +83,10 @@ installer; never redistributed by this repository.
 | uv (installateur / installer, Astral) | outil / tool | MIT OR Apache-2.0 |
 | Tests : pytest, lupa, playwright | développement / development | MIT, MIT, Apache-2.0 |
 
+Reconnaissance d'accords / chord recognition (`.venv-chords`, `requirements-chords.txt`) : torch
+(BSD-3-Clause), librosa (ISC), numpy, scipy, soundfile (BSD), numba / llvmlite (BSD) — les mêmes paquets
+que ci-dessus / the same packages as above.
+
 Les dépendances indirectes de ces paquets suivent leurs propres licences (voir PyPI). / Transitive
 dependencies follow their own licences (see PyPI).
 
@@ -106,3 +114,5 @@ dependencies follow their own licences (see PyPI).
   model for speech recognition in French / English*, Hugging Face, 2021.
 - Simon Rouard, Francisco Massa, Alexandre Défossez, *Hybrid Transformers for Music Source Separation*,
   ICASSP 2023, arXiv:2211.08553. https://arxiv.org/abs/2211.08553
+- Junyan Jiang, Ke Chen, Wei Li, Gus Xia, *Large-Vocabulary Chord Transcription via Chord Structure
+  Decomposition*, ISMIR 2019. https://archives.ismir.net/ismir2019/paper/000078.pdf

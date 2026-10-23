@@ -17,6 +17,23 @@
 - Settings `words_engine` (`auto` | `off`) and `words_language` (`auto` | `fr` | `en`, auto = guessed from
   the lyrics text).
 - `tools/compare_words.py`: before / after on the last prepared song, never prints the lyrics.
+### Accords : modèle entraîné (facultatif) / Chords: trained model (optional)
+- New optional component **chord recognition** (`Install ReaCue Chords.command` / `.bat`,
+  `install/install_chords_{mac.sh,windows.ps1}`, `requirements-chords.txt`, separate `.venv-chords`):
+  model of Jiang et al., *Large-Vocabulary Chord Transcription via Chord Structure Decomposition*
+  (ISMIR 2019, Music X Lab, code **and weights MIT**), pinned revision downloaded from GitHub into
+  `chords/model`. / Nouveau composant facultatif : reconnaissance d'accords par modèle entraîné.
+- `reacue_chords.py` (runs in `.venv-chords`): ensemble of 5 CNN + BiLSTM networks (triad, bass, 7th, 9th,
+  11th, 13th), HMM decoding **aligned on ReaCue's beats** (changes on beats, cheaper on beats 1 and 3),
+  network probabilities cached (a grid change only re-decodes); `check` tests it on synthetic chords.
+- `reacue_mcp/chord_model.py`: harmonic mix (stems without vocals or drums, else the single file),
+  subprocess, per-song cache in `.reacue/`, failure remembered for 1 h; `chords.chords_from_segments` maps
+  the model's chords onto the bars in the **same format** as before (≤ 2 chords per bar, `N.C.`,
+  inversions `A/C#`, confidence); sharps / flats from the key (estimated from the chords when unknown),
+  inversion basses spelled as chord tones (`E/G#`, `Ab/C`), 9/11/13 shown as the matching 7th.
+- `chords.cached_chords` uses the model when installed (setting **`chords_engine`**: `"auto"` | `"reacue"`,
+  env `REACUE_CHORDS_ENGINE`), otherwise or on failure ReaCue's detection (unchanged, same cache key).
+- `tools/compare_chords.py`: model vs ReaCue, bar by bar, on the user's songs.
 
 ## 1.0.1 — 2026-10-22 — docs : captures mises à jour / updated screenshots
 
