@@ -325,8 +325,9 @@ def build_pdf(song: dict, lang: str | None = None) -> bytes:
         y -= 16
 
     total = len(pages)
+    foot = "sheet_footer_auto" if any(ln.get("auto") for ln in song.get("lyrics") or []) else "sheet_footer"
     for i, p in enumerate(pages, 1):
-        p.text(MARGIN, MARGIN - 16, t("sheet_footer", lang=lang), 7, color=GREY)
+        p.text(MARGIN, MARGIN - 16, t(foot, lang=lang), 7, color=GREY)
         p.text(PAGE_W - MARGIN, MARGIN - 16, f"{i}/{total}", 7, color=GREY, align="right")
     return _pdf_bytes(pages, title)
 

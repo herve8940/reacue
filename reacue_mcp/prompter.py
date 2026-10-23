@@ -178,6 +178,8 @@ def lyrics_on_timeline(lyrics: list[dict], timeline: dict, bpb: int, n_bars: int
         e = {"i": o["i"], "line": o.get("line", o["i"] + 1), "bar": bar, "beat": int(o.get("beat", 0)),
              "pos": round(pos, 3), "t": t0, "end": round(t1, 4), "text": o["text"],
              "confidence": o.get("confidence", 0.5), "copy": bool(o.get("copy", False))}
+        if o.get("auto"):                    # brouillon automatique (Whisper, lyrics_auto.py)
+            e["auto"] = True
         if o.get("words"):
             ws = _words_on_timeline(o, t0, t1, timeline, bpb, downbeats)
             if ws:

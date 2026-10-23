@@ -18,6 +18,8 @@ os.environ["REAPER_RESOURCE_PATH"] = str(_RES)
 os.environ["REACUE_STRUCTURE_ENGINE"] = "reacue"
 # ni le vrai calage mot par mot (tests/test_words.py simule le moteur)
 os.environ["REACUE_WORDS_ENGINE"] = "off"
+# ni Whisper (paroles automatiques ; tests/test_lyrics_auto.py simule le moteur)
+os.environ["REACUE_LYRICS_AUTO"] = "off"
 os.environ["REACUE_CHORDS_ENGINE"] = "reacue"          # idem pour le modèle d'accords
 # ni le vrai modèle de batterie (ADTOF)
 os.environ["REACUE_DRUMS_ENGINE"] = "reacue"

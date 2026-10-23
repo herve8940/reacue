@@ -324,6 +324,24 @@ MSG = {
     "drums_model_failed": ("Transcription de batterie par modèle (ADTOF) impossible : {e} → méthode ReaCue utilisée.",
                            "Drum transcription by model (ADTOF) failed: {e} → ReaCue method used."),
     "drums_model_timeout": ("ADTOF n'a pas répondu en {min} min", "ADTOF did not answer within {min} min"),
+    # paroles automatiques (Whisper, composant optionnel) : brouillon « paroles (auto).txt »
+    "lyrics_auto_running": ("Paroles automatiques (Whisper)… {s} s", "Automatic lyrics (Whisper)… {s} s"),
+    "lyrics_auto_timeout": ("Whisper n'a pas répondu en {min} min", "Whisper did not answer within {min} min"),
+    "lyrics_auto_created": ("Paroles automatiques : brouillon « {name} » créé ({n} lignes, langue {lang}), à corriger.",
+                            "Automatic lyrics: draft “{name}” created ({n} lines, language {lang}), please correct it."),
+    "lyrics_auto_empty": ("Paroles automatiques : aucun chant reconnu dans le stem voix.",
+                          "Automatic lyrics: no singing recognised in the vocal stem."),
+    "lyrics_auto_failed": ("Paroles automatiques impossibles : {e} → pas de paroles.",
+                           "Automatic lyrics failed: {e} → no lyrics."),
+    "lyrics_auto_header1": ("Brouillon automatique (Whisper {model}, langue {lang}) : à corriger, à l'oreille.",
+                            "Automatic draft (Whisper {model}, language {lang}): please correct it by ear."),
+    "lyrics_auto_header2": ("Corrige ce fichier sur place, ou renomme-le paroles.txt. Une ligne = une phrase "
+                            "chantée, ligne vide = nouveau bloc ; les lignes « # » sont ignorées.",
+                            "Correct this file in place, or rename it lyrics.txt. One line = one sung phrase, "
+                            "empty line = new block; “#” lines are ignored."),
+    "sheet_footer_auto": ("Grille ReaCue : accords détectés et paroles transcrites automatiquement (brouillon), "
+                          "à vérifier.",
+                          "ReaCue chart: chords detected and lyrics transcribed automatically (draft), please check."),
     "structure_failed": ("Analyse SongFormer impossible : {e} → structure ReaCue utilisée.",
                          "SongFormer analysis failed: {e} → ReaCue structure used."),
 }

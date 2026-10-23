@@ -1,8 +1,11 @@
 """Calage des paroles sur le stem voix pour le prompteur des musiciens.
 
 Fichier de paroles cherché à côté des stems : paroles*.txt|rtf, parole*.txt|rtf, lyrics*.txt|rtf.
-ReaCue ne télécharge jamais de paroles : c'est l'utilisateur qui fournit le fichier.
-Une ligne = une phrase chantée ; ligne vide = séparation de blocs (couplet, refrain…).
+ReaCue ne télécharge jamais de paroles : c'est l'utilisateur qui fournit le fichier. S'il n'y en a pas et que
+Whisper est installé (composant facultatif, lyrics_auto.py), ReaCue transcrit le stem voix et écrit un brouillon
+« paroles (auto).txt » dans le dossier du morceau, utilisé ensuite comme un fichier de paroles normal
+(le fichier de l'utilisateur reste toujours prioritaire ; le brouillon n'est jamais écrasé).
+Une ligne = une phrase chantée ; ligne vide = séparation de blocs (couplet, refrain…) ; « # » = commentaire.
 
 Méthode (librosa / numpy uniquement, quelques secondes) — détaillée dans align_lyrics :
   1. phrases chantées : niveau du stem voix (seuil relatif p90 − 20 dB, comme _vocal_activity),
@@ -72,16 +75,16 @@ def calage_file(lyrics_path) -> Path | None:
             return p
     return None
 _PATTERNS = ("paroles", "parole", "lyrics")
+AUTO_NAME = "paroles (auto).txt"   # brouillon écrit par lyrics_auto.py (Whisper) si l'utilisateur n'a rien fourni
 _EXTS = (".txt", ".rtf")
 
 
 # --------------------------------------------------------------------------- #
 # Fichier de paroles
 # --------------------------------------------------------------------------- #
-def find_lyrics_file(paths: list[str]) -> Path | None:
-    """Premier fichier paroles*/parole*/lyrics* (.txt, .rtf) dans le dossier des fichiers donnés
-    (ou dans les dossiers donnés) ; pour des stems séparés par ReaCue (<morceau>-stems/<modèle>/), aussi
-    dans le dossier du morceau d'origine. Insensible à la casse ; .txt préféré à .rtf à préfixe égal."""
+def lyric_dirs(paths: list[str]) -> list[Path]:
+    """Dossiers où chercher les paroles : ceux des fichiers donnés (ou les dossiers donnés) ; pour des stems
+    séparés par ReaCue (<morceau>-stems/<modèle>/), aussi le dossier du morceau d'origine."""
     dirs = []
     for p in paths or []:
         p = Path(str(p)).expanduser()
@@ -91,7 +94,14 @@ def find_lyrics_file(paths: list[str]) -> Path | None:
     for d in list(dirs):       # stems séparés par ReaCue : <morceau>-stems/<modèle>/ -> dossier du morceau
         if d.parent.name.endswith("-stems") and d.parent.parent not in dirs:
             dirs.append(d.parent.parent)
-    for d in dirs:
+    return dirs
+
+
+def find_lyrics_file(paths: list[str]) -> Path | None:
+    """Premier fichier paroles*/parole*/lyrics* (.txt, .rtf) de l'utilisateur dans lyric_dirs(paths).
+    Insensible à la casse ; .txt préféré à .rtf à préfixe égal. Le brouillon automatique « paroles (auto).txt »
+    (lyrics_auto.py) n'est jamais renvoyé ici : le fichier de l'utilisateur est toujours prioritaire."""
+    for d in lyric_dirs(paths):
         try:
             files = sorted(f for f in d.iterdir() if f.is_file())
         except OSError:
@@ -99,7 +109,7 @@ def find_lyrics_file(paths: list[str]) -> Path | None:
         best = None
         for f in files:
             n = f.name.lower()
-            if n.startswith(".") or f.suffix.lower() not in _EXTS:
+            if n.startswith(".") or f.suffix.lower() not in _EXTS or n == AUTO_NAME.lower():
                 continue
             for rank, pre in enumerate(_PATTERNS):
                 if n.startswith(pre):
@@ -245,7 +255,8 @@ _REPEAT = re.compile(r"\s*[\[(]?\s*(?:x\s*(\d)|(\d)\s*x|(bis))\s*[\])]?\s*$", re
 def read_lyrics(path) -> list[dict]:
     """Lignes non vides : [{"i": index 0-based, "line": n° 1-based, "block": n° de bloc 0-based,
     "text": …, "repeat": répétitions demandées (« x2 », « bis »), "label": étiquette du bloc}].
-    Les lignes-étiquettes (« [Refrain] », « Couplet 2 : ») ne sont pas des lignes chantées."""
+    Les lignes-étiquettes (« [Refrain] », « Couplet 2 : ») ne sont pas des lignes chantées ; les lignes qui
+    commencent par « # » sont des commentaires (ignorés, ne séparent pas les blocs)."""
     text = _read_text(Path(path))
     text = unicodedata.normalize("NFC", text.replace("\r\n", "\n").replace("\r", "\n"))
     out, block, label, gap = [], 0, None, False
@@ -253,6 +264,8 @@ def read_lyrics(path) -> list[dict]:
         t = raw.replace("\u00a0", " ").replace("\u2028", " ").strip()
         if not t:
             gap = True
+            continue
+        if t.startswith("#"):              # commentaire (en-tête du brouillon automatique…)
             continue
         if gap and out:
             block += 1
@@ -1020,9 +1033,16 @@ def cached_lyrics(a: Analysis, items: list[dict] | None, cache=None, path=None) 
     if path is None:
         files = [d["file"] for d in items] if items else [a.file] + list((a.stems or {}).values())
         path = find_lyrics_file(files)
+        if not path:                    # pas de paroles de l'utilisateur : brouillon automatique (Whisper)
+            try:
+                from . import lyrics_auto
+                path = lyrics_auto.ensure_auto_lyrics(a, items, files)
+            except Exception:           # noqa: BLE001 - jamais bloquant : pas de paroles, comme avant
+                path = None
     if not path:
         return None
     path = Path(path)
+    auto = path.name.lower() == AUTO_NAME.lower()
     if cache is None:
         from .bridge import BRIDGE_DIR
         cache = BRIDGE_DIR / "prompter_lyrics.json"
@@ -1031,7 +1051,7 @@ def cached_lyrics(a: Analysis, items: list[dict] | None, cache=None, path=None) 
     try:
         c = json.loads(cache.read_text(encoding="utf-8"))
         if c.get("key") == ck:
-            return _with_words(a, items, c["lyrics"], cache)
+            return _mark_auto(_with_words(a, items, c["lyrics"], cache), auto)
     except Exception:
         pass
     lines = read_lyrics(path)
@@ -1047,7 +1067,15 @@ def cached_lyrics(a: Analysis, items: list[dict] | None, cache=None, path=None) 
         cache.write_text(json.dumps({"key": ck, "lyrics": res}, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
-    return _with_words(a, items, res, cache)
+    return _mark_auto(_with_words(a, items, res, cache), auto)
+
+
+def _mark_auto(res: list[dict] | None, auto: bool) -> list[dict] | None:
+    """Lignes venues du brouillon automatique : "auto": True (mention sur la grille PDF)."""
+    if auto and res:
+        for o in res:
+            o["auto"] = True
+    return res
 
 
 def _with_words(a: Analysis, items: list[dict] | None, res: list[dict], cache: Path) -> list[dict]:

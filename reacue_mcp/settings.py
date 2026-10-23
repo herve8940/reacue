@@ -37,6 +37,8 @@ DEFAULTS: dict = {
     # paroles mot par mot (composant optionnel .venv-words)
     "words_engine": "auto",      # "auto" (calage mot par mot s'il est installé) | "off" (lignes seulement)
     "words_language": "auto",    # langue chantée : "auto" (déduite du texte des paroles) | "fr" | "en"
+    # paroles automatiques (Whisper, dans .venv-words) : brouillon « paroles (auto).txt » sans fichier de paroles
+    "lyrics_auto": "auto",       # "auto" (si Whisper est installé) | "off"
 }
 
 LANGS = ("fr", "en")
@@ -68,6 +70,8 @@ def load_settings(path: Path | None = None) -> dict:
     out["words_engine"] = we if we in ("auto", "off") else "auto"
     wl = str(out.get("words_language") or "auto").lower()[:4]
     out["words_language"] = wl if wl in ("auto", "fr", "en") else "auto"
+    la = str(out.get("lyrics_auto") or "auto").lower()
+    out["lyrics_auto"] = la if la in ("auto", "off") else "auto"
     ce = str(out.get("chords_engine") or "auto").lower()
     out["chords_engine"] = ce if ce in ("auto", "reacue") else "auto"
     de = str(out.get("drums_engine") or "auto").lower()
