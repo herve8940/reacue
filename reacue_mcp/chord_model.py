@@ -165,7 +165,7 @@ def run_engine(audio: str, out_json: Path, beats: dict | None = None, probs: Pat
                python: str | None = None, script: str | None = None) -> dict:
     """Lance reacue_chords.py analyze ; renvoie le résultat (dict) ou lève RuntimeError."""
     from .i18n import t
-    d = Path(install_dir or ROOT)
+    d = Path(install_dir or ROOT).resolve()
     py = python or str(chords_python(d))
     sc = script or str(d / "reacue_chords.py")
     out_json = Path(out_json)

@@ -501,3 +501,24 @@ def test_no_chord_model_tracked_and_notices():
     assert not [f for f in files if f.endswith(".sdict") or f.startswith("chords/")]
     txt = " ".join((ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8").split())
     assert "ISMIR2019-Large-Vocabulary-Chord-Recognition" in txt and "Junyan Jiang" in txt
+
+
+# --------------------------------------------------------------------------- outil de comparaison
+def test_compare_tool(monkeypatch, capsys, tmp_path):
+    sys.path.insert(0, str(ROOT / "tools"))
+    import compare_chords as T
+    assert T._fam("F#m7/A") == (6, "m") and T._fam("Gbmaj7") == (6, "") and T._fam("N.C.") == ("N.C.", "")
+    a = _analysis(2)
+    monkeypatch.setattr(T, "load_song", lambda p: (a, None, ["Demo-A minor-120bpm.wav"]))
+    monkeypatch.setattr(T.CH, "detect_chords", lambda a, items, key, simple=True: [
+        {"bar": 1, "chords": [{"beat": 1, "chord": "Am", "bass": "A", "confidence": 1.0}]},
+        {"bar": 2, "chords": [{"beat": 1, "chord": "C", "bass": "C", "confidence": 1.0}]}])
+    monkeypatch.setattr(T.CM, "available", lambda install_dir=None: True)
+    monkeypatch.setattr(T.CM, "model_segments", lambda a, srcs: (
+        [_seg(0.5, 2.5, "A:min7"), _seg(2.5, 3.5, "C:maj"), _seg(3.5, 4.5, "G:maj/3")], {"cached": False}))
+    out = tmp_path / "r.json"
+    assert T.main(["song", "--json", str(out)]) == 0
+    txt = capsys.readouterr().out
+    assert "Am7" in txt and "C G/B" in txt and "same name 25 %" in txt and "same root and colour 75 %" in txt
+    r = json.loads(out.read_text())[0]
+    assert r["agreement"] == {"same_name": 0.25, "same_family": 0.75} and r["key"]["chord"] == "Am"
