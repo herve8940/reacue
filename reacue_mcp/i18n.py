@@ -320,6 +320,10 @@ MSG = {
                             "Chord model unavailable: {e} → ReaCue's chord detection used."),
     "chords_model_used": ("Accords reconnus par le modèle (Jiang et al. 2019), calés sur la grille de ReaCue.",
                           "Chords recognised by the model (Jiang et al. 2019), aligned on ReaCue's grid."),
+    # batterie : transcription par modèle (ADTOF, composant optionnel)
+    "drums_model_failed": ("Transcription de batterie par modèle (ADTOF) impossible : {e} → méthode ReaCue utilisée.",
+                           "Drum transcription by model (ADTOF) failed: {e} → ReaCue method used."),
+    "drums_model_timeout": ("ADTOF n'a pas répondu en {min} min", "ADTOF did not answer within {min} min"),
     "structure_failed": ("Analyse SongFormer impossible : {e} → structure ReaCue utilisée.",
                          "SongFormer analysis failed: {e} → ReaCue structure used."),
 }

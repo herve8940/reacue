@@ -136,6 +136,7 @@
   .lanes .c i.acc { width: 20px; height: 20px; }
   .lanes .c.cur i { background: var(--warn); }
   .lanes .c i.cy { background: #7fd1ff; transform: rotate(45deg); border-radius: 3px; }
+  .lanes .c i.cy.op { background: transparent; border: 3px solid #7fd1ff; box-sizing: border-box; }
   .lanes .c i.bd { background: #ff7a7a; }
   .lanes .c i.sd { background: #fff; }
   .lanes .c i.tm { background: #c9a0ff; }
@@ -410,7 +411,7 @@ const STR = {
     firstChord: "1er accord", then: "ensuite",
     lyThenIn: n => `ensuite dans ${n} mes.`, lyIn: (n, bar) => `dans ${n} mesures · mesure ${bar}`,
     lyEnd: "fin des paroles", lyLine: n => `ligne ${n}`, lyCopy: " (reprise)", lyUnsure: " · position incertaine",
-    lanes: { CR: "Crash", RD: "Ride", HH: "Charley", SD: "Caisse cl.", T1: "Tom 1", T2: "Tom 2", FT: "Tom bas", BD: "Gr. caisse" },
+    lanes: { CR: "Crash", RD: "Ride", HH: "Charley", HO: "Charley ouv.", SD: "Caisse cl.", T1: "Tom 1", T2: "Tom 2", FT: "Tom bas", BD: "Gr. caisse" },
     tacet: "Batterie tacet", ride: "ride", hihat: "charley",
     rest: n => `silence ${n} mes.`, back: "REPRISE", crash1: "crash sur le 1", withFill: "avec fill", fill: "FILL", end: "FIN",
     nowK: "En cours", countIn: "Décompte", finished: "Terminé", ready: "Prêt", endName: "Fin",
@@ -474,7 +475,7 @@ const STR = {
     firstChord: "first chord", then: "next",
     lyThenIn: n => `next in ${n} bars`, lyIn: (n, bar) => `in ${n} bars · bar ${bar}`,
     lyEnd: "end of lyrics", lyLine: n => `line ${n}`, lyCopy: " (repeat)", lyUnsure: " · position uncertain",
-    lanes: { CR: "Crash", RD: "Ride", HH: "Hi-hat", SD: "Snare", T1: "Tom 1", T2: "Tom 2", FT: "Floor tom", BD: "Kick" },
+    lanes: { CR: "Crash", RD: "Ride", HH: "Hi-hat", HO: "Open hi-hat", SD: "Snare", T1: "Tom 1", T2: "Tom 2", FT: "Floor tom", BD: "Kick" },
     tacet: "Drums tacet", ride: "ride", hihat: "hi-hat",
     rest: n => `${n}-bar rest`, back: "BACK IN", crash1: "crash on 1", withFill: "with fill", fill: "FILL", end: "END",
     nowK: "Now", countIn: "Count-in", finished: "Finished", ready: "Ready", endName: "End",
@@ -811,7 +812,7 @@ function renderLyrics(t, L) {
 }
 
 // ---------------------------------------------------------------- vue batteur
-const LANE_KEYS = ["CR", "RD", "HH", "SD", "T1", "T2", "FT", "BD"];
+const LANE_KEYS = ["CR", "RD", "HH", "HO", "SD", "T1", "T2", "FT", "BD"];
 const dBar = b => { const d = song.drums; if (!d || !d.bars) return null; const e = d.bars[b - 1]; return e && e.bar === b ? e : d.bars.find(x => x.bar === b) || null; };
 function grooveName(sec) {
   const d = song.drums; if (!d || !sec) return "";
@@ -898,7 +899,7 @@ function renderDrums(t, L, si, sec) {
       let h = `<div></div>` + Array.from({ length: steps }, (_, i) => `<div class="hd">${i % (steps / m) === 0 ? i / (steps / m) + 1 : ""}</div>`).join("");
       for (const l of lanes) {
         const set = new Set(hits[l] || []), A = new Set(acc[l] || []);
-        const kind = ["CR", "RD", "HH"].includes(l) ? "cy" : l === "BD" ? "bd" : l === "SD" ? "sd" : "tm";
+        const kind = l === "HO" ? "cy op" : ["CR", "RD", "HH"].includes(l) ? "cy" : l === "BD" ? "bd" : l === "SD" ? "sd" : "tm";
         h += `<div class="lb">${S.lanes[l] || l}</div>` + Array.from({ length: steps }, (_, i) =>
           `<div class="c${i % (steps / m) === 0 ? " b" : ""}" data-s="${i}">${set.has(i) ? `<i class="${kind}${A.has(i) ? " acc" : ""}"></i>` : ""}</div>`).join("");
       }
