@@ -1,0 +1,15 @@
+# ReaCue — transcription de batterie (ADTOF), environnement SÉPARÉ .venv-drums / separate environment.
+# Installé par install/install_drums_mac.sh et install/install_drums_windows.ps1 (Python 3.12) avec :
+#   uv pip install --only-binary :all: -r requirements-drums.txt
+# Le code et les poids d'ADTOF-pytorch sont téléchargés à part (révision figée), pas installés par pip.
+# Mêmes versions de PyTorch que la séparation de stems (Demucs) : le cache de uv les partage.
+# Mac Intel : PyTorch n'existe plus pour Mac Intel après 2.2.2, qui exige numpy < 2
+torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+# Mac Apple Silicon, Windows, Linux
+torch==2.5.1 ; sys_platform != "darwin" or platform_machine != "x86_64"
+numpy<2
+scipy<1.14
+librosa
+numba==0.62.1
+llvmlite==0.45.1
+soundfile

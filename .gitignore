@@ -59,6 +59,10 @@ demucs_status.json
 /structure/
 .reacue/
 
+# Transcription de batterie (ADTOF, téléchargé par l'installateur) / Drum transcription
+.venv-drums/
+/drums/
+
 # Poids de modèles : jamais dans le dépôt (téléchargés par l'utilisateur) / Model weights: never in the repository
 *.safetensors
 *.pt
