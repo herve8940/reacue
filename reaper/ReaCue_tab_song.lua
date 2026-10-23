@@ -190,11 +190,36 @@ return function(ctx)
     return nil
   end
 
+  -- Titre publié par ReaCue : nom du fichier seul, ou, pour des stems, le début commun de leurs noms
+  -- (« Song-vocals », « Song-drums » -> « Song »). Accepté s'il est le nom d'un des fichiers du projet
+  -- ou le début d'un de ces noms (au moins 3 caractères, suivi d'un séparateur ou de la fin).
+  local function title_matches(title, titles)
+    if titles[title] then return true end
+    if #title < 3 then return false end
+    local pre = nil                     -- même calcul que _common_title côté serveur
+    for name in pairs(titles) do
+      if not pre then pre = name
+      else
+        local n = 0
+        while n < #pre and n < #name and pre:byte(n + 1) == name:byte(n + 1) do n = n + 1 end
+        pre = pre:sub(1, n)
+      end
+    end
+    if pre and pre:gsub("[%s%-_%.]+$", "") == title then return true end
+    for name in pairs(titles) do
+      if name:sub(1, #title) == title then
+        local nxt = name:sub(#title + 1, #title + 1)
+        if nxt == "" or nxt:match("[%s%-_%.]") then return true end
+      end
+    end
+    return false
+  end
+
   local function published(titles)
     local src = L.read(reaper.GetResourcePath() .. SEP .. "reaper_www_root" .. SEP .. "reacue_song.json")
     if not src or src:find('"concert"%s*:') then return nil end
     local title = R.jfield(src, "title")
-    if not title or not titles[title] then return nil end
+    if not title or not title_matches(title, titles) then return nil end
     local chords = src:find('"chords"%s*:%s*%[%s*{') ~= nil
     local drums = src:find('"drums"%s*:%s*{') ~= nil
     return { chords = chords, drums = drums }

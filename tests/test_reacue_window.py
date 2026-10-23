@@ -792,3 +792,23 @@ def test_english_new_views(concert, tmp_path):
     press_text(L, g, "Advanced settings", exact=True); frame(L, g)
     T = TL.texts(g)
     assert "Click volume" in T and "Count speed" in T and "Simple settings" in T and "Check the installation" in T, T
+
+
+@pytest.mark.parametrize("title, ok", [
+    ("Song One-A minor-120bpm", True),              # stems : début commun des noms (serveur, _common_title)
+    ("Song One-A minor-120bpm-vocals", True),       # un seul fichier : son nom
+    ("Song One", True),                             # titre plus court, suivi d'un séparateur
+    ("Song Two", False), ("Song On", False),        # autre morceau / coupé au milieu d'un mot
+])
+def test_published_pills_match_stem_titles(concert, tmp_path, title, ok):
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path, structure=True)
+    song = {"version": 1, "title": title, "chords": [{"bar": 1, "chords": []}],
+            "drums": {"steps": 16, "bars": []}}
+    (Path(g.RES) / "reaper_www_root" / "reacue_song.json").write_text(json.dumps(song), encoding="utf-8")
+    open_window(L, g)
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    want = ("Accords ✓", "Batterie ✓", "Prompteur publié ✓") if ok else ("Accords —", "Batterie —", "Prompteur —")
+    for p in want:
+        assert p in T, (title, p, T)
