@@ -709,7 +709,13 @@ def from_model(a: Analysis, y, res: dict, shift: float = 0.0) -> dict:
     f0s = []
     for t, _, _ in toms:
         i = fr(t)
-        f0s.append(float(lowfr[int(np.argmax(lowspec[:, i:i + 8].mean(1)))]) if lowspec.shape[1] > i else 100.0)
+        if lowspec.shape[1] <= i + 1:
+            f0s.append(100.0)
+            continue
+        # hauteur de ce qui vient d'arriver (le tom précédent résonne encore) : hausse du spectre grave
+        now = lowspec[:, i:i + 8].mean(1)
+        rise = np.maximum(0.0, now - lowspec[:, max(0, i - 6):max(1, i - 1)].mean(1))
+        f0s.append(float(lowfr[int(np.argmax(rise if rise.max() > 0 else now))]))
     for (t, b, st), lane in zip(toms, _tom_lanes(f0s)):
         put(lane, b, st, level("TT", t))
     # charley et cymbales : décision par section (flux régulier = voie du groove), puis coup par coup
@@ -755,10 +761,15 @@ def from_model(a: Analysis, y, res: dict, shift: float = 0.0) -> dict:
         hh_dec = [x[4] for x in mine if x[0] == "HH"]
         ride_hh = stream("HH") and not ride_cy and float(np.median(hh_dec)) > -12
         med = float(np.median([x[3] for x in mine]))
+        # crash dans un flux de ride : seulement le 1er coup de cymbale du 1er temps, plus fort que le flux
+        first = {}
+        for x in mine:
+            if x[0] == "CY" and x[2] < q:
+                first[x[1]] = min(first.get(x[1], q), x[2])
         for c, b, st, lv, dec, long_, opened in mine:
             loud_long = lv >= max(-4.0, med + 4) and long_ > -10
             if c == "CY":
-                lane = "RD" if ride_cy and not (st < q and lv >= med + 4) else "CR"
+                lane = "RD" if ride_cy and not (first.get(b) == st and lv >= med + 4) else "CR"
             elif ride_hh:
                 lane = "CR" if loud_long else "RD"
             else:

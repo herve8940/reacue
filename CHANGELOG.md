@@ -1,5 +1,19 @@
 # Changelog
 
+## Non publié / Unreleased
+
+### Batterie : transcription par modèle (ADTOF) / Drums: model-based transcription (ADTOF)
+- **ADTOF** (optional component, `.venv-drums`, `Install ReaCue Drums.command` / `.bat`): trained drum
+  transcription of the drum stem (kick, snare, toms, hi-hat, cymbals), run in a subprocess
+  (`reacue_drums.py`), cached next to the stem; automatic fallback to ReaCue's rules if missing or failing
+  (setting `drums_engine`: `auto` | `reacue`). / Transcription entraînée du stem batterie, repli automatique.
+- Hits snapped to ReaCue's grid (bar times from the analysis, global latency estimated), **sixteenths or
+  triplets** chosen per song; toms split by pitch (T1 / T2 / FT), **open hi-hat** (new `HO` lane, shown by
+  the prompter), crash vs ride per section; same output format (patterns, fills, crashes). / Quantification
+  sur la grille, double-croches ou triolets, charley ouvert, crash / ride.
+- Licences: ADTOF weights CC BY-NC-SA 4.0 (non-commercial), explicit “J'accepte / I accept” in the
+  installers; see THIRD_PARTY_NOTICES.md. Comparison tool: `tools/compare_drums.py`.
+
 ## 1.0.1 — 2026-10-22 — docs : captures mises à jour / updated screenshots
 
 Documentation: every screenshot regenerated with the current code, in French **and** English, with made-up

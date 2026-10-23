@@ -19,12 +19,15 @@ is responsible for complying with their licences.
 L'**analyse de structure (SongFormer)**, composant facultatif, télécharge les poids **MuQ-large-msd-iter**,
 publiés sous **CC BY-NC 4.0 : usage non commercial uniquement**. Le modèle MusicFM (MSD) n'a pas de
 licence propre clairement indiquée (voir plus bas). N'utilise pas ce composant dans un cadre commercial
-(produit ou service payant) sans l'accord des ayants droit. Le reste de ReaCue n'est pas concerné.
+(produit ou service payant) sans l'accord des ayants droit. De même, la **transcription de batterie
+(ADTOF)**, composant facultatif, télécharge des poids sous **CC BY-NC-SA 4.0 (non commerciale)**. Le reste
+de ReaCue n'est pas concerné.
 
 The optional **structure analysis (SongFormer)** component downloads the **MuQ-large-msd-iter** weights,
 released under **CC BY-NC 4.0: non-commercial use only**. The MusicFM (MSD) checkpoint has no clearly
 stated licence of its own (see below). Do not use this component commercially (paid product or service)
-without the rights holders' permission. The rest of ReaCue is not affected.
+without the rights holders' permission. Likewise, the optional **drum transcription (ADTOF)** component
+downloads weights under **CC BY-NC-SA 4.0 (non-commercial)**. The rest of ReaCue is not affected.
 
 ## Inclus dans le dépôt / Included in this repository
 
@@ -40,12 +43,20 @@ without the rights holders' permission. The rest of ReaCue is not affected.
 | **SongFormer** (`SongFormer.safetensors`) | Analyse de structure (facultatif) / structure analysis (optional) | [ASLP-lab/SongFormer](https://github.com/ASLP-lab/SongFormer), [HF ASLP-lab/SongFormer](https://huggingface.co/ASLP-lab/SongFormer) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (attribution obligatoire / attribution required) | Page HF : badge CC BY 4.0, pas d'étiquette de licence formelle / HF page: CC BY 4.0 badge, no formal licence tag |
 | **MuQ** `OpenMuQ/MuQ-large-msd-iter` | Dépendance de SongFormer / SongFormer dependency | [tencent-ailab/MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab), [HF OpenMuQ/MuQ-large-msd-iter](https://huggingface.co/OpenMuQ/MuQ-large-msd-iter) | MIT | **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — non commercial** (fichier `LICENSE_weights` du dépôt et étiquette HF / `LICENSE_weights` file and HF tag) |
 | **MusicFM** MSD (`pretrained_msd.pt`, `msd_stats.json`) | Dépendance de SongFormer / SongFormer dependency | [minzwon/musicfm](https://github.com/minzwon/musicfm) (Minz Won, Yun-Ning Hung, Duc Le — ByteDance), [HF minzwon/MusicFM](https://huggingface.co/minzwon/MusicFM) | MIT (+ Apache-2.0 pour `modules/flash_conformer.py`) | **Incertaine / uncertain** : le dépôt HF est étiqueté MIT mais n'a pas de carte et rien n'est dit sur `pretrained_msd.pt` ; ce modèle est entraîné sur le Million Song Dataset, et le README des auteurs ne publie volontairement que le modèle FMA « pour éviter des complications de licence ». / The HF repo is tagged MIT but has no model card and says nothing about `pretrained_msd.pt`; this checkpoint is trained on the Million Song Dataset, and the authors' README says they chose to release the FMA model “to avoid potential licensing complications”. |
+| **ADTOF** Frame_RNN (`adtof_frame_rnn_pytorch_weights.pth`, 16 Mo / MB) | Transcription de batterie (facultatif) / drum transcription (optional) | [MZehren/ADTOF](https://github.com/MZehren/ADTOF) (Mickaël Zehren, Marco Alunno, Paolo Bientinesi) ; poids convertis pour PyTorch par / weights converted to PyTorch by [xavriley/ADTOF-pytorch](https://github.com/xavriley/ADTOF-pytorch) (Xavier Riley), téléchargés depuis GitHub / downloaded from GitHub | ADTOF : **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** ; ADTOF-pytorch : **aucune licence indiquée / no licence stated** | **CC BY-NC-SA 4.0 — non commercial** (poids d'origine d'ADTOF, fichier `LICENSE` du dépôt ; la conversion PyTorch en dérive / original ADTOF weights, repository `LICENSE` file; the PyTorch conversion derives from them) |
 | Configuration `facebook/wav2vec2-conformer-rope-large-960h-ft` | Configuration lue par MusicFM (pas de poids) / config read by MusicFM (no weights) | [Hugging Face](https://huggingface.co/facebook/wav2vec2-conformer-rope-large-960h-ft) (Meta) | — | Apache-2.0 (étiquette HF / HF tag) |
 
 ## Code source téléchargé par l'installateur / Source code fetched by the installer
 
 Révisions figées (voir `reacue_mcp/structure.py`) / Pinned revisions: SongFormer (CC BY 4.0), MuQ (MIT),
 MusicFM (MIT / Apache-2.0) — téléchargés dans `structure/`, jamais redistribués par ce dépôt.
+
+Transcription de batterie (voir `reacue_mcp/drums.py`) / Drum transcription: ADTOF-pytorch, révision
+figée / pinned revision `85c192e78f716ea0b111cc8a5ee4a8f6a3a4f8a9` (code sans licence indiquée + poids
+CC BY-NC-SA 4.0 / code with no stated licence + CC BY-NC-SA 4.0 weights) — téléchargé dans `drums/` après
+l'accord « J'accepte », jamais redistribué par ce dépôt ; ReaCue n'en utilise que le chargement du modèle
+(son propre code fait le reste) / fetched into `drums/` after the “I accept” step, never redistributed by
+this repository; ReaCue only uses its model loading (its own code does the rest).
 
 ## Paquets Python / Python packages
 
@@ -99,5 +110,8 @@ dependencies follow their own licences (see PyPI).
   Vector Quantization*, arXiv:2501.01108, 2025. https://arxiv.org/abs/2501.01108
 - Minz Won, Yun-Ning Hung, Duc Le, *A Foundation Model for Music Informatics*, arXiv:2311.03318, 2023.
   https://arxiv.org/abs/2311.03318
+- Mickaël Zehren, Marco Alunno, Paolo Bientinesi, *ADTOF: A large dataset of non-synthetic music for
+  automatic drum transcription*, ISMIR 2021, pp. 818–824 ; *High-Quality and Reproducible Automatic Drum
+  Transcription from Crowdsourced Data*, Signals 4(4), 768–787, 2023. https://doi.org/10.3390/signals4040042
 - Simon Rouard, Francisco Massa, Alexandre Défossez, *Hybrid Transformers for Music Source Separation*,
   ICASSP 2023, arXiv:2211.08553. https://arxiv.org/abs/2211.08553

@@ -47,6 +47,7 @@ language with Claude (MCP server).
 - [Enable REAPER's web interface (prompter)](#enable-reapers-web-interface-prompter)
 - [Stem separation (optional)](#stem-separation-optional)
 - [Structure analysis (SongFormer, default)](#structure-analysis-songformer-default)
+- [Drum transcription (ADTOF, optional)](#drum-transcription-adtof-optional)
 - [The ReaCue window](#the-reacue-window)
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
@@ -287,6 +288,26 @@ Memory and time:
 model whose **weights are licensed CC BY-NC 4.0 (non-commercial)**; the analysis is therefore for
 personal / non-commercial use. See [Credits and licence](#credits-and-licence). The repository contains no
 model weights: they are downloaded by the installer from their authors.
+
+## Drum transcription (ADTOF, optional)
+
+The prompter's **Drums** view (groove, fills, crashes) comes from the drum stem. By default ReaCue
+transcribes it with its own rules; if you install this component, it uses **ADTOF**, a model trained on
+359 hours of real music (kick, snare, toms, hi-hat, cymbals), much more reliable on snare and cymbals.
+ReaCue then tells high / mid / floor tom, closed / **open** hi-hat (new “Open hi-hat” row) and crash / ride
+apart, and snaps every hit to its grid (sixteenths, or triplets for a shuffle).
+
+- Install: double-click **`Install ReaCue Drums.command`** (Mac) or **`Install ReaCue Drums.bat`**
+  (Windows). About 300 MB to download (PyTorch, already cached if stem separation is installed) + 16 MB for
+  the model, 3 to 10 minutes. Separate `.venv-drums` environment.
+- Then it is automatic (setting `drums_engine`: `auto`; `reacue` to go back to the rules); if it fails,
+  ReaCue falls back to its rules. About 20 to 60 s per song on an Intel Mac, only once (result cached next
+  to the stem, in `.reacue/`).
+- Compare before / after on a song: `.venv/bin/python tools/compare_drums.py <drum stem>`.
+
+**Licences — non-commercial use only.** ADTOF's weights are **CC BY-NC-SA 4.0**; the PyTorch port used
+(ADTOF-pytorch) states no licence. The installer asks you to type “I accept”. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## The ReaCue window
 
@@ -715,6 +736,8 @@ Project layout:
   by its authors. Do not use this optional component for a commercial product or service without the
   rights holders' permission. The rest of ReaCue (including stem separation with Demucs, MIT) is not
   affected; you can always use ReaCue without it (setting *Structure detection: ReaCue only*).
+- **Drum transcription (ADTOF) — non-commercial use only.** Optional component whose weights are licensed
+  **CC BY-NC-SA 4.0 (non-commercial)**; without it, ReaCue transcribes drums with its own rules.
 - **Your music:** you alone are responsible for having the rights to the audio, stems and lyrics you
   process with ReaCue. ReaCue provides **no audio and no lyrics**, and never downloads lyrics.
 - **Trademarks:** REAPER is a trademark of Cockos Incorporated; Claude is a trademark of Anthropic; other

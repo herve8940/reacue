@@ -46,6 +46,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [Activer l'interface web de REAPER (prompteur)](#activer-linterface-web-de-reaper-prompteur)
 - [Séparation de stems (facultatif)](#séparation-de-stems-facultatif)
 - [Analyse de structure (SongFormer, par défaut)](#analyse-de-structure-songformer-par-défaut)
+- [Transcription de batterie (ADTOF, facultatif)](#transcription-de-batterie-adtof-facultatif)
 - [La fenêtre ReaCue](#la-fenêtre-reacue)
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
@@ -294,6 +295,27 @@ s'appuie sur le modèle **MuQ** dont les **poids sont sous licence CC BY-NC 4.0 
 l'analyse est donc réservée à un usage personnel / non commercial. Voir [Crédits et
 licence](#crédits-et-licence). Le dépôt ne contient aucun poids de modèle : l'installateur les télécharge
 chez leurs auteurs.
+
+## Transcription de batterie (ADTOF, facultatif)
+
+La vue **Batterie** du prompteur (groove, fills, crashs) vient du stem batterie. Par défaut ReaCue le
+transcrit avec ses propres règles ; si tu installes ce composant, il utilise **ADTOF**, un modèle entraîné
+sur 359 heures de musique réelle (grosse caisse, caisse claire, toms, charley, cymbales), bien plus fiable
+sur la caisse claire et les cymbales. ReaCue précise ensuite tom aigu / médium / basse, charley fermé /
+**ouvert** (nouvelle ligne « Charley ouv. »), crash / ride, et cale chaque coup sur sa grille
+(double-croches, ou triolets pour un morceau shuffle).
+
+- Installation : double-clique **`Install ReaCue Drums.command`** (Mac) ou **`Install ReaCue Drums.bat`**
+  (Windows). Environ 300 Mo à télécharger (PyTorch, déjà en cache si la séparation de stems est installée)
+  + 16 Mo pour le modèle, 3 à 10 minutes. Environnement séparé `.venv-drums`.
+- Ensuite c'est automatique (réglage `drums_engine` : `auto` ; `reacue` pour revenir aux règles) ; en cas
+  d'échec, ReaCue reprend ses règles. Calcul : environ 20 à 60 s par morceau sur un Mac Intel, une seule
+  fois (résultat mémorisé à côté du stem, dans `.reacue/`).
+- Comparer avant / après sur un morceau : `.venv/bin/python tools/compare_drums.py <stem batterie>`.
+
+**Licences — usage non commercial uniquement.** Les poids d'ADTOF sont sous **CC BY-NC-SA 4.0** ; le
+portage PyTorch utilisé (ADTOF-pytorch) n'indique pas de licence. L'installateur demande de taper
+« J'accepte ». Voir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## La fenêtre ReaCue
 
@@ -750,6 +772,9 @@ Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : 
   un service commercial sans l'accord des ayants droit. Le reste de ReaCue (y compris la séparation de stems
   avec Demucs, MIT) n'est pas concerné ; tu peux toujours utiliser ReaCue sans lui (réglage *Détection de
   structure : ReaCue seul*).
+- **Transcription de batterie (ADTOF) — usage non commercial uniquement.** Composant facultatif dont les
+  poids sont sous licence **CC BY-NC-SA 4.0 (non commerciale)** ; sans lui, ReaCue transcrit la batterie
+  avec ses propres règles.
 - **Ta musique :** tu es seul responsable des droits sur l'audio, les stems et les paroles que tu traites
   avec ReaCue. ReaCue ne fournit **ni audio ni paroles**, et ne télécharge jamais de paroles.
 - **Marques :** REAPER est une marque de Cockos Incorporated ; Claude est une marque d'Anthropic ; les autres
