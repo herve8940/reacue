@@ -639,6 +639,25 @@ def speller(kp: tuple[int, bool]):
     return name
 
 
+_LETTERS = "CDEFGAB"
+_NAT = (0, 2, 4, 5, 7, 9, 11)
+# intervalle (demi-tons) -> nombre de lettres au-dessus de la fondamentale (tierce = 2, quinte = 4…)
+_STEPS = (0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6)
+
+
+def spell_above(root_name: str, semis: int, fallback=None) -> str:
+    """Note à `semis` demi-tons au-dessus de root_name, épelée comme intervalle de l'accord :
+    E + 4 -> G# (et non Ab), Bb + 4 -> D, F# + 3 -> A. Altération double : fallback(pc) si fourni."""
+    li = _LETTERS.index(root_name[0])
+    rpc = _PC.get(root_name, _NAT[li])
+    letter = _LETTERS[(li + _STEPS[semis % 12]) % 7]
+    pc = (rpc + semis) % 12
+    acc = (pc - _NAT[_LETTERS.index(letter)] + 6) % 12 - 6
+    if acc in (-1, 0, 1):
+        return letter + {-1: "b", 0: "", 1: "#"}[acc]
+    return fallback(pc) if fallback else (SHARPS[pc])
+
+
 def _segments_key(segs: list[tuple]) -> tuple[int, bool]:
     """Tonalité estimée sur les accords du modèle (notes des accords pondérées par la durée, basse double)."""
     ch, bs = np.zeros((1, 12)), np.zeros((1, 12))
@@ -704,10 +723,10 @@ def chords_from_segments(a: Analysis, segments: list[dict], key: dict | str | No
         if lab is None:
             return {"beat": beat, "chord": NC, "bass": None, "confidence": round(min(1.0, conf), 2)}
         r, suf, b = lab
-        name = spell(r) + suf
-        if b != r:
-            name += "/" + spell(b)
-        return {"beat": beat, "chord": name, "bass": spell(b), "confidence": round(min(1.0, conf), 2)}
+        rn = spell(r)
+        bn = rn if b == r else spell_above(rn, (b - r) % 12, spell)      # renversement : note de l'accord
+        name = rn + suf + ("" if b == r else "/" + bn)
+        return {"beat": beat, "chord": name, "bass": bn, "confidence": round(min(1.0, conf), 2)}
 
     out = []
     for k in range(len(db) - 1):

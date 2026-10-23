@@ -46,6 +46,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [Activer l'interface web de REAPER (prompteur)](#activer-linterface-web-de-reaper-prompteur)
 - [Séparation de stems (facultatif)](#séparation-de-stems-facultatif)
 - [Analyse de structure (SongFormer, par défaut)](#analyse-de-structure-songformer-par-défaut)
+- [Reconnaissance d'accords (modèle, facultatif)](#reconnaissance-daccords-modèle-facultatif)
 - [La fenêtre ReaCue](#la-fenêtre-reacue)
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
@@ -294,6 +295,32 @@ s'appuie sur le modèle **MuQ** dont les **poids sont sous licence CC BY-NC 4.0 
 l'analyse est donc réservée à un usage personnel / non commercial. Voir [Crédits et
 licence](#crédits-et-licence). Le dépôt ne contient aucun poids de modèle : l'installateur les télécharge
 chez leurs auteurs.
+
+## Reconnaissance d'accords (modèle, facultatif)
+
+Par défaut, ReaCue détecte les accords du prompteur et de la grille PDF avec ses propres règles (chroma +
+basse). Pour des accords plus justes (majeur / mineur, 7e, maj7, m7, sus, dim, aug, renversements comme
+`D/F#`), il peut utiliser un **modèle entraîné** : *Large-Vocabulary Chord Transcription via Chord Structure
+Decomposition* (Junyan Jiang, Ke Chen, Wei Li, Gus Xia — ISMIR 2019), **code et poids sous licence MIT**.
+
+**Installer :** double-clic sur **`Install ReaCue Chords.command`** (Mac) ou **`Install ReaCue Chords.bat`**
+(Windows), ou `bash install/install_chords_mac.sh`. L'installateur crée un environnement séparé
+`.venv-chords` (le `.venv` de ReaCue n'est pas touché), télécharge le modèle depuis GitHub à une version
+figée dans `chords/model` (environ 60 Mo), installe PyTorch (déjà en cache si la séparation de stems est
+installée ; sur Mac Intel : PyTorch 2.2.2, numpy < 2, aucun paquet à compiler), puis fait un essai sur un
+audio synthétique et affiche `CHORDS_OK`.
+
+| | |
+|---|---|
+| Entrée | les stems **sans la voix ni la batterie** (guitares, basse, claviers, other), sinon le fichier unique |
+| Calage | le décodage suit les temps de la grille de ReaCue (changements sur les temps, surtout 1 et 3), puis au plus deux accords par mesure, comme avant |
+| Nommage | dièses / bémols selon la tonalité (nom du fichier, sinon estimée) ; basse des renversements épelée comme note de l'accord (`E/G#`, `Ab/C`) |
+| Lisibilité | 9e, 11e, 13e affichées comme la 7e correspondante (`G9` → `G7`) |
+| Temps | environ 30 s à 1 min par morceau sur un Mac Intel (processeur), moins de 1 Go de mémoire ; résultat mémorisé dans le dossier `.reacue` du morceau (un changement de grille ne relance que le décodage) |
+| Repli | modèle non installé, réglage `chords_engine` = `"reacue"`, erreur ou délai dépassé (10 min) → détection de ReaCue (message « Modèle d'accords indisponible : … ») ; après un échec, pas de nouvel essai sur le même audio pendant 1 h |
+
+**Comparer** les deux méthodes sur tes morceaux : `.venv/bin/python tools/compare_chords.py <dossier du
+morceau ou fichier audio>…` (affiche les deux grilles mesure par mesure et leur taux d'accord).
 
 ## La fenêtre ReaCue
 
@@ -568,6 +595,7 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `tempo_mode` | `"auto"` | `auto`, `constant` (un seul tempo) ou `beatmap` (un tempo par mesure) |
 | `stems_model` | `"htdemucs_6s"` | modèle de séparation de stems : `"htdemucs_6s"` (6 stems) ou `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections : `"auto"` (SongFormer s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
+| `chords_engine` | `"auto"` | accords : `"auto"` (modèle d'accords s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
 | `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
 
@@ -750,6 +778,9 @@ Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : 
   un service commercial sans l'accord des ayants droit. Le reste de ReaCue (y compris la séparation de stems
   avec Demucs, MIT) n'est pas concerné ; tu peux toujours utiliser ReaCue sans lui (réglage *Détection de
   structure : ReaCue seul*).
+- **Reconnaissance d'accords (facultative)** : modèle de Jiang et al. (Music X Lab), code et poids sous
+  licence **MIT**, téléchargés depuis GitHub par `Install ReaCue Chords` ; aucune restriction commerciale
+  connue.
 - **Ta musique :** tu es seul responsable des droits sur l'audio, les stems et les paroles que tu traites
   avec ReaCue. ReaCue ne fournit **ni audio ni paroles**, et ne télécharge jamais de paroles.
 - **Marques :** REAPER est une marque de Cockos Incorporated ; Claude est une marque d'Anthropic ; les autres

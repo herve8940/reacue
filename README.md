@@ -47,6 +47,7 @@ language with Claude (MCP server).
 - [Enable REAPER's web interface (prompter)](#enable-reapers-web-interface-prompter)
 - [Stem separation (optional)](#stem-separation-optional)
 - [Structure analysis (SongFormer, default)](#structure-analysis-songformer-default)
+- [Chord recognition (model, optional)](#chord-recognition-model-optional)
 - [The ReaCue window](#the-reacue-window)
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
@@ -287,6 +288,26 @@ Memory and time:
 model whose **weights are licensed CC BY-NC 4.0 (non-commercial)**; the analysis is therefore for
 personal / non-commercial use. See [Credits and licence](#credits-and-licence). The repository contains no
 model weights: they are downloaded by the installer from their authors.
+
+## Chord recognition (model, optional)
+
+By default ReaCue detects the prompter and PDF-chart chords with its own rules (chroma + bass). For more
+accurate chords (major / minor, 7, maj7, m7, sus, dim, aug, inversions such as `D/F#`) it can use a
+**trained model**: *Large-Vocabulary Chord Transcription via Chord Structure Decomposition* (Junyan Jiang,
+Ke Chen, Wei Li, Gus Xia — ISMIR 2019), **code and weights under the MIT licence**.
+
+**Install:** double-click **`Install ReaCue Chords.command`** (Mac) or **`Install ReaCue Chords.bat`**
+(Windows). It creates a separate `.venv-chords` environment, downloads the model from GitHub at a pinned
+revision into `chords/model` (about 60 MB), installs PyTorch (already cached if stem separation is installed;
+Mac Intel: PyTorch 2.2.2, numpy < 2, nothing to compile), tests it on synthetic audio and prints `CHORDS_OK`.
+
+The model listens to the stems **without vocals and drums** (or to the single file), its decoding follows
+ReaCue's beat grid, and the result keeps the usual format (at most two chords per bar, beats 1 and 3);
+sharps / flats follow the key, inversion basses are spelled as chord tones (`E/G#`, `Ab/C`), 9ths, 11ths
+and 13ths show as the matching 7th chord. About 30 s to 1 min per song on an Intel Mac CPU, under 1 GB of
+memory, cached in the song's `.reacue` folder. Fallback to ReaCue's detection when it is not installed,
+when `chords_engine` is `"reacue"`, or on error / timeout (10 min). Compare both methods on your songs:
+`.venv/bin/python tools/compare_chords.py <song folder or audio file>…`.
 
 ## The ReaCue window
 
@@ -544,6 +565,7 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `tempo_mode` | `"auto"` | `auto`, `constant` (one tempo) or `beatmap` (one tempo per bar) |
 | `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems) or `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
+| `chords_engine` | `"auto"` | chords: `"auto"` (chord model when installed) or `"reacue"` (ReaCue's own detection) |
 | `projects_dir` | `null` | concert mode: folder searched for song projects by name; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | concert mode: folder of the concerts; `null` = `<projects folder>/Concerts` |
 
@@ -715,6 +737,8 @@ Project layout:
   by its authors. Do not use this optional component for a commercial product or service without the
   rights holders' permission. The rest of ReaCue (including stem separation with Demucs, MIT) is not
   affected; you can always use ReaCue without it (setting *Structure detection: ReaCue only*).
+- **Chord recognition (optional):** model by Jiang et al. (Music X Lab), code and weights under the **MIT**
+  licence, downloaded from GitHub by `Install ReaCue Chords`; no known commercial restriction.
 - **Your music:** you alone are responsible for having the rights to the audio, stems and lyrics you
   process with ReaCue. ReaCue provides **no audio and no lyrics**, and never downloads lyrics.
 - **Trademarks:** REAPER is a trademark of Cockos Incorporated; Claude is a trademark of Anthropic; other

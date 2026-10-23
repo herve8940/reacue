@@ -59,6 +59,11 @@ demucs_status.json
 /structure/
 .reacue/
 
+# Reconnaissance d'accords (modèle téléchargé par l'installateur) / Chord recognition
+.venv-chords/
+/chords/
+*.sdict
+
 # Poids de modèles : jamais dans le dépôt (téléchargés par l'utilisateur) / Model weights: never in the repository
 *.safetensors
 *.pt
