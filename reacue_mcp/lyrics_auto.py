@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parent.parent          # dossier d'installation 
 ENGINE = "whisper"
 MODEL = os.environ.get("REACUE_LYRICS_MODEL") or "large-v3-turbo"
 CACHE_VERSION = 1
-TIMEOUT_S = 2400                 # 40 min (Mac Intel, CPU) ; au-delà : pas de paroles
+TIMEOUT_S = 1200                 # 20 min (Mac Intel, CPU : 3 à 6 min attendues) ; au-delà : pas de paroles
 SR = 16000
 
 # nettoyage du texte de Whisper
