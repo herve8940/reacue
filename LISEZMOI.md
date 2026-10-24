@@ -22,7 +22,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 > et [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — l'analyse de structure facultative est réservée à un
 > **usage non commercial**.
 
-> **État : 1.0.1.** Développé et utilisé sur macOS (Intel). La prise en charge de Windows et des Mac Apple Silicon
+> **État : 1.1.0.** Développé et utilisé sur macOS (Intel). La prise en charge de Windows et des Mac Apple Silicon
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
 
 | La fenêtre ReaCue dans REAPER | Le prompteur sur un téléphone | La Régie (télécommande, PIN) |
