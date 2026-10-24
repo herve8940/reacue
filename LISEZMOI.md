@@ -50,6 +50,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
 - [Paroles](#paroles)
+- [Lumière : export grandMA3](#lumière--export-grandma3)
 - [Réglages](#réglages)
 - [Facultatif : piloter ReaCue avec Claude (MCP)](#facultatif--piloter-reacue-avec-claude-mcp)
 - [Limites connues](#limites-connues)
@@ -512,6 +513,31 @@ REAPER.
 
 Pas à pas : [tutoriel, chapitre concert](docs/TUTORIEL_fr.md#16-mode-concert--plusieurs-morceaux-dans-un-projet).
 
+## Lumière : export grandMA3
+
+Chaque préparation (et chaque construction de concert) écrit aussi un **show lumière grandMA3** : un cue par
+section (nommé comme la section, ex. « Refrain 1 ») au début de sa région, en **temps du projet REAPER**
+(0 = début du projet, count-in compris).
+
+- **Morceau** : `grandMA3/<Titre>_Sequence.xml`, `<Titre>_Timecode.xml`, `<Titre>_conduite.csv` à côté du `.RPP`.
+- **Concert** : `<dossier des concerts>/grandMA3/<concert>/` : une Sequence par morceau, **un seul** Timecode
+  (une piste par morceau) et la fiche de conduite.
+- Noms de séquences nettoyés (ASCII et `_` : « Démo d’été » → `Demo_d_ete`) ; cues de même nom suffixés « (2) ».
+- La fiche de conduite (CSV) donne timecode SMPTE, cue, libellé, type et un **effet suggéré** par type de
+  section (aussi en commentaire XML au-dessus de chaque cue).
+- Le rôle **Lumière** du prompteur affiche la liste des cues (cue en cours surligné), le timecode, les
+  réglages et les liens de téléchargement des trois fichiers (servis par l'interface web de REAPER, sans internet).
+- Sur la console : importer d'abord la ou les Sequences, puis le Timecode (essayer d'abord sur un slot vide).
+
+**Recommandé : REAPER envoie le timecode à la console.** Dans REAPER, envoie le **MTC** (timecode MIDI) ou le
+**LTC** (timecode audio) à la grandMA3 et règle son show Timecode pour le suivre : la console suit alors la
+position du projet, indispensable puisque le concert **s'arrête entre les morceaux** (un timecode qui
+défilerait seul se décalerait). ReaCue ne modifie jamais les réglages de REAPER : active toi-même la sortie
+timecode (REAPER : *Préférences → Audio → MIDI Devices* / *Paramètres du projet*, ou un plug-in générateur de
+LTC sur une sortie libre). Réglages `gma3_tc_start` (timecode console du temps 0 du projet), `gma3_fps`,
+`gma3_song_gap` et `gma3_song_slot` (chaque morceau démarre à une heure ronde, ex. toutes les 10 min : plus
+simple à retrouver sur la console) : voir [Réglages](#réglages).
+
 ## Paroles
 
 ReaCue **ne télécharge jamais de paroles** : tu fournis ton propre fichier texte, à côté des stems (même dossier) :
@@ -570,6 +596,11 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `structure_engine` | `"auto"` | sections : `"auto"` (SongFormer s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
 | `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
+| `gma3_export` | `true` | écrire les fichiers lumière grandMA3 à chaque préparation / construction de concert |
+| `gma3_fps` | `25` | images par seconde du timecode (24, 25, 29.97, 30) |
+| `gma3_tc_start` | `"00:00:00:00"` | timecode console du début du projet (ex. `"01:00:00:00"`) : ajouté au temps de chaque cue |
+| `gma3_song_gap` | `null` | concert : blanc minimum entre deux morceaux (s), remplace celui de la setlist (4 s) ; `null` = inchangé |
+| `gma3_song_slot` | `0` | concert : chaque morceau démarre au prochain multiple de ce temps (s, ex. `600` = 0, 10 min, 20 min… ; le blanc est rallongé de mesures entières) ; `0` = non |
 
 Voix : sous Windows, on ajoute des voix (par exemple françaises) dans *Paramètres → Heure et langue →
 Voix*. Seules les voix visibles par SAPI (voix « Desktop ») sont utilisées. Sans aucune voix, tout fonctionne

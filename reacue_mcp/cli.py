@@ -64,6 +64,9 @@ def _message(res: dict, title: str) -> str:
         lines.append("")
         sep = ": " if get_lang() == "en" else " : "
         lines.append(t("cli_published") + (sep + ", ".join(bits) if bits else ""))
+        g = p.get("grandma3") or {}
+        if g.get("cues") and g.get("dossier"):
+            lines.append(t("gma3_written", n=g["cues"], d=g["dossier"]))
         if p.get("warning"):
             lines.append("  ! " + p["warning"])
     warns = [w for w in res.get("warnings") or [] if not is_bpm_from_name_warning(w)]
@@ -127,6 +130,9 @@ def _concert_message(res) -> str:
         lines.append(t("concert_line", n=d["n"], title=d["title"], bpm=d["bpm"], bars=d["bars"]))
     total = res.songs[-1]["stop"] if res.songs else 0
     lines += ["", t("concert_duration", m=int(total // 60), s=int(total % 60)), t("concert_extras_running")]
+    g = getattr(res, "lighting", None) or {}
+    if g.get("cues") and g.get("dir"):
+        lines.append(t("gma3_written", n=g["cues"], d=g["dir"]))
     if res.warnings:
         lines.append("")
         lines.extend("! " + w for w in res.warnings[:6])

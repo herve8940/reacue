@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.1.0 (en cours / unreleased) — lumière grandMA3 / grandMA3 lighting export
+
+### Added / Ajouts
+- **grandMA3 export / export grandMA3** (`reacue_mcp/lighting.py`): one cue per section (named after the
+  section) at the start of its region, in REAPER project time (count-in included). Song: `grandMA3/` next to
+  the `.RPP` with `<Title>_Sequence.xml`, `<Title>_Timecode.xml`, `<Title>_conduite.csv`; concert:
+  `Concerts/grandMA3/<concert>/` with one Sequence per song, one Timecode (one track per song) and the cue
+  sheet. XML generators ported as is from the reference validated on a desk (DataVersion 2.4.2.2, UTF-8 BOM,
+  OffCue + CueZero, 3-character `No`, `Target` without quotes, `Object="13.13.0.5.<track>"`,
+  `ValCueDestination="0.5.<track>.<n×1000>"`, `CueDestination` = cue name). Cleaned sequence names (ASCII +
+  `_`), unique cue names, suggested effect per section type (FR / EN) as XML comment and in the cue sheet.
+  Written automatically at each preparation (where the prompter is published) and each concert build;
+  never blocks them (warning only).
+- **Prompter: Lighting role / rôle Lumière** (FR / EN): cue list with SMPTE time and suggested effect,
+  current cue highlighted from the play position, countdown to the next cue, timecode, fps / start / slot,
+  download links (files also written to `reaper_www_root`, prefix `reacue_gma3_`; no internet needed).
+- **Settings / réglages**: `gma3_export` (true), `gma3_fps` (25), `gma3_tc_start` ("00:00:00:00"),
+  `gma3_song_gap` (null = setlist gap, 4 s), `gma3_song_slot` (0 = off). Gap and slot change the **real**
+  placement of the songs in the concert project (tempo map, regions, `.concert.lua`, prompter, timecode all
+  agree): with a slot, each song starts on the next multiple, the gap being lengthened by whole bars at an
+  adjusted tempo (the grid stays right); the placement is stored in the setlist (`layout`) and reused by the
+  background prompter pass. Defaults keep the previous behaviour.
+- Docs: lighting section in README / LISEZMOI, tutorials 16.9 (FR / EN), recommendation to have REAPER send
+  MTC or LTC to the desk (the concert stops between songs). Tests: `tests/test_lighting.py`.
+
 ## 1.0.1 — 2026-10-22 — docs : captures mises à jour / updated screenshots
 
 Documentation: every screenshot regenerated with the current code, in French **and** English, with made-up

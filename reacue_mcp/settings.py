@@ -32,6 +32,12 @@ DEFAULTS: dict = {
     "structure_engine": "auto",  # sections : "auto" (SongFormer s'il est installé, sinon ReaCue) | "reacue"
     "projects_dir": None,        # mode concert : dossier des projets des morceaux ; None = <Documents>/REAPER Media
     "concert_dir": None,         # mode concert : dossier des concerts ; None = <dossier des projets>/Concerts
+    # lumière grandMA3 (lighting.py) : Sequence + Timecode + fiche de conduite à chaque préparation / concert
+    "gma3_export": True,         # False : aucun fichier lumière
+    "gma3_fps": 25,              # images/s du timecode SMPTE (24, 25, 29.97, 30)
+    "gma3_tc_start": "00:00:00:00",  # timecode du début du projet (ex. "01:00:00:00"), ajouté aux temps du XML
+    "gma3_song_gap": None,       # concert : blanc minimum entre deux morceaux (s) ; None = celui de la setlist (4 s)
+    "gma3_song_slot": 0,         # concert : créneau rond (s) du départ de chaque morceau (600 = 0, 10 min…) ; 0 = non
 }
 
 LANGS = ("fr", "en")
@@ -59,6 +65,7 @@ def load_settings(path: Path | None = None) -> dict:
     out["count_lang"] = cl if cl in LANGS else "en"
     se = str(out.get("structure_engine") or "auto").lower()
     out["structure_engine"] = se if se in ("auto", "reacue") else "auto"
+    out["gma3_export"] = out["gma3_export"] is not False and str(out["gma3_export"]).lower() not in ("0", "false", "no")
     return out
 
 

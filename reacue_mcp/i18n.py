@@ -264,6 +264,8 @@ MSG = {
     "concert_empty": ("Setlist vide.", "Empty setlist."),
     "concert_lane_songs": ("Morceaux", "Songs"),
     "concert_prompter_failed": ("Prompteur du concert non publié : {e}", "Concert prompter not published: {e}"),
+    "gma3_failed": ("Export lumière grandMA3 non écrit : {e}", "grandMA3 lighting export not written: {e}"),
+    "gma3_written": ("Lumière grandMA3 : {n} cues → {d}", "grandMA3 lighting: {n} cues → {d}"),
     "concert_extra_failed": ("{title} : {what} non disponible ({e})", "{title}: {what} not available ({e})"),
     "concert_built": ("Concert « {name} » construit", "Concert “{name}” built"),
     "concert_line": ("  {n}. {title}  ·  {bpm:g} BPM  ·  {bars} mesures", "  {n}. {title}  ·  {bpm:g} BPM  ·  {bars} bars"),

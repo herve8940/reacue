@@ -12,14 +12,20 @@ Le concert est écrit dans le dossier des concerts (réglage `concert_dir`, déf
     <nom>.concert.lua      les temps de chaque morceau, lus par l'action « ReaCue - Concert »
     <nom>.prompteur.json   le prompteur des musiciens pour tout le concert
 
+    grandMA3/<nom>/        export lumière (lighting.py) : une Sequence par morceau, un Timecode, la conduite
+
 Entre deux morceaux : un blanc d'un nombre entier de mesures (la grille reste juste) ; l'action
 « ReaCue - Concert » arrête la lecture à la fin de chaque morceau et place le curseur au début du
-suivant : Espace relance.
+suivant : Espace relance. Réglages du placement : `gma3_song_gap` (blanc minimum, remplace celui de la
+setlist) et `gma3_song_slot` (créneau rond : chaque morceau démarre au prochain multiple, le blanc est
+rallongé d'un nombre entier de mesures à un tempo ajusté). Le placement réel est écrit dans le projet,
+le .concert.lua, le prompteur et le timecode grandMA3 : tout coïncide.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import math
 import time
 import zlib
 import os
@@ -506,6 +512,63 @@ def _plan_song_span(s: SongSrc, gap_s: float):
     s.next_start = s.bar_lines[k]
 
 
+def concert_layout(settings: dict | None = None, gap_s: float = 4.0, stored: dict | None = None) -> dict:
+    """Placement des morceaux : {"gap_s": blanc minimum (s), "slot_s": créneau rond (s, 0 = aucun)}.
+
+    gap_s : argument / setlist (4 s par défaut) ; le réglage `gma3_song_gap` le remplace s'il est donné.
+    `gma3_song_slot` > 0 : chaque morceau commence au prochain multiple du créneau (morceau 1 à 0).
+    stored : placement enregistré dans la setlist à la construction (relu par la phase lente, pour que le
+    prompteur garde les temps du projet même si les réglages ont changé entre-temps)."""
+    if stored:
+        return {"gap_s": max(0.0, float(stored.get("gap_s", gap_s))), "slot_s": max(0.0, float(stored.get("slot_s") or 0))}
+    try:
+        from .lighting import config
+        cfg = config(settings)
+    except Exception:
+        cfg = {"gap_s": None, "slot_s": 0.0}
+    gap = float(gap_s) if cfg.get("gap_s") is None else float(cfg["gap_s"])
+    return {"gap_s": max(0.0, gap), "slot_s": max(0.0, float(cfg.get("slot_s") or 0.0))}
+
+
+MAX_FILL_BPM = 900.0      # tempo maximal du blanc ajusté (REAPER : 960)
+
+
+def _fill_to(s: SongSrc, start: float, target: float) -> tuple[float, int] | None:
+    """Tempo du blanc pour que la barre de mesure `start` (temps du concert, fin du morceau s) tombe, en
+    un nombre entier de mesures, sur `target` (début du morceau suivant) : (bpm, mesures) ; None si
+    rien à faire. La grille reste juste : le morceau suivant commence sur une barre de mesure."""
+    d = target - start
+    if d < 1e-6:
+        return None
+    j = min(max(1, s.i0 + s.n_bars), len(s.bar_lines) - 1)
+    bar = max(1e-3, s.bar_lines[j] - s.bar_lines[j - 1])
+    n = max(1, int(round(d / bar)))
+    bpm = 60.0 * s.beats_per_bar * 4.0 / s.denominator * n / d
+    return (bpm, n) if bpm <= MAX_FILL_BPM else None
+
+
+def place_songs(srcs: list[SongSrc], slot_s: float = 0.0) -> list[dict]:
+    """Début de chaque morceau sur la timeline du concert (après _plan_song_span) :
+    [{"shift", "next", "fill": (bpm, mesures) | None}]. Sans créneau : à la suite (comportement d'origine) ;
+    avec créneau : au prochain multiple de slot_s, le blanc étant rallongé d'un nombre entier de mesures."""
+    out, pos = [], 0.0
+    for k, s in enumerate(srcs):
+        shift = pos
+        nxt = shift + s.next_start
+        fill = None
+        if slot_s > 0 and k + 1 < len(srcs):
+            target = math.ceil((nxt - 1e-6) / slot_s) * slot_s
+            while True:
+                fill = _fill_to(s, nxt, target)
+                if fill is not None or target - nxt < 1e-6:
+                    break
+                target += slot_s                  # blanc trop court pour un tempo raisonnable : créneau suivant
+            nxt = target
+        out.append({"shift": round(shift, 6), "next": round(nxt, 6), "fill": fill})
+        pos = nxt
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Construction du projet concert
 # --------------------------------------------------------------------------- #
@@ -588,6 +651,7 @@ class ConcertResult:
     song_srcs: list[SongSrc] = field(default_factory=list, repr=False)
     live: list[str] = field(default_factory=list)
     live_exceptions: dict = field(default_factory=dict)
+    lighting: dict | None = None
 
     def summary(self) -> dict:
         out = {"concert": self.name, "projet": str(self.rpp), "setlist": str(self.setlist),
@@ -597,6 +661,8 @@ class ConcertResult:
                "duree_s": round(self.songs[-1]["stop"], 1) if self.songs else 0,
                "warnings": self.warnings}
         out.update(live_summary(self.live, self.live_exceptions))
+        if self.lighting:
+            out["grandma3"] = {"dossier": self.lighting.get("dir"), "cues": self.lighting.get("cues")}
         return out
 
 
@@ -625,6 +691,7 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
     warnings: list[str] = []
     srcs: list[SongSrc] = []
     entries = []
+    layout = concert_layout(gap_s=gap_s)
     for e in songs:
         if isinstance(e, dict):
             proj, title = e.get("project") or e.get("path") or e.get("name"), e.get("title")
@@ -632,10 +699,11 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
             proj, title = e, None
         p = find_project(str(proj))
         s = load_song(p, title)
-        _plan_song_span(s, gap_s)
+        _plan_song_span(s, layout["gap_s"])
         warnings += s.warnings
         srcs.append(s)
         entries.append({"project": str(p), "title": s.title})
+    places = place_songs(srcs, layout["slot_s"])
 
     # pistes communes : rôles utilisés, dans l'ordre fixe ; doublons dans un morceau -> « Nom 2 »
     lanes: dict[str, list[Node]] = {}
@@ -653,12 +721,11 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
     gen_heads: dict[str, Node] = {}
     gen_names: dict[str, str] = {}
     song_markers, regions, cue_markers, pts_out, sidecar_songs = [], [], [], [], []
-    pos = 0.0
     tracks_l = role_tracks()
     track_name = {r: n for r, n, _ in tracks_l}
     role_rank = {r: i for i, (r, _, _) in enumerate(tracks_l)}
     for k, s in enumerate(srcs):
-        shift = pos
+        shift, nxt_abs = places[k]["shift"], places[k]["next"]
         col = SONG_COLORS[k % len(SONG_COLORS)]
         used: dict[str, int] = {}
         for d in sorted(s.audio, key=lambda d: role_rank.get(d["role"], 99)):
@@ -688,6 +755,8 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
             q_ = list(p)
             q_[1] = f"{t + shift:.12f}"
             pts_out.append(q_)
+        if places[k]["fill"]:                     # créneau rond : blanc rallongé, mesures entières
+            pts_out.append(["PT", f"{s.next_start + shift:.12f}", f"{places[k]['fill'][0]:.10f}", "1"])
         # régions et marqueurs
         for sec_r in s.regions:
             regions.append({"start": sec_r["start"] + shift, "end": sec_r["end"] + shift,
@@ -702,13 +771,12 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
             "n": k + 1, "title": s.title, "project": str(s.path),
             "start": round(shift, 6), "countin": round(s.count_in_pos + shift, 6),
             "bar1": round(s.bar1 + shift, 6), "song_end": round(s.song_end + shift, 6),
-            "stop": round(s.stop + shift, 6), "next": round(s.next_start + shift, 6),
+            "stop": round(s.stop + shift, 6), "next": nxt_abs,
             "bpm": round(s.bpm, 2), "beatmap": bool(s.beatmap),
             "sig": f"{s.beats_per_bar}/{s.denominator}", "bars": s.n_bars,
             "sections": len(s.sections), "color": list(col),
             **_fingerprint(s.path),
         })
-        pos = shift + s.next_start
 
     # projet ------------------------------------------------------------------
     first = srcs[0]
@@ -764,7 +832,10 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
     tmp = rpp.with_suffix(".rpp-tmp")
     tmp.write_text(dump_rpp(root) + "\n", encoding="utf-8")
     os.replace(tmp, rpp)
-    _write_json(setlist, {"name": name, "gap_s": gap_s, "songs": entries, "live": live_l, "live_exceptions": exc})
+    sl = {"name": name, "gap_s": gap_s, "songs": entries, "live": live_l, "live_exceptions": exc}
+    if layout["slot_s"] > 0 or abs(layout["gap_s"] - float(gap_s)) > 1e-9:
+        sl["layout"] = layout                 # placement réel (réglages gma3_song_gap / gma3_song_slot)
+    _write_json(setlist, sl)
     side = {"version": 2, "name": name, "rpp": str(rpp), "setlist": str(setlist), "prompter": str(prompter_file),
             "built": int(time.time()), "songs": sidecar_songs}
     sidecar.write_text("-- ReaCue : données du concert (lues par ReaCue_Concert.lua) / concert data\nreturn " + to_lua(side) + "\n",
@@ -773,10 +844,30 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
     # prompteur : structure tout de suite ; accords, paroles, batterie ensuite (concert_extras)
     try:
         song_json = concert_prompter(res, extras=False)
-        write_prompter(res, song_json, publish=publish)
     except Exception as e:                    # le prompteur ne bloque jamais le concert
+        song_json = None
         res.warnings.append(_t("concert_prompter_failed", e=e))
+    if song_json is not None:
+        # avant la publication : les liens de l'onglet Lumière existent (dossier web seulement si publié)
+        export_lighting(res, song_json, www=None if publish else False)
+        try:
+            write_prompter(res, song_json, publish=publish)
+        except Exception as e:
+            res.warnings.append(_t("concert_prompter_failed", e=e))
     return res
+
+
+def export_lighting(res: ConcertResult, data: dict, www=None) -> dict | None:
+    """Export grandMA3 du concert (jamais bloquant : un échec devient un avertissement)."""
+    from . import lighting, prompter
+    try:
+        out = lighting.export_concert(res.name, data, res.rpp.parent,
+                                      prompter.WWW_DIR if www is None else (www or None))
+        res.lighting = out
+        return out
+    except Exception as e:
+        res.warnings.append(_t("gma3_failed", e=e))
+        return None
 
 
 # --------------------------------------------------------------------------- #
@@ -866,6 +957,13 @@ def concert_prompter(res: ConcertResult, extras: bool = True, log=None) -> dict:
     data = {"version": 1, "language": get_lang(), "concert": {"name": res.name, "n": len(songs_out),
                                       "titles": [x["title"] for x in res.songs]},
             "songs": songs_out}
+    try:                                       # onglet Lumière du prompteur (cues grandMA3)
+        from . import lighting
+        cfg = lighting.config()
+        if cfg["export"]:
+            data["lighting"] = lighting.web_data(lighting.show_from_songs(songs_out, res.name), cfg)
+    except Exception:
+        pass
     data["id"] = hashlib.md5(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
     return data
 
@@ -922,17 +1020,18 @@ def _reload(setlist_path) -> ConcertResult:
     d = load_setlist(setlist_path)
     out_dir = Path(setlist_path).expanduser().parent
     slug = _slug(d.get("name") or "Concert")
-    gap_s = float(d.get("gap_s", 4.0))
-    srcs, side, pos, warnings = [], [], 0.0, []
+    layout = concert_layout(gap_s=float(d.get("gap_s", 4.0)), stored=d.get("layout") or {"gap_s": d.get("gap_s", 4.0)})
+    srcs, side, warnings = [], [], []
     for k, e in enumerate(d["songs"]):
         p = find_project(e["project"] if isinstance(e, dict) else e)
         s = load_song(p, e.get("title") if isinstance(e, dict) else None)
-        _plan_song_span(s, gap_s)
+        _plan_song_span(s, layout["gap_s"])
         srcs.append(s)
         warnings += s.warnings
+    for k, (s, pl) in enumerate(zip(srcs, place_songs(srcs, layout["slot_s"]))):
+        pos = pl["shift"]
         side.append({"n": k + 1, "title": s.title, "start": round(pos, 6), "stop": round(s.stop + pos, 6),
-                     "next": round(s.next_start + pos, 6)})
-        pos += s.next_start
+                     "next": pl["next"]})
     return ConcertResult(d.get("name") or slug, out_dir / f"{slug}.RPP", Path(setlist_path).expanduser(),
                          out_dir / f"{slug}.concert.lua", out_dir / f"{slug}.prompteur.json", side, warnings, srcs)
 

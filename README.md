@@ -51,6 +51,7 @@ language with Claude (MCP server).
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
 - [Lyrics](#lyrics)
+- [Lighting: grandMA3 export](#lighting-grandma3-export)
 - [Settings](#settings)
 - [Optional: drive ReaCue with Claude (MCP)](#optional-drive-reacue-with-claude-mcp)
 - [Known limitations](#known-limitations)
@@ -488,6 +489,30 @@ REAPER's repeat and time selection as they were.
 
 Step by step: [tutorial, concert chapter](docs/TUTORIAL_en.md#16-concert-mode-several-songs-in-one-project).
 
+## Lighting: grandMA3 export
+
+Every preparation (and every concert build) also writes a **grandMA3 lighting show**: one cue per section
+(named after the section, e.g. “Chorus 1”) at the start of its region, in **REAPER project time** (0 = start
+of the project, count-in included).
+
+- **Song**: `grandMA3/<Title>_Sequence.xml`, `<Title>_Timecode.xml`, `<Title>_conduite.csv` next to the `.RPP`.
+- **Concert**: `<concerts folder>/grandMA3/<concert>/`: one Sequence per song, **one** Timecode (one track
+  per song) and the cue sheet.
+- Sequence names are cleaned (ASCII and `_`: “Démo d’été” → `Demo_d_ete`); duplicate cue names get “(2)”.
+- The cue sheet (CSV) lists SMPTE timecode, cue, label, type and a **suggested effect** per section type
+  (also written as an XML comment above each cue).
+- The prompter's **Lighting** role shows the cue list (current cue highlighted), the timecode, the settings
+  and download links for the three files (served by REAPER's web interface, no internet needed).
+- On the desk: import the Sequence(s) first, then the Timecode (test on an empty slot first).
+
+**Recommended: REAPER sends the timecode to the desk.** In REAPER, send **MTC** (MIDI timecode) or **LTC**
+(audio timecode) to the grandMA3 and set its Timecode show to follow it: the desk then follows the project
+position, which matters because the concert **stops between songs** (a free-running timecode would drift).
+ReaCue never changes REAPER's settings: enable the timecode output yourself (REAPER: *Preferences → Audio →
+MIDI Devices* / *Project settings*, or a timecode generator plug-in on a spare output for LTC). Settings
+`gma3_tc_start` (desk timecode of project time 0), `gma3_fps`, `gma3_song_gap` and `gma3_song_slot` (start
+each song on a round time, e.g. every 10 min: easier to find on the desk) are listed in [Settings](#settings).
+
 ## Lyrics
 
 ReaCue **never downloads lyrics**: you provide your own text file, next to the stems (same folder):
@@ -546,6 +571,11 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
 | `projects_dir` | `null` | concert mode: folder searched for song projects by name; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | concert mode: folder of the concerts; `null` = `<projects folder>/Concerts` |
+| `gma3_export` | `true` | write the grandMA3 lighting files at each preparation / concert build |
+| `gma3_fps` | `25` | timecode frames per second (24, 25, 29.97, 30) |
+| `gma3_tc_start` | `"00:00:00:00"` | desk timecode of the project start (e.g. `"01:00:00:00"`): added to every cue time |
+| `gma3_song_gap` | `null` | concert: minimum gap between songs (s), replaces the setlist's (4 s); `null` = unchanged |
+| `gma3_song_slot` | `0` | concert: each song starts on the next multiple of this time (s, e.g. `600` = 0, 10 min, 20 min…; the gap is lengthened by whole bars); `0` = off |
 
 Voices: on Windows, extra voices (e.g. French) are added in *Settings → Time & language → Speech*. Only
 voices visible to SAPI (“Desktop” voices) are used. If no voice is available, everything works except the

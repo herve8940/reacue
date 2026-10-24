@@ -47,6 +47,7 @@ SETTINGS_DEFAULTS = {
     "voice_count_each": True, "voice_volume": 0.8, "click_volume": 0.5, "click_to_master": True,
     "click_hw_output": None, "tempo_mode": "auto", "count_rate": 240, "stems_model": "htdemucs_6s",
     "structure_engine": "auto", "projects_dir": None, "concert_dir": None,
+    "gma3_export": True, "gma3_fps": 25, "gma3_tc_start": "00:00:00:00", "gma3_song_gap": None, "gma3_song_slot": 0,
 }
 
 MSG = {

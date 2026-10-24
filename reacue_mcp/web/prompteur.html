@@ -266,6 +266,39 @@
   .pinbox button.ok { background: #1d9e75; border-color: #1d9e75; color: #fff; }
   .pinbox .err { color: var(--hot); font-weight: 700; min-height: 1.2em; }
 
+  /* lumière (cues grandMA3) */
+  #light { display: none; flex-direction: column; gap: 10px; min-height: 0; flex: 1; overflow: hidden; }
+  body.light #light { display: flex; }
+  body.light #now, body.light #next, body.light .side, body.light #drum, body.light .map { display: none !important; }
+  .lhead { display: flex; gap: 10px; align-items: stretch; }
+  .lcur { flex: 1; min-width: 0; background: var(--panel); border-radius: 16px; padding: 10px 14px 12px; border-left: 12px solid var(--sec); }
+  .lcur .k { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; gap: 8px; }
+  .lcur .v { font-size: clamp(28px, 8.5vw, 64px); font-weight: 900; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lcur .e { font-size: clamp(16px, 4.5vw, 24px); color: var(--warn); font-weight: 700; margin-top: 4px; }
+  .lcnt { flex: none; width: clamp(110px, 30vw, 200px); background: var(--panel); border-radius: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 6px; }
+  .lcnt .v { font-size: clamp(34px, 10vw, 72px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .lcnt .k { font-size: 13px; color: var(--dim); }
+  .lcnt.soon { background: var(--warn); color: #000; } .lcnt.soon .k { color: #000; }
+  .lnext { background: var(--panel); border-radius: 14px; padding: 8px 14px; font-size: clamp(17px, 4.6vw, 26px); font-weight: 700; }
+  .lnext small { display: block; font-size: 14px; font-weight: 500; color: var(--dim); }
+  .ltc { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; color: var(--dim); font-size: 14px; }
+  .ltc b { color: var(--ink); font-size: clamp(22px, 6vw, 34px); font-variant-numeric: tabular-nums; font-weight: 800; }
+  .lcues { display: flex; flex-direction: column; gap: 2px; flex: 1 1 0; min-height: 110px; overflow-y: auto; position: relative; }
+  .lcues .song { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin: 8px 0 2px; }
+  .lcues .row { display: grid; grid-template-columns: 34px 96px 1fr; gap: 2px 10px; padding: 6px 8px; border-radius: 8px; align-items: baseline; }
+  .lcues .row .n { color: var(--dim); font-variant-numeric: tabular-nums; }
+  .lcues .row .tc { font-variant-numeric: tabular-nums; color: var(--dim); font-size: 14px; }
+  .lcues .row .nm { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lcues .row .ef { grid-column: 3; font-size: 13px; color: var(--dim); }
+  .lcues .row.past { opacity: .5; }
+  .lcues .row.cur { background: var(--panel); box-shadow: inset 4px 0 0 var(--warn); opacity: 1; }
+  .lcues .row.cur .nm { color: var(--warn); }
+  .lfiles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .lfiles a { color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: 700; text-decoration: none; }
+  .lfiles a small { display: block; font-weight: 500; color: var(--dim); font-size: 12px; }
+  .lnote { font-size: 13px; color: var(--dim); line-height: 1.35; }
+  .lnone { border-radius: 12px; padding: 10px 14px; font-size: 16px; font-weight: 700; background: var(--warn); color: #000; }
+
   @media (orientation: landscape) and (min-width: 700px) {
     body { display: grid; grid-template-columns: 1.25fr 1fr; grid-template-rows: auto auto minmax(0, 1fr); column-gap: 14px; }
     .top { grid-column: 1 / -1; }
@@ -275,7 +308,7 @@
     .map { grid-column: 2; grid-row: 3; margin-top: 0; padding-top: 4px; }
     .strip { display: none; }
     .foot { display: none; }
-    body.regie { display: flex; }
+    body.regie, body.light { display: flex; }
   }
 
 </style>
@@ -360,6 +393,21 @@
     <div class="rfoot"><span id="rFootL"></span><button id="rPinBtn"></button></div>
   </div>
 
+  <div id="light">
+    <div class="lnone" id="lNone" style="display:none"></div>
+    <div class="lhead">
+      <div class="lcur" id="lCur"><div class="k"><span id="lCurK"></span><span id="lCurN"></span></div><div class="v" id="lCurV">—</div><div class="e" id="lCurE"></div></div>
+      <div class="lcnt" id="lCnt"><div class="v" id="lCntV">–</div><div class="k" id="lCntK"></div></div>
+    </div>
+    <div class="lnext" id="lNext"></div>
+    <div class="ltc"><span><span id="lTcK"></span> <b id="lTc">00:00:00:00</b></span><span id="lCfg"></span></div>
+    <div class="rtitle" id="lCuesT"></div>
+    <div class="lcues" id="lCues"></div>
+    <div class="rtitle" id="lFilesT"></div>
+    <div class="lfiles" id="lFiles"></div>
+    <div class="lnote" id="lNote"></div>
+  </div>
+
   <div class="map">
     <div class="strip" id="strip"></div>
     <div class="list show" id="list"></div>
@@ -375,6 +423,7 @@
     <button data-role="vocals"></button>
     <button data-role="all"></button>
     <button data-role="regie"></button>
+    <button data-role="light"></button>
   </div>
   <div class="pinbox" id="pinBox">
     <h2 id="pinH"></h2>
@@ -390,13 +439,14 @@
 // ---------------------------------------------------------------- langue (fr / en)
 const STR = {
   fr: {
-    role: "Rôle", roles: { drums: "Batterie", bass: "Basse", guitars: "Guitare rythm.", lead_guitar: "Guitare solo", vocals: "Chant", all: "Général", regie: "Régie" },
+    role: "Rôle", roles: { drums: "Batterie", bass: "Basse", guitars: "Guitare rythm.", lead_guitar: "Guitare solo", vocals: "Chant", all: "Général", regie: "Régie", light: "Lumière" },
     instr: { drums: "batterie", bass: "basse", guitars: "guitare", lead_guitar: "guitare solo", vocals: "chant" },
     pick: "Je suis…",
     pickers: {
       drums: ["Batterie", "groove, fills, crashs, carrures"], bass: ["Basse", "notes de basse, grille, entrées et sorties"],
       guitars: ["Guitare rythmique", "accords, grille, entrées et sorties"], lead_guitar: ["Guitare solo", "solos, accords, entrées"],
-      vocals: ["Chant", "paroles défilantes, entrées de voix"], all: ["Vue générale", "structure et accords"], regie: ["Régie", "télécommande du concert (code PIN)"] },
+      vocals: ["Chant", "paroles défilantes, entrées de voix"], all: ["Vue générale", "structure et accords"], regie: ["Régie", "télécommande du concert (code PIN)"],
+      light: ["Lumière", "cues grandMA3, timecode, fichiers à importer"] },
     fullscreen: "Plein écran", link: "Liaison avec REAPER", next: "Ensuite", footR: "touche le plan : liste on/off",
     noSong: "Pas de morceau préparé : dans REAPER, fenêtre ReaCue → « Analyser et préparer ».",
     noReaper: "REAPER ne répond pas : vérifie le Wi-Fi et l'interface web de REAPER.",
@@ -452,15 +502,23 @@ const STR = {
     mixCut: "coupé", mixOn: "joué", mixSolo: "solo", mixLive: "live",
     stemCut: "ton stem est coupé", stemOn: "ton stem est joué",
     tracks: { vocals: "Chant", drums: "Batterie", bass: "Basse", guitars: "Guitares", lead_guitar: "Guitare solo", keys: "Claviers", other: "Autres", mix: "Mix" },
+    // lumière (grandMA3)
+    lCurK: "Cue en cours", lBefore: "Avant le 1er cue", lNextK: "prochain cue", lNext: (n, x) => `Ensuite : cue ${n} · ${x}`,
+    lLast: "Dernier cue", lTcK: "Timecode", lCfg: (fps, tc) => `${fps} i/s · départ ${tc}`,
+    lSlot: s => ` · créneau ${Math.round(s / 60)} min`, lGap: s => ` · blanc ${s} s`,
+    lCues: "Cues (une par section)", lFiles: "Fichiers grandMA3", lSeq: "Sequence", lTc: "Timecode", lCsv: "Fiche de conduite (CSV)",
+    lNone: "Pas d'export lumière : réglage gma3_export désactivé, ou morceau à republier (« Mettre à jour les téléphones »).",
+    lNote: "REAPER envoie le timecode (MTC ou LTC) à la console, qui suit la position du projet : le concert s'arrête entre les morceaux, la console attend. Importer d'abord la Sequence, puis le Timecode.",
   },
   en: {
-    role: "Role", roles: { drums: "Drums", bass: "Bass", guitars: "Rhythm gtr", lead_guitar: "Lead gtr", vocals: "Vocals", all: "Overview", regie: "Stage control" },
+    role: "Role", roles: { drums: "Drums", bass: "Bass", guitars: "Rhythm gtr", lead_guitar: "Lead gtr", vocals: "Vocals", all: "Overview", regie: "Stage control", light: "Lighting" },
     instr: { drums: "drums", bass: "bass", guitars: "guitar", lead_guitar: "lead guitar", vocals: "vocals" },
     pick: "I play…",
     pickers: {
       drums: ["Drums", "groove, fills, crashes, phrasing"], bass: ["Bass", "bass notes, chart, entries and exits"],
       guitars: ["Rhythm guitar", "chords, chart, entries and exits"], lead_guitar: ["Lead guitar", "solos, chords, entries"],
-      vocals: ["Vocals", "scrolling lyrics, vocal entries"], all: ["Overview", "structure and chords"], regie: ["Stage control", "concert remote (PIN code)"] },
+      vocals: ["Vocals", "scrolling lyrics, vocal entries"], all: ["Overview", "structure and chords"], regie: ["Stage control", "concert remote (PIN code)"],
+      light: ["Lighting", "grandMA3 cues, timecode, files to import"] },
     fullscreen: "Full screen", link: "Link to REAPER", next: "Next", footR: "tap the map: list on/off",
     noSong: "No song prepared: in REAPER, ReaCue window → “Analyse and prepare”.",
     noReaper: "REAPER is not responding: check the Wi-Fi and REAPER's web interface.",
@@ -516,6 +574,13 @@ const STR = {
     stemCut: "your stem is muted", stemOn: "your stem is playing",
     tracks: { vocals: "Vocals", drums: "Drums", bass: "Bass", guitars: "Guitars", lead_guitar: "Lead guitar", keys: "Keys", other: "Other", mix: "Mix" },
     rSecsReh: "Sections — tap = loop (2nd section\u00a0=\u00a0range)",
+    // lighting (grandMA3)
+    lCurK: "Current cue", lBefore: "Before the first cue", lNextK: "next cue", lNext: (n, x) => `Next: cue ${n} · ${x}`,
+    lLast: "Last cue", lTcK: "Timecode", lCfg: (fps, tc) => `${fps} fps · start ${tc}`,
+    lSlot: s => ` · ${Math.round(s / 60)} min slot`, lGap: s => ` · ${s} s gap`,
+    lCues: "Cues (one per section)", lFiles: "grandMA3 files", lSeq: "Sequence", lTc: "Timecode", lCsv: "Cue sheet (CSV)",
+    lNone: "No lighting export: setting gma3_export is off, or the song needs republishing (“Update the phones”).",
+    lNote: "REAPER sends the timecode (MTC or LTC) to the desk, which follows the project position: the concert stops between songs, the desk waits. Import the Sequence first, then the Timecode.",
   },
 };
 const params = new URLSearchParams(location.search);
@@ -547,6 +612,10 @@ function applyStatic() {
   $("rSecsT").textContent = S.rSecs; $("rListT").textContent = S.rList; $("rPinBtn").textContent = S.rPinBtn;
   $("pinH").textContent = S.pinH; $("pinP").textContent = S.pinP; $("pinCancel").textContent = S.pinCancel;
   $("rPlayTx").textContent = S.rPlay; $("rState").textContent = S.rState.stop;
+  $("lCurK").textContent = S.lCurK; $("lTcK").textContent = S.lTcK; $("lCuesT").textContent = S.lCues;
+  $("lFilesT").textContent = S.lFiles; $("lNote").textContent = S.lNote; $("lNone").textContent = S.lNone;
+  $("lCntK").textContent = S.lNextK;
+  if (typeof lKey !== "undefined") lKey = "";
   if (typeof rKeyList !== "undefined") { rKeyList = ""; rKeySecs = ""; }
 }
 
@@ -629,7 +698,9 @@ function layoutBeats() {
   $("roleBtn").textContent = S.roles[role] || S.role;
   document.body.classList.toggle("drummer", role === "drums");
   document.body.classList.toggle("regie", role === "regie");
+  document.body.classList.toggle("light", role === "light");
   if (role === "regie") { rKeySecs = ""; rKeyList = ""; }
+  if (role === "light") lKey = "";
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const SHORT = [["Pré-refrain", "Pré"], ["Pre-chorus", "Pre"], ["Couplet", "Cplt"], ["Refrain", "Ref"], ["Verse", "V"],
@@ -645,7 +716,7 @@ async function poll() {
   const t = performance.now();
   try {
     let q = "/_/TRANSPORT";
-    if (role && role !== "all") q += ";GET/EXTSTATE/ReaCue/mix";
+    if (role && role !== "all" && role !== "light") q += ";GET/EXTSTATE/ReaCue/mix";
     if (role === "regie") {
       q += ";GET/EXTSTATE/ReaCue/remote_alive;GET/EXTSTATE/ReaCue/remote_ack;GET/EXTSTATE/ReaCue/rehearsal";
       if (t - rg.seenAt > 3000) { rg.seenAt = t; q += ";SET/EXTSTATE/ReaCue/remote_seen/" + rg.sid + "-" + (++rg.seenN); }
@@ -893,7 +964,7 @@ function renderDrums(t, L, si, sec) {
 
 // ---------------------------------------------------------------- rendu
 // grands titres sur une ligne : police réduite (jusqu'à 60 %) plutôt que « … » quand le nom est long
-const FIT_IDS = ["nowName", "nextName", "dSecV", "rTitle"];
+const FIT_IDS = ["nowName", "nextName", "dSecV", "rTitle", "lCurV"];
 function fitText(el) {
   if (!el) return;
   const key = el.textContent + "|" + el.clientWidth;
@@ -954,6 +1025,7 @@ function render() {
   renderLyrics(t, L);
   renderDrums(t, L, si, sec);
   renderRegie(t, L, si, sec);
+  renderLight(t);
 
   // alertes du rôle
   $("alerts").innerHTML = alerts(L, si, sec, nxt, left).map(a =>
@@ -972,7 +1044,7 @@ function render() {
 
 function alerts(L, si, sec, nxt, left) {
   const out = [];
-  if (!song || role === "all" || role === "regie" || !role) return out;
+  if (!song || role === "all" || role === "regie" || role === "light" || !role) return out;
   const bar = L.bar, r = instrRole();
   let stopping = false;
   const has = !!song.activity[r];
@@ -1252,6 +1324,57 @@ function renderRegie(t, L, si, sec) {
     rWarn("");
   if (!concert && !$("rWarn").classList.contains("show")) rWarn(S.rNoConcertHint);
   const pin = pinGet(); $("rFootL").textContent = pin ? S.rPin(pin) : S.rNoPin;
+}
+
+// ---------------------------------------------------------------- lumière (cues grandMA3)
+let lKey = "";
+// même calcul que l'export (lighting.seconds_to_smpte) : HH:MM:SS:FF, non drop-frame
+function smpte(sec, fps) {
+  sec = Math.max(0, sec);
+  const tf = Math.round(sec * fps), fr = tf % Math.round(fps), ts = Math.floor(tf / fps);
+  const p = v => String(Math.floor(v)).padStart(2, "0");
+  return `${p(Math.floor(ts / 3600))}:${p(Math.floor(ts / 60) % 60)}:${p(ts % 60)}:${p(fr)}`;
+}
+function lightData() { return concert ? concert.lighting : song && song.lighting; }
+function renderLight(t) {
+  if (role !== "light") return;
+  const D = lightData(), cues = (D && D.cues) || [];
+  $("lNone").style.display = cues.length ? "none" : "";
+  const key = (concert ? concert.id : song.id) + ":" + LANG + ":" + cues.length;
+  if (key !== lKey) {
+    lKey = key;
+    let html = "", prev = null;
+    cues.forEach((c, i) => {
+      if (concert && c.track !== prev) { prev = c.track; html += `<div class="song">${c.track + 1} · ${esc(c.song)}</div>`; }
+      html += `<div class="row" data-i="${i}"><span class="n">${c.n}</span><span class="tc">${esc(c.tc)}</span>` +
+        `<span class="nm">${esc(c.name)}</span><span class="ef">${esc(c.type_label[LANG] || "")} · ${esc(c.effect[LANG] || "")}</span></div>`;
+    });
+    $("lCues").innerHTML = html;
+    const kinds = { sequence: S.lSeq, timecode: S.lTc, csv: S.lCsv };
+    $("lFiles").innerHTML = ((D && D.files) || []).map(f =>
+      `<a href="${esc(encodeURI(f.url))}" download="${esc(f.name)}">${esc(kinds[f.kind] || f.kind)}<small>${esc(f.name)}</small></a>`).join("");
+    $("lFilesT").style.display = D && D.files && D.files.length ? "" : "none";
+    $("lCfg").textContent = D ? S.lCfg(D.fps, D.tc_start) + (D.slot_s ? S.lSlot(D.slot_s) : "") + (D.gap_s != null ? S.lGap(D.gap_s) : "") : "";
+  }
+  const fps = D ? D.fps : 25, off = D ? D.offset_s : 0;
+  $("lTc").textContent = smpte(off + Math.max(0, t), fps);
+  let ci = -1;
+  for (let i = 0; i < cues.length; i++) if (cues[i].t <= t + 0.02) ci = i;
+  const cur = cues[ci], nx = cues[ci + 1];
+  $("lCurV").textContent = cur ? cur.name : (cues.length ? S.lBefore : "—");
+  $("lCurN").textContent = cur ? `${concert ? (cur.track + 1) + " · " : ""}cue ${cur.n}` : "";
+  $("lCurE").textContent = cur ? cur.effect[LANG] || "" : "";
+  const secC = cur && song.sections.find(s => s.name === cur.name);
+  $("lCur").style.borderLeftColor = secC ? secC.color : "#555";
+  $("lNext").innerHTML = nx ? `${esc(S.lNext(nx.n, nx.name))}<small>${esc(nx.tc)} · ${esc(nx.effect[LANG] || "")}</small>` : (cues.length ? esc(S.lLast) : "");
+  const left = nx ? nx.t - t : null;
+  $("lCntV").textContent = left == null ? "–" : mmss(left);
+  $("lCnt").classList.toggle("soon", left != null && left <= 5);
+  document.querySelectorAll("#lCues .row").forEach(r => { const i = +r.dataset.i;
+    r.classList.toggle("cur", i === ci); r.classList.toggle("past", i < ci); });
+  if (ci !== renderLight.last) { renderLight.last = ci;
+    const r = document.querySelector(`#lCues .row[data-i="${ci}"]`), box = $("lCues");
+    if (r) box.scrollTo({ top: Math.max(0, r.offsetTop - box.clientHeight / 2 + r.offsetHeight / 2), behavior: "smooth" }); }
 }
 
 function showMsg(t) { $("msg").textContent = t; $("msg").classList.add("show"); }

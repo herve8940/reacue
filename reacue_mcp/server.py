@@ -109,8 +109,14 @@ async def _apply(analysis: Analysis, item: dict, opts: Options, items: list[dict
     res = await bridge.call("apply_plan", plan, timeout=60)
     _save(analysis, item, opts, items)
     if timeline:
+        if info is None:
+            try:
+                info = await bridge.call("ping")
+            except Exception:
+                info = None
         try:
-            summary["prompteur"] = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items)
+            summary["prompteur"] = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items,
+                                                           _project_of(info))
         except Exception as e:          # le prompteur ne doit jamais bloquer la préparation
             summary.setdefault("warnings", []).append(t("prompter_not_updated", e=e))
     if analysis.stems:
@@ -191,12 +197,32 @@ async def _publish_only(analysis, item, opts, items) -> dict:
     """Met à jour le prompteur des musiciens (paroles, accords…) sans rien changer dans REAPER."""
     plan, summary = await asyncio.to_thread(build_plan, analysis, item, opts, None, None, items)
     timeline = plan.pop("prompter")
-    out = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items)
+    try:
+        project = _project_of(await bridge.call("ping"))
+    except Exception:
+        project = None
+    out = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items, project)
     return {"prompteur": out, "reaper": t("unchanged"), "warnings": [],
             "sections": [{"name": s.name, "bars": f"{s.start_bar + 1}-{s.end_bar}"} for s in analysis.sections]}
 
 
-def _publish_prompter(analysis, item, timeline, items):
+def _project_of(info: dict | None) -> str | None:
+    """Chemin du .RPP ouvert dans REAPER (réponse de « ping ») ; None si le projet n'est pas enregistré."""
+    p = (info or {}).get("project") or ""
+    return p if str(p).lower().endswith(".rpp") else None
+
+
+def _export_lighting(song: dict, project: str | None) -> tuple[dict | None, str | None]:
+    """Export grandMA3 du morceau : (résultat, avertissement). Jamais bloquant."""
+    from . import lighting
+    try:
+        res = lighting.export_song(song, project)
+    except Exception as e:
+        return None, t("gma3_failed", e=e)
+    return res, None
+
+
+def _publish_prompter(analysis, item, timeline, items, project: str | None = None):
     act = prompter.stem_activity(analysis, items)
     grid, chord_warn = None, None
     try:                                # les accords ne doivent jamais bloquer le prompteur
@@ -216,11 +242,14 @@ def _publish_prompter(analysis, item, timeline, items):
     except Exception as e:
         drum_warn = t("drums_failed", e=e)
     song = prompter.build_song(analysis, item, timeline, items, act, chords=grid, lyrics=words, drums=kit)
+    light, light_warn = _export_lighting(song, project)     # lumière grandMA3 (onglet Lumière du prompteur)
     out = prompter.publish(song)
     out["chords"] = bool(song.get("chords"))
     out["lyrics"] = len(song.get("lyrics") or [])
     out["drums"] = bool(song.get("drums"))
-    warns = [w for w in (chord_warn, lyr_warn, drum_warn) if w]
+    if light:
+        out["grandma3"] = {"cues": light["cues"], "dossier": light.get("dir")}
+    warns = [w for w in (chord_warn, lyr_warn, drum_warn, light_warn) if w]
     if warns:
         out["warning"] = " ; ".join(warns)
     out["url"] = t("prompter_url", page=prompter.PAGE_NAME)
