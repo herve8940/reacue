@@ -64,6 +64,14 @@ def _message(res: dict, title: str) -> str:
         lines.append("")
         sep = ": " if get_lang() == "en" else " : "
         lines.append(t("cli_published") + (sep + ", ".join(bits) if bits else ""))
+        g = p.get("grandma3") or {}
+        if g.get("cues") and g.get("dossier"):
+            lines.append(t("gma3_written", n=g["cues"], d=g["dossier"]))
+        if p.get("pdf"):
+            lines.append(t("cli_pdf", name=Path(p["pdf"]).name))
+        from .lyrics_auto import LAST_INFO as auto_info      # paroles automatiques (Whisper) : créées / échec
+        if auto_info.get("message") and not auto_info.get("cached"):
+            lines.append("  " + auto_info["message"])
         if p.get("warning"):
             lines.append("  ! " + p["warning"])
     warns = [w for w in res.get("warnings") or [] if not is_bpm_from_name_warning(w)]
@@ -127,6 +135,9 @@ def _concert_message(res) -> str:
         lines.append(t("concert_line", n=d["n"], title=d["title"], bpm=d["bpm"], bars=d["bars"]))
     total = res.songs[-1]["stop"] if res.songs else 0
     lines += ["", t("concert_duration", m=int(total // 60), s=int(total % 60)), t("concert_extras_running")]
+    g = getattr(res, "lighting", None) or {}
+    if g.get("cues") and g.get("dir"):
+        lines.append(t("gma3_written", n=g["cues"], d=g["dir"]))
     if res.warnings:
         lines.append("")
         lines.extend("! " + w for w in res.warnings[:6])
@@ -196,6 +207,8 @@ def main(argv=None):
     _status("running", cmd=args.cmd, step=t("cli_running"))
     from . import structure
     structure.PROGRESS = lambda msg: _status("running", cmd=args.cmd, step=msg)
+    from . import lyrics_auto
+    lyrics_auto.PROGRESS = lambda msg: _status("running", cmd=args.cmd, step=msg)
     try:
         res = asyncio.run(_run(args.cmd, args))
         ok = not res.get("error")

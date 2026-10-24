@@ -461,6 +461,12 @@ ReaCue never downloads lyrics: **you provide the text**.
 The lines are aligned automatically on the vocal stem. If a line is off, you can place it by hand with a
 timing file `lyrics_timing.json` (see the *Lyrics* section of the README).
 
+**No text at hand?** If *automatic lyrics* are installed (Whisper, with `Install ReaCue Words`), ReaCue
+transcribes the vocal stem and writes a draft **`paroles (auto).txt`** in the song folder; the pill turns
+orange: **Lyrics: auto (N lines)**. Click it to open the draft, correct it by ear (in place, or rename it
+`lyrics.txt`), then **Update the phones**. Your own `lyrics.txt` always wins, and the draft is never
+overwritten.
+
 ---
 
 ## 13. Open the prompter on the phones
@@ -785,6 +791,22 @@ On the phones, each musician sees at the top **“your stem is muted”** (orang
 
 With Claude: “in the Saturday 15 concert, drums and bass are played live, except the bass on Second Demo”
 (tool `set_live_profile`, no rebuild).
+
+### 16.9 Lighting: grandMA3
+
+At each preparation and each concert build, ReaCue writes one cue per section for a grandMA3 desk (folder
+`grandMA3/` next to the project, or `Concerts/grandMA3/<concert>/`): one Sequence per song, one Timecode and
+a cue sheet (CSV with a suggested effect per section).
+
+1. On a phone or the lighting computer, open the prompter and choose the **Lighting** role: cue list,
+   current cue highlighted, links to download the three files.
+2. On the desk: import the Sequence, then the Timecode.
+3. **Have REAPER send the timecode** (MTC or LTC) to the desk, and set the desk's Timecode to follow it: the
+   concert stops between songs, so the desk must follow the project position. ReaCue does not touch
+   REAPER's settings: enable the timecode output yourself.
+
+Useful settings: `gma3_tc_start` (e.g. `"01:00:00:00"`), `gma3_fps` (25 by default), `gma3_song_slot`
+(e.g. `600`: each song starts on a round 10-minute mark). Rebuild the concert after a change.
 
 ---
 

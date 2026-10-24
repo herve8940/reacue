@@ -1,0 +1,6 @@
+# ReaCue — paroles automatiques : openai-whisper (MIT), dans .venv-words, installé APRÈS requirements-words.txt :
+#   uv pip install --no-deps -r requirements-whisper.txt
+# Publié seulement en code source Python pur (aucune compilation) ; ses dépendances (torch, numpy, numba,
+# tiktoken, more-itertools, tqdm) sont épinglées dans requirements-words.txt (paquets précompilés seulement).
+# triton (Linux + GPU NVIDIA seulement) n'est pas nécessaire sur CPU.
+openai-whisper==20250625

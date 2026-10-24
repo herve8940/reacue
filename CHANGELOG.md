@@ -1,5 +1,91 @@
 # Changelog
 
+## Non publié / Unreleased
+
+### Lumière grandMA3 / grandMA3 lighting export
+- **grandMA3 export / export grandMA3** (`reacue_mcp/lighting.py`): one cue per section (named after the
+  section) at the start of its region, in REAPER project time (count-in included). Song: `grandMA3/` next to
+  the `.RPP` with `<Title>_Sequence.xml`, `<Title>_Timecode.xml`, `<Title>_conduite.csv`; concert:
+  `Concerts/grandMA3/<concert>/` with one Sequence per song, one Timecode (one track per song) and the cue
+  sheet. XML generators ported as is from the reference validated on a desk (DataVersion 2.4.2.2, UTF-8 BOM,
+  OffCue + CueZero, 3-character `No`, `Target` without quotes, `Object="13.13.0.5.<track>"`,
+  `ValCueDestination="0.5.<track>.<n×1000>"`, `CueDestination` = cue name). Cleaned sequence names (ASCII +
+  `_`), unique cue names, suggested effect per section type (FR / EN) as XML comment and in the cue sheet.
+  Written automatically at each preparation (where the prompter is published) and each concert build;
+  never blocks them (warning only).
+- **Prompter: Lighting role / rôle Lumière** (FR / EN): cue list with SMPTE time and suggested effect,
+  current cue highlighted from the play position, countdown to the next cue, timecode, fps / start / slot,
+  download links (files also written to `reaper_www_root`, prefix `reacue_gma3_`; no internet needed).
+- **Settings / réglages**: `gma3_export` (true), `gma3_fps` (25), `gma3_tc_start` ("00:00:00:00"),
+  `gma3_song_gap` (null = setlist gap, 4 s), `gma3_song_slot` (0 = off). Gap and slot change the **real**
+  placement of the songs in the concert project (tempo map, regions, `.concert.lua`, prompter, timecode all
+  agree): with a slot, each song starts on the next multiple, the gap being lengthened by whole bars at an
+  adjusted tempo (the grid stays right); the placement is stored in the setlist (`layout`) and reused by the
+  background prompter pass. Defaults keep the previous behaviour.
+- Docs: lighting section in README / LISEZMOI, tutorials 16.9 (FR / EN), recommendation to have REAPER send
+  MTC or LTC to the desk (the concert stops between songs). Tests: `tests/test_lighting.py`.
+### Paroles mot par mot / Word-by-word lyrics (optional component)
+- New optional component `.venv-words` (`Install ReaCue Words.command` / `.bat`, `install/install_words_*`,
+  `requirements-words.txt`, `reacue_words.py`): forced alignment of the known lyrics on the vocal stem
+  (`torchaudio.functional.forced_align`, wav2vec2 XLSR-53 fine-tuned in French / English by J. Grosman,
+  Apache-2.0; same PyTorch versions as Demucs, no `transformers`). / Nouveau composant facultatif : chaque mot
+  est placé à son vrai moment, à l'intérieur des lignes déjà calées (le calage par ligne reste l'ancrage et
+  le repli).
+- Lyrics entries get an optional `words: [{"w", "t", "end"}]` field (file time, converted to the REAPER
+  timeline by `prompter.lyrics_on_timeline`); existing formats unchanged. Separate cache
+  (`<cache>_words.json`); any failure keeps the line timing.
+- Prompter (Vocals): the current word is highlighted, sung words are dimmed. / Prompteur : mot en cours
+  surligné. PDF chart: each word goes in the bar where it is sung. / Grille PDF : vrais temps des mots.
+- Settings `words_engine` (`auto` | `off`) and `words_language` (`auto` | `fr` | `en`, auto = guessed from
+  the lyrics text).
+- `tools/compare_words.py`: before / after on the last prepared song, never prints the lyrics.
+### Paroles automatiques / Automatic lyrics (optional, Whisper)
+- When the song folder has no lyrics file, ReaCue transcribes the vocal stem with **Whisper** (openai-whisper,
+  code and weights MIT, `large-v3-turbo`, ≈ 1.6 GB, in `words/whisper/`) inside `.venv-words`
+  (`reacue_transcribe.py`, `reacue_mcp/lyrics_auto.py`) and writes a draft **`paroles (auto).txt`** in the
+  song folder, then used like a normal lyrics file (line timing, then word by word). / Sans fichier de
+  paroles, brouillon automatique à corriger.
+- The user's file (`paroles.txt`, `lyrics.txt`…) always wins; the draft is created once and never
+  overwritten (correct it in place or rename it). Lines starting with `#` are now comments in lyrics files.
+- Against hallucinations on singing: voice activity on the stem (only sung parts are transcribed),
+  `condition_on_previous_text=False`, no-speech / log-prob thresholds, removal of typical captions and of
+  looping repetitions; one line per sung phrase (long segments split), empty line between blocks.
+- `Install ReaCue Words` also installs Whisper (`requirements-whisper.txt`, `--no-deps`; numba 0.62.1 /
+  llvmlite 0.45.1 / tiktoken 0.9.0 wheels for Mac Intel) and downloads the model; re-running it completes an
+  existing install (`REACUE_WHISPER=0` to skip). Fallback: official Hugging Face weights converted locally.
+- ReaCue window: orange pill *Paroles : auto (N lignes)* / *Lyrics: auto (N lines)* (click: open the draft);
+  PDF chart footer mentions automatic lyrics. Setting `lyrics_auto` (`auto` | `off`). Never blocking: any
+  failure = no lyrics, as before (failure remembered, no retry at every publication).
+- `tools/transcribe_lyrics.py`: transcription by hand, prints statistics only (never the text).
+### Accords : modèle entraîné (facultatif) / Chords: trained model (optional)
+- New optional component **chord recognition** (`Install ReaCue Chords.command` / `.bat`,
+  `install/install_chords_{mac.sh,windows.ps1}`, `requirements-chords.txt`, separate `.venv-chords`):
+  model of Jiang et al., *Large-Vocabulary Chord Transcription via Chord Structure Decomposition*
+  (ISMIR 2019, Music X Lab, code **and weights MIT**), pinned revision downloaded from GitHub into
+  `chords/model`. / Nouveau composant facultatif : reconnaissance d'accords par modèle entraîné.
+- `reacue_chords.py` (runs in `.venv-chords`): ensemble of 5 CNN + BiLSTM networks (triad, bass, 7th, 9th,
+  11th, 13th), HMM decoding **aligned on ReaCue's beats** (changes on beats, cheaper on beats 1 and 3),
+  network probabilities cached (a grid change only re-decodes); `check` tests it on synthetic chords.
+- `reacue_mcp/chord_model.py`: harmonic mix (stems without vocals or drums, else the single file),
+  subprocess, per-song cache in `.reacue/`, failure remembered for 1 h; `chords.chords_from_segments` maps
+  the model's chords onto the bars in the **same format** as before (≤ 2 chords per bar, `N.C.`,
+  inversions `A/C#`, confidence); sharps / flats from the key (estimated from the chords when unknown),
+  inversion basses spelled as chord tones (`E/G#`, `Ab/C`), 9/11/13 shown as the matching 7th.
+- `chords.cached_chords` uses the model when installed (setting **`chords_engine`**: `"auto"` | `"reacue"`,
+  env `REACUE_CHORDS_ENGINE`), otherwise or on failure ReaCue's detection (unchanged, same cache key).
+- `tools/compare_chords.py`: model vs ReaCue, bar by bar, on the user's songs.
+### Batterie : transcription par modèle (ADTOF) / Drums: model-based transcription (ADTOF)
+- **ADTOF** (optional component, `.venv-drums`, `Install ReaCue Drums.command` / `.bat`): trained drum
+  transcription of the drum stem (kick, snare, toms, hi-hat, cymbals), run in a subprocess
+  (`reacue_drums.py`), cached next to the stem; automatic fallback to ReaCue's rules if missing or failing
+  (setting `drums_engine`: `auto` | `reacue`). / Transcription entraînée du stem batterie, repli automatique.
+- Hits snapped to ReaCue's grid (bar times from the analysis, global latency estimated), **sixteenths or
+  triplets** chosen per song; toms split by pitch (T1 / T2 / FT), **open hi-hat** (new `HO` lane, shown by
+  the prompter), crash vs ride per section; same output format (patterns, fills, crashes). / Quantification
+  sur la grille, double-croches ou triolets, charley ouvert, crash / ride.
+- Licences: ADTOF weights CC BY-NC-SA 4.0 (non-commercial), explicit “J'accepte / I accept” in the
+  installers; see THIRD_PARTY_NOTICES.md. Comparison tool: `tools/compare_drums.py`.
+
 ## 1.0.1 — 2026-10-22 — docs : captures mises à jour / updated screenshots
 
 Documentation: every screenshot regenerated with the current code, in French **and** English, with made-up

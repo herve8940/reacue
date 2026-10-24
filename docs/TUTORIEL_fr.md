@@ -480,6 +480,12 @@ défilent avec le morceau.
 Les lignes sont calées automatiquement sur le stem de voix. Si une ligne tombe mal, tu peux la caler à la
 main avec un fichier d'ancres `paroles_calage.json` (voir la section *Paroles* du LISEZMOI).
 
+**Pas de texte sous la main ?** Si les *paroles automatiques* sont installées (Whisper, avec
+`Install ReaCue Words`), ReaCue transcrit le stem voix et écrit un brouillon **`paroles (auto).txt`** dans
+le dossier du morceau ; la pastille devient orange : **Paroles : auto (N lignes)**. Clique dessus pour ouvrir
+le brouillon, corrige-le à l'oreille (sur place, ou renomme-le `paroles.txt`), puis **Mettre à jour les
+téléphones**. Ton propre `paroles.txt` reste toujours prioritaire, et le brouillon n'est jamais écrasé.
+
 ---
 
 ## 13. Ouvrir le prompteur sur les téléphones
@@ -808,6 +814,22 @@ entendre**.
 
 Avec Claude : « dans le concert Samedi 15, la batterie et la basse sont jouées en live, sauf la basse sur
 Second Demo » (outil `set_live_profile`, sans reconstruire).
+
+### 16.9 Lumière : grandMA3
+
+À chaque préparation et à chaque construction du concert, ReaCue écrit un cue par section pour une console
+grandMA3 (dossier `grandMA3/` à côté du projet, ou `Concerts/grandMA3/<concert>/`) : une Sequence par
+morceau, un Timecode, une fiche de conduite (CSV avec un effet suggéré par section).
+
+1. Sur un téléphone ou l'ordinateur de la régie lumière, ouvre le prompteur et choisis le rôle **Lumière** :
+   liste des cues, cue en cours surligné, liens pour télécharger les trois fichiers.
+2. Sur la console : importe la Sequence, puis le Timecode.
+3. **Fais envoyer le timecode par REAPER** (MTC ou LTC) à la console, et règle le Timecode de la console pour
+   le suivre : le concert s'arrête entre les morceaux, la console doit suivre la position du projet.
+   ReaCue ne touche pas aux réglages de REAPER : active la sortie timecode toi-même.
+
+Réglages utiles : `gma3_tc_start` (ex. `"01:00:00:00"`), `gma3_fps` (25 par défaut), `gma3_song_slot`
+(ex. `600` : chaque morceau démarre toutes les 10 minutes rondes). Reconstruis le concert après un changement.
 
 ---
 

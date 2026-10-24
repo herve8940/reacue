@@ -59,6 +59,17 @@ demucs_status.json
 /structure/
 .reacue/
 
+# Paroles mot par mot (modèles wav2vec2 téléchargés par l'installateur) / Word-by-word lyrics
+.venv-words/
+/words/
+# Reconnaissance d'accords (modèle téléchargé par l'installateur) / Chord recognition
+.venv-chords/
+/chords/
+*.sdict
+# Transcription de batterie (ADTOF, téléchargé par l'installateur) / Drum transcription
+.venv-drums/
+/drums/
+
 # Poids de modèles : jamais dans le dépôt (téléchargés par l'utilisateur) / Model weights: never in the repository
 *.safetensors
 *.pt

@@ -4,7 +4,8 @@
 Fabrique un morceau de démonstration entièrement fictif (« Demo Song » : structure, accords,
 paroles et batterie inventés) et un concert fictif de trois morceaux, les sert avec la page du prompteur
 sur un faux serveur REAPER (/_/TRANSPORT renvoie une position fixe ; instruments, Régie et répétition
-simulés), puis photographie chaque vue avec Playwright (Chromium) : rôles, tablette, concert, Régie (PIN 1234).
+simulés), puis photographie chaque vue avec Playwright (Chromium) : rôles, tablette, concert, Régie (PIN 1234),
+Lumière (cues grandMA3).
 
     pip install playwright && playwright install chromium
     python3 tools/make_screenshots.py [--out docs/images] [--check]
@@ -106,6 +107,14 @@ def _drums(lang: str) -> dict:
             "version": "demo"}
 
 
+def _lighting(songs: list[dict], concert: str | None = None) -> dict:
+    """Bloc « lighting » (onglet Lumière), calculé par le vrai module d'export grandMA3."""
+    from reacue_mcp import lighting
+    cfg = lighting.config({"gma3_fps": 25, "gma3_tc_start": "01:00:00:00",
+                           "gma3_song_slot": 0})
+    return lighting.web_data(lighting.show_from_songs(songs, concert), cfg)
+
+
 def demo_song(lang: str, title: str = "Demo Song", bpm: float = BPM, t0: float = 0.0) -> dict:
     secs = []
     for name, a, b in STRUCT:
@@ -151,6 +160,7 @@ def demo_song(lang: str, title: str = "Demo Song", bpm: float = BPM, t0: float =
         "sections": secs, "activity": act, "roles": sorted(act), "chords": chords, "lyrics": lyrics,
         "drums": _drums(lang),
     }
+    song["lighting"] = _lighting([song])
     song["id"] = hashlib.md5(json.dumps(song, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
     return song
 
@@ -172,6 +182,7 @@ def demo_concert(lang: str) -> dict:
     name = "Concert de démo" if lang == "fr" else "Demo concert"
     data = {"version": 1, "language": lang, "concert": {"name": name, "n": len(songs), "titles": [x[0] for x in CONCERT]},
             "songs": songs}
+    data["lighting"] = _lighting(songs, name)
     data["id"] = hashlib.md5(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
     return data
 
@@ -225,9 +236,11 @@ VIEWS = {
     "vocals": (11, 1.6),       # couplet 1, ligne en cours
     "lead_guitar": (93, 1.0),  # solo
     "all": (30, 0.5),
+    "light": (31, 0.5),        # refrain 1 : cue en cours surligné
 }
 TABLET_VIEWS = {"drums": (24, 1.2), "vocals": (30, 1.5)}   # fill avant le pré-refrain ; refrain 1
 PHONE = {"width": 390, "height": 844}
+S_LIGHT = {"fr": "Refrain 1", "en": "Chorus 1"}      # cue attendu dans la liste de l'onglet Lumière
 TABLET = {"width": 1180, "height": 820}
 
 
@@ -252,7 +265,11 @@ def run(out: Path | None, check_only: bool) -> list[str]:
                     page.goto(f"{base}/prompteur.html?role={role}&lang={lang}")
                     page.wait_for_function("document.getElementById('nowName').textContent !== '—'", timeout=8000)
                     page.wait_for_timeout(600)
-                    if out and not check_only and role in ("drums", "bass", "vocals", "guitars"):
+                    if role == "light" and S_LIGHT[lang] not in (page.text_content("#lCues") or ""):
+                        errors.append(f"{lang}/light: cue list missing")
+                    if role == "light" and not page.is_visible("#lCues .row.cur"):
+                        errors.append(f"{lang}/light: current cue not highlighted")
+                    if out and not check_only and role in ("drums", "bass", "vocals", "guitars", "light"):
                         f = out / f"prompter_{role}_{lang}{'_tablet' if kind == 'tablet' else ''}.png"
                         page.screenshot(path=str(f))
                         shots.append(f.name)
