@@ -801,12 +801,30 @@ a cue sheet (CSV with a suggested effect per section).
 1. On a phone or the lighting computer, open the prompter and choose the **Lighting** role: cue list,
    current cue highlighted, links to download the three files.
 2. On the desk: import the Sequence, then the Timecode.
-3. **Have REAPER send the timecode** (MTC or LTC) to the desk, and set the desk's Timecode to follow it: the
-   concert stops between songs, so the desk must follow the project position. ReaCue does not touch
-   REAPER's settings: enable the timecode output yourself.
+3. **REAPER sends the timecode** (MTC or LTC): the concert stops between songs, the desk follows.
 
-Useful settings: `gma3_tc_start` (e.g. `"01:00:00:00"`), `gma3_fps` (25 by default), `gma3_song_slot`
-(e.g. `600`: each song starts on a round 10-minute mark). Rebuild the concert after a change.
+**First setup (once).**
+
+1. In `reacue_settings.json`, choose the output(s):
+   - **console with LTC**: `"gma3_ltc_output": 7` (sound card output 7 → the desk's LTC XLR input);
+   - **grandMA3 onPC on the same Mac**: `"gma3_mtc_output": "IAC Driver Bus 1"` (Audio MIDI Setup → Window →
+     Show MIDI Studio → IAC Driver → tick *Device is online*);
+   - **onPC on another computer**: `"gma3_mtc_output": "Network Session 1"` (Audio MIDI Setup → MIDI Network
+     Setup: create a session, connect the PC; on Windows, rtpMIDI);
+   - optionally `"gma3_tc_slot": 1`, `"gma3_tc_start": "01:00:00:00"`, `"gma3_fps": 25`.
+2. REAPER: *Preferences → Audio → MIDI Devices*: enable that MIDI output (MTC only).
+3. Prepare a song: tracks `TIMECODE LTC` / `TIMECODE MTC` appear. Double-click the generator item →
+   *Source properties*: frame rate = `gma3_fps`, start = `gma3_tc_start`, *Send MIDI (MTC)* ticked on the
+   MTC track only. OK, then **Prepare** again: ReaCue remembers this for every song and concert.
+4. Desk: copy the contents of the export folder (`grandMA3/` next to the project, or
+   `Concerts/grandMA3/<concert>/`) into `grandMA3/` at the root of a USB stick, import the plugin
+   `ReaCue.xml` (Plugins pool → Import) and run it: Sequences, Timecode and TC Slot in one tap.
+5. Desk input (once): *Menu → In & Out (Connector Configuration)*: SMPTE Mode = In and SMPTE TC = slot
+   (LTC), or MIDI TC Mode = In and MIDI TC = slot (MTC).
+
+Test: play in REAPER → the desk's timecode runs and the cues fire; stop → the timecode show stops; play
+again → it restarts. Useful settings: `gma3_song_slot` (e.g. `600`: each song starts on a round 10-minute
+mark). Rebuild the concert after a change.
 
 ---
 

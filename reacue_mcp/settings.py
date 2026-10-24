@@ -45,6 +45,10 @@ DEFAULTS: dict = {
     "gma3_tc_start": "00:00:00:00",  # timecode du début du projet (ex. "01:00:00:00"), ajouté aux temps du XML
     "gma3_song_gap": None,       # concert : blanc minimum entre deux morceaux (s) ; None = celui de la setlist (4 s)
     "gma3_song_slot": 0,         # concert : créneau rond (s) du départ de chaque morceau (600 = 0, 10 min…) ; 0 = non
+    # timecode envoyé par REAPER (timecode.py) : pistes TIMECODE LTC / TIMECODE MTC ; vide = pas de piste
+    "gma3_ltc_output": None,     # sortie audio du LTC : 7 (= sortie 7, mono) ou "7/8" (paire) ; None = aucune
+    "gma3_mtc_output": None,     # sortie MIDI du MTC : nom du périphérique ("IAC Driver Bus 1", "Réseau MIDI"…)
+    "gma3_tc_slot": 1,           # TC Slot grandMA3 (1 à 8) réglé par le plugin ReaCue
 }
 
 LANGS = ("fr", "en")

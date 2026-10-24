@@ -1,5 +1,32 @@
 # Changelog
 
+## Non publié / Unreleased
+
+### Timecode automatique vers grandMA3 / Automatic timecode to grandMA3
+- **Timecode tracks / pistes timecode** (`reacue_mcp/timecode.py`, `ReaCue_Bridge.lua` 1.4.0): with
+  `gma3_ltc_output` and/or `gma3_mtc_output`, each preparation creates `TIMECODE LTC` (REAPER's SMPTE
+  LTC/MTC generator, action 40208, over the whole project, sent to a hardware audio output, mono `7` or pair
+  `"7/8"`, never to the master) and `TIMECODE MTC` (same generator, track MIDI hardware output found by device
+  name). Replaced at every preparation, never duplicated. Sent time = project time + `gma3_tc_start` at
+  `gma3_fps`, like the Timecode XML. The generator's `<SOURCE LTC` fields are undocumented: ReaCue never
+  writes them itself, it reapplies the block the user set **once** in *Source properties* (remembered per
+  fps + start in `ReaCueMCP/timecode/`) and reminds the user until then.
+- **Concert**: one timecode track per output over the whole concert (built from the remembered setting, or
+  the first song's generator and routing), the songs' timecode tracks are never copied.
+- Timecode tracks are ignored everywhere a generated track is (analysis, stems separation, Song tab, stage
+  mute, rehearsal mute, concert audio lanes, region pick-up).
+- **grandMA3 plugin “ReaCue”** written with every export: `gma3_library/datapools/plugins/ReaCue.xml` +
+  `ReaCue.lua`, and copies of the XML files in `gma3_library/datapools/sequences/` and `…/timecodes/` (USB
+  stick layout). One tap: imports the Sequences (keeps an existing Sequence of the same name), the Timecode
+  (asks before replacing), sets TC Slot (`gma3_tc_slot`), Auto Start, Auto Stop; final message with the
+  input setup. Defensive (pcall, several command forms, read-back). The validated Timecode XML is unchanged
+  (`TCSlot="-1"`).
+- **Prompter, Lighting role**: timecode outputs (LTC → output, MTC → device, TC Slot) and a 3-line setup
+  reminder (FR / EN).
+- Settings: `gma3_ltc_output` (null), `gma3_mtc_output` (null), `gma3_tc_slot` (1). Empty = no track,
+  nothing changes. Docs (README / LISEZMOI, tutorials 16.9): console (LTC XLR), onPC on the same Mac (IAC),
+  onPC on another computer (macOS Network MIDI / rtpMIDI), one-time setup. Tests: `tests/test_timecode.py`.
+
 ## 1.1.0 — 2026-10-24 — lumière grandMA3, paroles mot par mot et automatiques, accords et batterie par modèle, grille PDF
 
 ### Lumière grandMA3 / grandMA3 lighting export

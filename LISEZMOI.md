@@ -577,14 +577,47 @@ section (nommé comme la section, ex. « Refrain 1 ») au début de sa région, 
   réglages et les liens de téléchargement des trois fichiers (servis par l'interface web de REAPER, sans internet).
 - Sur la console : importer d'abord la ou les Sequences, puis le Timecode (essayer d'abord sur un slot vide).
 
-**Recommandé : REAPER envoie le timecode à la console.** Dans REAPER, envoie le **MTC** (timecode MIDI) ou le
-**LTC** (timecode audio) à la grandMA3 et règle son show Timecode pour le suivre : la console suit alors la
-position du projet, indispensable puisque le concert **s'arrête entre les morceaux** (un timecode qui
-défilerait seul se décalerait). ReaCue ne modifie jamais les réglages de REAPER : active toi-même la sortie
-timecode (REAPER : *Préférences → Audio → MIDI Devices* / *Paramètres du projet*, ou un plug-in générateur de
-LTC sur une sortie libre). Réglages `gma3_tc_start` (timecode console du temps 0 du projet), `gma3_fps`,
-`gma3_song_gap` et `gma3_song_slot` (chaque morceau démarre à une heure ronde, ex. toutes les 10 min : plus
-simple à retrouver sur la console) : voir [Réglages](#réglages).
+**REAPER envoie le timecode à la console (MTC ou LTC), automatiquement.** La console suit la position du
+projet, indispensable puisque le concert **s'arrête entre les morceaux** : l'arrêt de REAPER arrête le show
+Timecode de la console, la relance le fait repartir. Donne `gma3_ltc_output` et/ou `gma3_mtc_output` : chaque
+préparation et chaque construction de concert crée (ou remplace, jamais en double) les pistes :
+
+- `TIMECODE LTC` : item *SMPTE LTC/MTC Timecode Generator* de REAPER sur tout le projet, envoyé vers la sortie
+  audio `gma3_ltc_output` (`7` = sortie 7 seule, `"7/8"` = paire), jamais vers le master ;
+- `TIMECODE MTC` : le même générateur envoyé vers la sortie MIDI `gma3_mtc_output` (nom du périphérique, ex.
+  `"IAC Driver Bus 1"`), sans audio.
+
+Temps envoyé = temps du projet + `gma3_tc_start`, à `gma3_fps` : les mêmes temps que le Timecode XML. Un
+concert a **une** piste par sortie sur toute sa durée (les pistes des morceaux ne sont pas recopiées).
+Réglages vides (par défaut) = aucune piste.
+
+**Une seule fois, dans REAPER :** les réglages du générateur ne sont pas documentés dans le fichier projet,
+ReaCue ne les invente donc pas. Après la première préparation, double-clic sur l'item du générateur →
+*Propriétés de la source* : images/s = `gma3_fps`, départ = `gma3_tc_start`, *Send MIDI (MTC)* coché sur
+`TIMECODE MTC` seulement, décoché sur `TIMECODE LTC` ; OK, puis relance la préparation. ReaCue le mémorise
+(par fps + départ) et le réapplique à tous les morceaux et concerts ; d'ici là, chaque préparation le
+rappelle. Active aussi la sortie MIDI dans *Préférences → Audio → MIDI Devices*.
+
+**Plugin grandMA3 « ReaCue ».** Le dossier d'export contient aussi `gma3_library/datapools/plugins/ReaCue.xml`
+(+ `ReaCue.lua`) et une copie des XML dans `gma3_library/datapools/sequences/` et `…/timecodes/`. Copie le
+**contenu** du dossier d'export dans `grandMA3/` à la racine d'une clé USB ; sur la console : pool Plugins →
+nouveau plugin → *Import* → `ReaCue.xml`, puis lance-le. En un appui il importe les Sequences (une Sequence du
+même nom déjà présente est gardée : ta programmation reste), le Timecode (demande avant de le remplacer),
+règle son TC Slot (`gma3_tc_slot`, 1 par défaut), Auto Start et Auto Stop, et rappelle le réglage de l'entrée.
+Réimporte le plugin après chaque export (il contient la liste des fichiers du morceau ou du concert).
+
+| Installation | Réglage ReaCue | Console / onPC, une fois |
+|---|---|---|
+| Console, LTC | `gma3_ltc_output` : sortie de la carte son reliée à l'entrée **LTC XLR** | Menu → In & Out (Connector Configuration) : SMPTE Mode = In, colonne SMPTE TC = slot |
+| Console, MTC | `gma3_mtc_output` : interface MIDI reliée au **MIDI In** | MIDI TC Mode = In, colonne MIDI TC = slot |
+| onPC sur le même Mac | `gma3_mtc_output` : `"IAC Driver Bus 1"` (Configuration audio et MIDI → Studio MIDI → Gestionnaire IAC : *Le périphérique est en ligne*) | entrée MIDI TC sur le slot |
+| onPC sur un autre ordinateur | `gma3_mtc_output` : `"Réseau MIDI"` / `"Network Session 1"` (MIDI réseau de macOS) ; rtpMIDI sur le PC Windows | entrée MIDI TC sur le slot |
+
+À tester sur la console (pas encore vérifié) : les commandes d'import du plugin et les dossiers `sequences/` /
+`timecodes/`, les propriétés TC Slot / Auto Stop réglées par le plugin, l'entrée MIDI timecode de l'onPC. Si
+le plugin n'arrive pas à importer un fichier, importe la Sequence puis le Timecode à la main et règle TC Slot
+dans les réglages du Timecode. Réglages `gma3_song_gap` et `gma3_song_slot` (chaque morceau démarre à une
+heure ronde, ex. toutes les 10 min) : voir [Réglages](#réglages).
 
 ## Paroles
 
@@ -702,6 +735,9 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `gma3_tc_start` | `"00:00:00:00"` | timecode console du début du projet (ex. `"01:00:00:00"`) : ajouté au temps de chaque cue |
 | `gma3_song_gap` | `null` | concert : blanc minimum entre deux morceaux (s), remplace celui de la setlist (4 s) ; `null` = inchangé |
 | `gma3_song_slot` | `0` | concert : chaque morceau démarre au prochain multiple de ce temps (s, ex. `600` = 0, 10 min, 20 min… ; le blanc est rallongé de mesures entières) ; `0` = non |
+| `gma3_ltc_output` | `null` | piste `TIMECODE LTC` : sortie audio du LTC (`7` = sortie 7, `"7/8"` = paire) ; `null` = pas de piste |
+| `gma3_mtc_output` | `null` | piste `TIMECODE MTC` : nom du périphérique de sortie MIDI (`"IAC Driver Bus 1"`, `"Réseau MIDI"`… ; une partie du nom suffit, majuscules indifférentes) ; `null` = pas de piste |
+| `gma3_tc_slot` | `1` | TC Slot grandMA3 (1 à 8) réglé par le plugin ReaCue |
 
 Voix : sous Windows, on ajoute des voix (par exemple françaises) dans *Paramètres → Heure et langue →
 Voix*. Seules les voix visibles par SAPI (voix « Desktop ») sont utilisées. Sans aucune voix, tout fonctionne

@@ -7,6 +7,11 @@ section, au début de sa région, en temps PROJET REAPER (0 = début du projet, 
     Concert :       <dossier des concerts>/grandMA3/<Concert>/<Titre>_Sequence.xml (un par morceau),
                     <Concert>_Timecode.xml (une piste par morceau), <Concert>_conduite.csv
 
+Dans chaque dossier d'export, une arborescence de clé USB (à copier dans grandMA3/ à la racine de la clé) :
+gma3_library/datapools/sequences/*.xml, …/timecodes/*.xml et le plugin …/plugins/ReaCue.xml + ReaCue.lua
+(gma3/ReaCue_plugin.lua + données du morceau / concert) : import des Sequences et du Timecode, TC Slot
+(`gma3_tc_slot`). Le Timecode XML validé garde TCSlot="-1" ; c'est le plugin qui règle le slot.
+
 Les fichiers sont aussi copiés dans reaper_www_root (préfixe « reacue_gma3_ ») : l'onglet Lumière du
 prompteur propose de les télécharger.
 
@@ -33,6 +38,15 @@ from .i18n import get_lang, section_kind
 FPS_CHOICES = (24.0, 25.0, 29.97, 30.0)
 WEB_PREFIX = "reacue_gma3_"
 FOLDER = "grandMA3"
+# bibliothèque grandMA3 sur clé USB : <clé>/grandMA3/gma3_library/datapools/<pool>/ (plugins : aide MA
+# « Plugins » 2.4 ; sequences / timecodes : même schéma, à confirmer sur console)
+LIB_ROOT = "gma3_library"
+PLUGIN_DIR = f"{LIB_ROOT}/datapools/plugins"
+SEQ_DIR = f"{LIB_ROOT}/datapools/sequences"
+TC_DIR = f"{LIB_ROOT}/datapools/timecodes"
+PLUGIN_NAME = "ReaCue"
+PLUGIN_TEMPLATE = Path(__file__).resolve().parent / "gma3" / "ReaCue_plugin.lua"
+PLUGIN_MARK = "--[[REACUE_DATA]] nil"
 
 # --------------------------------------------------------------------------- #
 # Bibliothèque d'effets (reprise de l'appli de référence) et types de cues
@@ -152,9 +166,14 @@ def config(settings: dict | None = None) -> dict:
     off = parse_tc(tc, fps)
     if off is None:
         tc, off = "00:00:00:00", 0.0
+    from . import timecode as TC
+    ltc = TC.parse_audio_output(settings.get("gma3_ltc_output"))
     return {"export": bool(settings.get("gma3_export", True)), "fps": fps, "tc_start": tc,
             "offset_s": round(off, 6), "gap_s": _num(settings.get("gma3_song_gap"), None),
-            "slot_s": _num(settings.get("gma3_song_slot"), 0.0) or 0.0}
+            "slot_s": _num(settings.get("gma3_song_slot"), 0.0) or 0.0,
+            # sorties timecode de REAPER et TC Slot (onglet Lumière, plugin grandMA3)
+            "tc_slot": TC.tc_slot(settings.get("gma3_tc_slot")), "ltc": ltc["label"] if ltc else None,
+            "mtc": TC.midi_output_name(settings.get("gma3_mtc_output"))}
 
 
 def _fps(v) -> float:
@@ -423,6 +442,9 @@ def web_data(show: dict, cfg: dict) -> dict:
         out["slot_s"] = cfg.get("slot_s") or 0
         if cfg.get("gap_s") is not None:
             out["gap_s"] = cfg["gap_s"]
+    # sorties timecode de REAPER (pistes TIMECODE LTC / MTC) et TC Slot réglé par le plugin
+    out["timecode"] = {"ltc": cfg.get("ltc"), "mtc": cfg.get("mtc"), "slot": cfg.get("tc_slot", 1),
+                       "plugin": f"{PLUGIN_DIR}/{PLUGIN_NAME}.xml"}
     return out
 
 
@@ -452,6 +474,15 @@ def write_files(show: dict, cfg: dict, folder: Path | None, www: Path | None, la
             _write(folder / n, txt)
             out["files"].append(str(folder / n))
         out["dir"] = str(folder)
+        # arborescence de la clé USB (contenu du dossier à copier dans grandMA3/ à la racine de la clé)
+        fn = file_names(show)
+        lib = {f"{SEQ_DIR}/{n}": files[n] for n in fn["sequences"]}
+        lib[f"{TC_DIR}/{fn['timecode']}"] = files[fn["timecode"]]
+        lib.update(plugin_files(show, cfg, lang))
+        for rel, txt in lib.items():
+            _write(folder / rel, txt)
+        out["library"] = str(folder / LIB_ROOT)
+        out["plugin"] = str(folder / PLUGIN_DIR / f"{PLUGIN_NAME}.xml")
     if www is not None:
         www = Path(www)
         keep = {web_name(show, n) for n in files}
@@ -468,6 +499,32 @@ def write_files(show: dict, cfg: dict, folder: Path | None, www: Path | None, la
             _write(www / web_name(show, n), txt)
             out["web"].append(web_name(show, n))
     return out
+
+
+def plugin_data(show: dict, cfg: dict, lang: str | None = None) -> dict:
+    """Données embarquées dans le plugin : Sequences et Timecode à importer, TC Slot, langue."""
+    fn = file_names(show)
+    return {"version": 1, "lang": "en" if (lang or get_lang()) == "en" else "fr", "name": show["name"],
+            "slot": int(cfg.get("tc_slot") or 1),
+            "sequences": [{"name": tr["seq"], "file": n} for tr, n in zip(show["tracks"], fn["sequences"])],
+            "timecode": {"name": show["name"], "file": fn["timecode"]}}
+
+
+def plugin_files(show: dict, cfg: dict, lang: str | None = None) -> dict[str, str]:
+    """{chemin relatif: contenu} du plugin grandMA3 « ReaCue » (XML du plugin + composant Lua)."""
+    from . import __version__
+    from .bridge import to_lua
+    src = PLUGIN_TEMPLATE.read_text(encoding="utf-8")
+    assert PLUGIN_MARK in src
+    lua = src.replace(PLUGIN_MARK, to_lua(plugin_data(show, cfg, lang)), 1)
+    ver = ".".join((__version__.split(".") + ["0", "0", "0", "0"])[:4])
+    xml = ('\ufeff<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<GMA3 DataVersion="2.4.2.2">\n'
+           f'    <Plugin Name="{PLUGIN_NAME}" Author="ReaCue" Version="{ver}">\n'
+           f'        <ComponentLua Name="{PLUGIN_NAME}" FileName="{PLUGIN_NAME}.lua" Installed="No"/>\n'
+           '    </Plugin>\n'
+           '</GMA3>\n')
+    return {f"{PLUGIN_DIR}/{PLUGIN_NAME}.xml": xml, f"{PLUGIN_DIR}/{PLUGIN_NAME}.lua": lua}
 
 
 def rehash(d: dict) -> dict:

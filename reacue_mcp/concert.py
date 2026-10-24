@@ -39,7 +39,7 @@ from .analysis import Analysis, Section, assign_roles, classify_stem, reference_
 from .bridge import BRIDGE_DIR, to_lua
 from .i18n import get_lang, t as _t
 
-GENERATED = ("CLICK", "CUES", "VOIX", "VOICE")
+GENERATED = ("CLICK", "CUES", "VOIX", "VOICE", "TIMECODE LTC", "TIMECODE MTC")  # timecode : recréé, jamais copié
 
 
 def documents_dir() -> Path:
@@ -814,6 +814,17 @@ def build_concert(name: str, songs: list, gap_s: float = 4.0, out_dir: Path | No
     for gname in ("CUES", "VOIX", "CLICK"):
         if gen_items[gname]:
             root.children.append(_track(gen_names.get(gname, gname), None, gen_items[gname], gen_heads.get(gname)))
+    # timecode pour la console lumière : UNE piste par sortie sur toute la durée du concert (pas une copie
+    # de celles des morceaux) ; temps envoyé = temps du concert + gma3_tc_start, comme le Timecode XML
+    try:
+        from . import timecode as TC
+        tc_cfg = TC.config()
+        if tc_cfg["enabled"]:
+            tc_nodes, tc_warn = TC.concert_tracks([s.gen for s in srcs], sidecar_songs[-1]["stop"] + TC.TAIL_S, tc_cfg)
+            root.children += tc_nodes
+            warnings += tc_warn
+    except Exception as e:                    # le timecode ne bloque jamais le concert
+        warnings.append(_t("gma3_failed", e=e))
 
     rpp = out_dir / f"{slug}.RPP"
     setlist = out_dir / f"{slug}.setlist.json"

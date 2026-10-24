@@ -7,7 +7,7 @@
 -- Pour l'arrêter : relancer l'action, REAPER propose "Terminate instances".
 -------------------------------------------------------------------------------
 
-local VERSION   = "1.3.0"
+local VERSION   = "1.4.0"
 local SEP       = package.config:sub(1, 1)
 local DIR       = reaper.GetResourcePath() .. SEP .. "ReaCueMCP"
 local REQ       = DIR .. SEP .. "request.lua"
@@ -39,11 +39,15 @@ local MSG = {
   unknown_action = { fr = "action inconnue", en = "unknown action" },
   undo_fail = { fr = "ReaCue : échec", en = "ReaCue: failed" },
   undo_ok = { fr = "ReaCue : régions, cues et click", en = "ReaCue: regions, cues and click" },
+  tc_chunk = { fr = "réglages mémorisés du générateur non appliqués", en = "remembered generator settings not applied" },
 }
 local function T(k) return MSG[k][LANG] end
 
 -- pistes créées par ReaCue (toutes langues) : jamais prises pour des stems, effacées à chaque préparation
-local GENERATED = { CLICK = true, CUES = true, VOIX = true, VOICE = true }
+local GENERATED = { CLICK = true, CUES = true, VOIX = true, VOICE = true,
+                    ["TIMECODE LTC"] = true, ["TIMECODE MTC"] = true }
+local TIMECODE = { ["TIMECODE LTC"] = true, ["TIMECODE MTC"] = true }
+local TC_KEY = "P_EXT:reacue_tc_key"     -- réglages ReaCue (sorte, fps, départ) du générateur de la piste
 
 -- JSON (encodeur minimal) ----------------------------------------------------
 local function json_str(s)
@@ -215,6 +219,71 @@ function H.get_state()
   return s
 end
 
+-- Générateur SMPTE LTC/MTC : bloc `<SOURCE LTC` … `>` d'un état d'item (GetItemStateChunk) ------------
+-- Les champs de ce bloc ne sont pas documentés : ReaCue ne les écrit jamais lui-même, il recopie le
+-- bloc réglé par l'utilisateur dans « Propriétés de la source ».
+local function split_lines(s)
+  local out = {}
+  for line in (s .. "\n"):gmatch("(.-)\r?\n") do out[#out + 1] = line end
+  return out
+end
+
+local function source_span(lines)
+  local i0
+  for i, l in ipairs(lines) do
+    if l:match("^%s*<SOURCE LTC") then i0 = i; break end
+  end
+  if not i0 then return nil end
+  local depth = 0
+  for j = i0, #lines do
+    local l = lines[j]:match("^%s*(.-)%s*$")
+    if l:sub(1, 1) == "<" then depth = depth + 1 elseif l == ">" then depth = depth - 1 end
+    if depth == 0 then return i0, j end
+  end
+  return nil
+end
+
+local function tc_source_block(chunk)
+  local lines = split_lines(chunk or "")
+  local a, b = source_span(lines)
+  if not a then return nil end
+  local out = {}
+  for k = a, b do out[#out + 1] = lines[k]:match("^%s*(.-)%s*$") end
+  return table.concat(out, "\n")
+end
+
+local function tc_replace_block(chunk, block)
+  local lines = split_lines(chunk or "")
+  local a, b = source_span(lines)
+  local blk = split_lines(block or "")
+  if not a or not blk[1] or not blk[1]:match("^%s*<SOURCE LTC") or not source_span(blk) then return nil end
+  local out = {}
+  for k = 1, a - 1 do out[#out + 1] = lines[k] end
+  for _, l in ipairs(blk) do if l:match("%S") then out[#out + 1] = l end end
+  for k = b + 1, #lines do out[#out + 1] = lines[k] end
+  return table.concat(out, "\n")
+end
+
+-- pistes timecode existantes : {nom = {key, block}} (avant effacement), pour garder le réglage fait à la main
+local function capture_timecode()
+  local out = {}
+  for i = 0, reaper.CountTracks(0) - 1 do
+    local tr = reaper.GetTrack(0, i)
+    local name = track_name(tr)
+    if TIMECODE[name] and not out[name] then
+      local _, key = reaper.GetSetMediaTrackInfo_String(tr, TC_KEY, "", false)
+      local it = reaper.CountTrackMediaItems(tr) > 0 and reaper.GetTrackMediaItem(tr, 0)
+      local block = nil
+      if it then
+        local ok, chunk = reaper.GetItemStateChunk(it, "", false)
+        if ok then block = tc_source_block(chunk) end
+      end
+      out[name] = { key = key or "", block = block }
+    end
+  end
+  return out
+end
+
 local function clear(plan)
   local _, nm, nr = reaper.CountProjectMarkers(0)
   for i = nm + nr - 1, 0, -1 do reaper.DeleteProjectMarkerByIndex(0, i) end
@@ -281,6 +350,88 @@ local function build_click(c, warnings)
   return reaper.CountTrackMediaItems(tr)
 end
 
+-- périphérique MIDI de sortie par son nom (exact, sinon contenu dans le nom ; sans tenir compte de la casse)
+local function midi_out_index(want)
+  want = tostring(want or ""):lower()
+  if want == "" or not reaper.GetMIDIOutputName then return nil end
+  local n = reaper.GetMaxMIDIOutputs and reaper.GetMaxMIDIOutputs() or 64
+  local partial
+  for i = 0, n - 1 do
+    local ok, name = reaper.GetMIDIOutputName(i, "")
+    if ok and name and name ~= "" then
+      local low = name:lower()
+      if low == want then return i, name end
+      if not partial and low:find(want, 1, true) then partial = { i, name } end
+    end
+  end
+  if partial then return partial[1], partial[2] end
+  return nil
+end
+
+-- piste TIMECODE LTC / TIMECODE MTC : un générateur (action 40208) de 0 à `len`, pas de master ;
+-- LTC -> sortie audio matérielle, MTC -> sortie MIDI matérielle
+local function build_timecode(spec, len, captured, warnings)
+  local tr = new_track(spec.name)
+  reaper.SetMediaTrackInfo_Value(tr, "B_MAINSEND", 0)
+  reaper.SetMediaTrackInfo_Value(tr, "D_VOL", spec.volume or 1.0)
+  reaper.GetSetMediaTrackInfo_String(tr, TC_KEY, spec.key or "", true)
+  local info = { name = spec.name, kind = spec.kind, key = spec.key, label = spec.label,
+                 midi_out = spec.midi_out, length = len }
+  local ts, te = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+  local cur = reaper.GetCursorPosition()
+  reaper.SetOnlyTrackSelected(tr)
+  reaper.GetSet_LoopTimeRange(true, false, 0, len, false)
+  reaper.SetEditCurPos(0, false, false)
+  reaper.Main_OnCommand(40208, 0) -- Insert > SMPTE LTC/MTC Timecode Generator
+  reaper.GetSet_LoopTimeRange(true, false, ts, te, false)
+  reaper.SetEditCurPos(cur, false, false)
+  local it = reaper.CountTrackMediaItems(tr) > 0 and reaper.GetTrackMediaItem(tr, 0)
+  if not it then
+    info.item = false
+  else
+    info.item = true
+    reaper.SetMediaItemInfo_Value(it, "C_BEATATTACHMODE", 0)
+    reaper.SetMediaItemInfo_Value(it, "D_POSITION", 0)
+    reaper.SetMediaItemInfo_Value(it, "D_LENGTH", len)
+    reaper.SetMediaItemInfo_Value(it, "B_LOOPSRC", 0)
+    reaper.SetMediaItemInfo_Value(it, "D_FADEINLEN", 0)
+    reaper.SetMediaItemInfo_Value(it, "D_FADEOUTLEN", 0)
+    -- réglage du générateur : celui fait à la main sur cette piste (mêmes réglages ReaCue), sinon le
+    -- bloc mémorisé, sinon les valeurs par défaut de REAPER
+    local old = captured[spec.name]
+    local block, origin = nil, "default"
+    if old and old.block and old.key == spec.key then block, origin = old.block, "kept"
+    elseif spec.template then block, origin = spec.template, "template" end
+    if block then
+      local ok, chunk = reaper.GetItemStateChunk(it, "", false)
+      local new = ok and tc_replace_block(chunk, block)
+      if not (new and reaper.SetItemStateChunk(it, new, false)) then
+        warnings[#warnings + 1] = spec.name .. " : " .. T("tc_chunk")
+        origin = "default"
+      end
+    end
+    local ok, chunk = reaper.GetItemStateChunk(it, "", false)
+    info.block = ok and tc_source_block(chunk) or nil
+    info.origin = origin
+  end
+  if spec.kind == "ltc" and spec.audio_dst then
+    local k = reaper.CreateTrackSend(tr, nil)
+    if k and k >= 0 then
+      reaper.SetTrackSendInfo_Value(tr, 1, k, "I_SRCCHAN", spec.audio_src or 0)
+      reaper.SetTrackSendInfo_Value(tr, 1, k, "I_DSTCHAN", spec.audio_dst)
+    end
+  end
+  if spec.kind == "mtc" then
+    local dev, name = midi_out_index(spec.midi_out)
+    info.midi_found = dev ~= nil
+    if dev then
+      reaper.SetMediaTrackInfo_Value(tr, "I_MIDIHWOUT", dev << 5)   -- 5 bits bas : canal (0 = tous)
+      info.midi_out = name
+    end
+  end
+  return info
+end
+
 local function build_cues(c)
   local tr = new_track(c.track_name or "CUES")
   for _, q in ipairs(c.items or {}) do
@@ -298,8 +449,12 @@ function H.apply_plan(plan)
   reaper.Undo_BeginBlock()
   reaper.PreventUIRefresh(1)
 
+  local captured = {}
   local ok, err = pcall(function()
-    if plan.clear ~= false then clear(plan) end
+    if plan.clear ~= false then
+      captured = capture_timecode()
+      clear(plan)
+    end
 
     -- 1. caler le ou les items audio (base de temps "temps" pour qu'ils ne soient pas étirés)
     local moves = {}
@@ -342,6 +497,16 @@ function H.apply_plan(plan)
   if plan.cues and plan.cues.enabled ~= false then result.cue_items = build_cues(plan.cues) end
   if plan.voice and plan.voice.enabled ~= false then result.voice_items = build_voice(plan.voice, warnings) end
   if plan.click and plan.click.enabled ~= false then result.click_items = build_click(plan.click, warnings) end
+  if plan.timecode then
+    local len = math.max(tonumber(plan.timecode.min_len) or 0, reaper.GetProjectLength(0))
+    local tcw, tracks = {}, {}
+    for _, spec in ipairs(plan.timecode.tracks or {}) do
+      local ok_tc, info = pcall(build_timecode, spec, len, captured, tcw)
+      if ok_tc then tracks[#tracks + 1] = info
+      else tcw[#tcw + 1] = tostring(spec.name) .. " : " .. tostring(info) end
+    end
+    result.timecode = { tracks = tracks, warnings = tcw, length = len }
+  end
 
   reaper.PreventUIRefresh(-1)
   reaper.UpdateArrange()

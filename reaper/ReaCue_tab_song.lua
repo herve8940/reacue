@@ -111,7 +111,7 @@ return function(ctx)
   local sel = nil           -- section choisie (bande / liste)
   local hist, redo = {}, {} -- historique de la structure (instantanés des régions)
   local last_summary = nil  -- message de la dernière préparation (bouton « Résumé »)
-  local GEN = { CLICK = true, CUES = true, VOIX = true, VOICE = true }
+  local GEN = { CLICK = true, CUES = true, VOIX = true, VOICE = true, ["TIMECODE LTC"] = true, ["TIMECODE MTC"] = true }
 
   -- projet ---------------------------------------------------------------------------------
   -- état gardé dans le projet (.RPP) : moteur de structure, débuts de sections douteux

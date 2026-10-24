@@ -83,7 +83,8 @@ def test_parse_tc_and_config():
     assert LG.parse_tc("01:00:00:00") == 3600 and LG.parse_tc("00:00:01:12", 25) == pytest.approx(1.48)
     assert LG.parse_tc("00:00:00:25", 25) is None and LG.parse_tc("bad") is None
     c = cfg()
-    assert c == {"export": True, "fps": 25.0, "tc_start": "00:00:00:00", "offset_s": 0.0, "gap_s": None, "slot_s": 0.0}
+    assert c == {"export": True, "fps": 25.0, "tc_start": "00:00:00:00", "offset_s": 0.0, "gap_s": None, "slot_s": 0.0,
+                 "tc_slot": 1, "ltc": None, "mtc": None}
     c = cfg(gma3_fps="30", gma3_tc_start="01:00:00:00", gma3_song_gap=2, gma3_song_slot=600, gma3_export=False)
     assert (c["fps"], c["offset_s"], c["gap_s"], c["slot_s"], c["export"]) == (30.0, 3600.0, 2.0, 600.0, False)
     c = cfg(gma3_fps=50, gma3_tc_start="xx", gma3_song_gap=-1, gma3_song_slot="n")
@@ -187,7 +188,7 @@ def test_export_song_files_and_web(tmp_path):
     res = LG.export_song(s, str(proj), www, cfg(gma3_tc_start="01:00:00:00"))
     out = proj.parent / "grandMA3"
     names = sorted(p.name for p in out.iterdir())
-    assert names == ["Demo_Song_Sequence.xml", "Demo_Song_Timecode.xml", "Demo_Song_conduite.csv"]
+    assert names == ["Demo_Song_Sequence.xml", "Demo_Song_Timecode.xml", "Demo_Song_conduite.csv", "gma3_library"]
     assert res["cues"] == 4 and res["dir"] == str(out)
     assert sorted(p.name for p in www.iterdir()) == ["reacue_gma3_Demo_Song_Sequence.xml",
                                                       "reacue_gma3_Demo_Song_Timecode.xml",
@@ -260,7 +261,7 @@ def test_concert_default_layout_unchanged(tmp_path):
     out = tmp_path / "Concerts" / "grandMA3" / "Concert_test"
     assert sorted(p.name for p in out.iterdir()) == ["Concert_test_Timecode.xml", "Concert_test_conduite.csv",
                                                      "Demo_Song_Sequence.xml", "Second_Demo_Sequence.xml",
-                                                     "Third_Demo_Sequence.xml"]
+                                                     "Third_Demo_Sequence.xml", "gma3_library"]
     tc = parse((out / "Concert_test_Timecode.xml").read_text(encoding="utf-8"))
     tracks = tc.find("Timecode/TrackGroup").findall("Track")
     assert [t.get("Name") for t in tracks] == ["Demo_Song", "Second_Demo", "Third_Demo"]
@@ -373,7 +374,7 @@ def test_prepare_song_export_and_failure_never_blocks(monkeypatch, lang, bridge_
     msg = TC.status(bridge_dir)["message"]
     assert "grandMA3 lighting: 5 cues" in msg
     files = sorted(p.name for p in (proj.parent / "grandMA3").iterdir())
-    assert files == ["Demo_Sequence.xml", "Demo_Timecode.xml", "Demo_conduite.csv"]
+    assert files == ["Demo_Sequence.xml", "Demo_Timecode.xml", "Demo_conduite.csv", "gma3_library"]
     pub = json.loads((resdir / "reaper_www_root" / "reacue_song.json").read_text(encoding="utf-8"))
     assert [c["name"] for c in pub["lighting"]["cues"]] == ["Intro", "Verse 1", "Chorus 1", "Bridge", "Chorus 2"]
     assert pub["lighting"]["cues"][0]["t"] == pytest.approx(pub["bar_times"][pub["count_in_bars"]])
