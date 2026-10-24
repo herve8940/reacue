@@ -220,14 +220,14 @@ function U.pill(lab, col, x, y)
   return w
 end
 
--- pastille cliquable (état du morceau) : ok = vert, false = gris, "warn" = orange ; renvoie largeur, clic
+-- pastille cliquable (état du morceau) : ok = vert, false = gris, "warn" = orange, "bad" = rouge ; renvoie largeur, clic
 function U.chip(id, lab, ok, x, y, size)
   size = size or 12
   local w = U.text_w(lab, size, true) + 26
   local h = size + 12
   local over = U.over(x, y, w, h)
   if over then U.hover = id end
-  local col = ok == true and U.ACCENT or (ok == "warn" and U.WARN or U.GREY)
+  local col = ok == true and U.ACCENT or (ok == "warn" and U.WARN or (ok == "bad" and U.RED or U.GREY))
   U.set(col, over and 0.34 or 0.2); gfx.rect(x, y, w, h, 1)
   U.set(col, over and 1 or 0.8); gfx.roundrect(x, y, w - 1, h - 1, 6, 1)
   gfx.circle(x + 10, y + h / 2, 3.5, 1, 1)

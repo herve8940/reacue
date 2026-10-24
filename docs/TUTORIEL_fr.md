@@ -13,9 +13,10 @@ faire si ça ne marche pas**.
   section et compte « one two three four » ;
 - un **prompteur** sur le téléphone de chaque musicien : structure, accords, paroles, batterie.
 
-Tout se fait depuis **une seule fenêtre, « ReaCue »**, en quatre onglets : **Morceau** (préparer un
+Tout se fait depuis **une seule fenêtre, « ReaCue »**, en cinq onglets : **Morceau** (préparer un
 morceau), **Concert** (composer et construire un concert, préparer plusieurs morceaux d'un coup), **Scène**
-(jouer : transport, instruments, répétition, Régie) et **Réglages**.
+(jouer : transport, instruments, répétition, Régie), **Lumière** (console grandMA3 : cues, timecode, test) et
+**Réglages**.
 
 **Le principe pour chaque morceau tient en deux clics** : **+ Nouveau morceau**, puis **Tout faire**. Un grand
 bouton te donne toujours l'étape suivante, une ligne en bas de la fenêtre explique le bouton survolé, et une
@@ -824,12 +825,36 @@ morceau, un Timecode, une fiche de conduite (CSV avec un effet suggéré par sec
 1. Sur un téléphone ou l'ordinateur de la régie lumière, ouvre le prompteur et choisis le rôle **Lumière** :
    liste des cues, cue en cours surligné, liens pour télécharger les trois fichiers.
 2. Sur la console : importe la Sequence, puis le Timecode.
-3. **Fais envoyer le timecode par REAPER** (MTC ou LTC) à la console, et règle le Timecode de la console pour
-   le suivre : le concert s'arrête entre les morceaux, la console doit suivre la position du projet.
-   ReaCue ne touche pas aux réglages de REAPER : active la sortie timecode toi-même.
+3. **REAPER envoie le timecode** (MTC ou LTC) : le concert s'arrête entre les morceaux, la console suit.
 
-Réglages utiles : `gma3_tc_start` (ex. `"01:00:00:00"`), `gma3_fps` (25 par défaut), `gma3_song_slot`
-(ex. `600` : chaque morceau démarre toutes les 10 minutes rondes). Reconstruis le concert après un changement.
+**Première configuration (une seule fois).**
+
+1. Dans l'onglet **Lumière** de la fenêtre ReaCue (ou dans `reacue_settings.json`), choisis la ou les sorties :
+   - **console en LTC** : `"gma3_ltc_output": 7` (sortie 7 de la carte son → entrée LTC XLR de la console) ;
+   - **grandMA3 onPC sur le même Mac** : `"gma3_mtc_output": "IAC Driver Bus 1"` (Configuration audio et MIDI →
+     Fenêtre → Afficher le studio MIDI → Gestionnaire IAC → cocher *Le périphérique est en ligne*) ;
+   - **onPC sur un autre ordinateur** : `"gma3_mtc_output": "Réseau MIDI"` ou le nom de la session (Configuration
+     audio et MIDI → Configuration du réseau MIDI : crée une session, connecte le PC ; sous Windows, rtpMIDI) ;
+   - au besoin `"gma3_tc_slot": 1`, `"gma3_tc_start": "01:00:00:00"`, `"gma3_fps": 25`.
+2. REAPER : *Préférences → Audio → MIDI Devices* : active cette sortie MIDI (MTC seulement).
+3. Prépare un morceau : les pistes `TIMECODE LTC` / `TIMECODE MTC` apparaissent. Double-clic sur l'item du
+   générateur → *Propriétés de la source* : images/s = `gma3_fps`, départ = `gma3_tc_start`, *Send MIDI (MTC)*
+   coché sur la piste MTC seulement. OK, puis **Préparer** à nouveau (ou, onglet **Lumière**, **Créer / mettre
+   à jour les pistes timecode**) : ReaCue le mémorise pour tous les morceaux et concerts. Les pastilles de
+   l'onglet **Lumière** passent au vert (sortie LTC, périphérique MIDI activé, pistes, générateur réglé).
+4. Console : copie le contenu du dossier d'export (`grandMA3/` à côté du projet, ou
+   `Concerts/grandMA3/<concert>/`) dans `grandMA3/` à la racine d'une clé USB, importe le plugin `ReaCue.xml`
+   (pool Plugins → Import) et lance-le : Sequences, Timecode et TC Slot en un appui.
+5. Entrée de la console (une fois) : *Menu → In & Out (Connector Configuration)* : SMPTE Mode = In et
+   SMPTE TC = slot (LTC), ou MIDI TC Mode = In et MIDI TC = slot (MTC).
+
+<img src="images/window_lighting_fr.png" width="420">
+
+Test : onglet **Lumière** → **Envoyer 10 s de test** : seules les pistes `TIMECODE` jouent (le public n'entend
+rien), puis tout est rétabli ; sur la console, le TC Slot passe au vert (le LTC / MTC va dans un seul sens :
+ReaCue ne peut pas le vérifier lui-même). Puis lecture dans REAPER → le timecode de la console défile et les cues partent ; stop → le show Timecode
+s'arrête ; relance → il repart. Réglage utile : `gma3_song_slot` (ex. `600` : chaque morceau démarre toutes
+les 10 minutes rondes). Reconstruis le concert après un changement.
 
 ---
 

@@ -29,8 +29,8 @@ SCRIPT_FILES = ("ReaCue_Bridge.lua", "ReaCue_run.lua", "ReaCue_Preparer.lua", "R
                 "ReaCue_stems.lua", "ReaCue_Separer_stems.lua", "ReaCue_concert_lib.lua", "ReaCue_qrcode.lua",
                 "ReaCue_Concert.lua", "ReaCue_Morceau_suivant.lua", "ReaCue_Morceau_precedent.lua",
                 "ReaCue.lua", "ReaCue_ui.lua", "ReaCue_tab_song.lua", "ReaCue_tab_concert.lua",
-                "ReaCue_tab_stage.lua", "ReaCue_tab_settings.lua", "ReaCue_newsong.lua", "ReaCue_guide.lua",
-                "ReaCue_flow.lua", "ReaCue_assistant.lua")
+                "ReaCue_tab_stage.lua", "ReaCue_tab_lighting.lua", "ReaCue_tab_settings.lua", "ReaCue_newsong.lua",
+                "ReaCue_guide.lua", "ReaCue_flow.lua", "ReaCue_assistant.lua")
 ACTIONS = (   # (identifiant de commande, fichier, nom FR, nom EN)
     ("REACUE_MAIN", "ReaCue.lua", "ReaCue", "ReaCue"),
     ("REACUE_PREPARE", "ReaCue_Preparer.lua", "ReaCue - Préparer le morceau", "ReaCue - Prepare the song"),
@@ -48,6 +48,7 @@ SETTINGS_DEFAULTS = {
     "click_hw_output": None, "tempo_mode": "auto", "count_rate": 240, "stems_model": "htdemucs_6s",
     "structure_engine": "auto", "projects_dir": None, "concert_dir": None,
     "gma3_export": True, "gma3_fps": 25, "gma3_tc_start": "00:00:00:00", "gma3_song_gap": None, "gma3_song_slot": 0,
+    "gma3_ltc_output": None, "gma3_mtc_output": None, "gma3_tc_slot": 1,
 }
 
 MSG = {

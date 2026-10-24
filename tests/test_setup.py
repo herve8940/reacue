@@ -228,7 +228,7 @@ def test_all_window_modules_installed():
     import reacue_setup as RS
     root = Path(__file__).resolve().parents[1] / "reaper"
     src = (root / "ReaCue.lua").read_text(encoding="utf-8")
-    used = set(re.findall(r'"(ReaCue_[A-Za-z_]+\.lua)"', src)) | {f"ReaCue_tab_{k}.lua" for k in ("song", "concert", "stage", "settings")}
+    used = set(re.findall(r'"(ReaCue_[A-Za-z_]+\.lua)"', src)) | {f"ReaCue_tab_{k}.lua" for k in ("song", "concert", "stage", "lighting", "settings")}
     assert used <= set(RS.SCRIPT_FILES), used - set(RS.SCRIPT_FILES)
     for f in RS.SCRIPT_FILES:
         assert (root / f).is_file(), f

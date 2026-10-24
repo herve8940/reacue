@@ -192,7 +192,7 @@ def test_bridge_ping_and_stems_skip_generated_tracks(tmp_path):
         r = json.loads((data / "response.json").read_text(encoding="utf-8"))
         assert r["id"] == "r1"
         if cmd == "ping":
-            assert r["ok"] and r["result"]["bridge"] == "1.3.0"
+            assert r["ok"] and r["result"]["bridge"] == "1.5.0"
         elif cmd == "get_audio_items":
             files = [d["file"] for d in r["result"]["items"]]
             assert files == ["/s/drums.wav", "/s/bass.wav"]          # piste VOICE ignorée

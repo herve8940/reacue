@@ -281,3 +281,27 @@ def test_assistant_and_settings(concert, tmp_path, lang):
     L.execute("REACUE_CTX.tabs.settings.set_advanced(true)"); W.frame(L, g)
     T = snap(L, g, "settings_advanced", lang)
     assert ("Volume du click" if lang == "fr" else "Click volume") in T, T
+
+
+@pytest.mark.parametrize("lang", LANGS)
+def test_lighting_tab(concert, tmp_path, lang):
+    """onglet Lumière : cues exportés (morceau fictif), cue en cours, sorties fictives, pistes TIMECODE"""
+    import test_lighting_tab as LT
+    L, g, res = LT.song_rt(concert, tmp_path, lang=lang, gma3_ltc_output=7, gma3_mtc_output="IAC Driver Bus 1",
+                           gma3_tc_start="01:00:00:00", gma3_tc_slot=1)
+    en_regions(L, lang)
+    if lang == "en":
+        www = Path(g.RES) / "reaper_www_root" / "reacue_song.json"
+        d = json.loads(www.read_text(encoding="utf-8"))
+        for q in d["lighting"]["cues"]:
+            q["name"] = {"Couplet 1": "Verse 1", "Refrain 1": "Chorus 1"}.get(q["name"], q["name"])
+        www.write_text(json.dumps(d), encoding="utf-8")
+    LT.add_tc_tracks(L, ("LTC", "MTC"))
+    W.install(g, tmp_path, structure=True)
+    open_(L, g)
+    L.execute('REACUE_CTX.goto_tab("lighting")')
+    g.state.play, g.state.pos = 1, 13.0
+    W.frame(L, g)
+    T = snap(L, g, "lighting", lang)
+    assert "01:00:13:00" in T and ("Envoyer 10 s de test" if lang == "fr" else "Send a 10 s test") in T, T
+    g.state.play = 0

@@ -65,8 +65,8 @@ language with Claude (MCP server).
 
 ## Features
 
-In REAPER, from the audio already in your project — everything from **one window, “ReaCue”**, with four tabs
-(Song, Concert, Stage, Settings):
+In REAPER, from the audio already in your project — everything from **one window, “ReaCue”**, with five tabs
+(Song, Concert, Stage, Lighting, Settings):
 
 - **Tempo map** locked to the song: fixed tempo when the recording is quantised, or one tempo marker per
   bar when it was played without a click (the click then follows the band). The audio is moved so that
@@ -332,7 +332,7 @@ apart, and snaps every hit to its grid (sixteenths, or triplets for a shuffle).
 
 ## The ReaCue window
 
-Action **ReaCue** (put it on a toolbar). One window, four tabs; it opens on the right tab by itself
+Action **ReaCue** (put it on a toolbar). One window, five tabs; it opens on the right tab by itself
 (a concert project → **Stage**, a song project → **Song**, otherwise the last tab used). Right-click: dock /
 undock — docked low, it becomes a compact transport bar. While it is open, on any tab, it also runs the
 concert's automatic stop, the rehearsal loop, the Stage control remote and the “played live” profile.
@@ -356,8 +356,8 @@ address, program, stems, structure, projects folder) with a button for each miss
 | <img src="docs/images/window_check_en.png" width="380"> | <img src="docs/images/window_qr_en.png" width="380"> |
 | **Assistant (first launch)** | **Settings** |
 | <img src="docs/images/window_assistant_en.png" width="380"> | <img src="docs/images/window_settings_en.png" width="380"> |
-| **Advanced settings** |  |
-| <img src="docs/images/window_settings_advanced_en.png" width="380"> |  |
+| **Advanced settings** | **Lighting (grandMA3)** |
+| <img src="docs/images/window_settings_advanced_en.png" width="380"> | <img src="docs/images/window_lighting_en.png" width="380"> |
 
 *(Made-up demo songs, address 192.168.1.20, PIN 1234.)*
 
@@ -387,6 +387,14 @@ address, program, stems, structure, projects folder) with a button for each miss
   *Fix*, also for the bridge and the web interface), *Rehearsal*, *Setlist*, *PIN*, *QR*. With a single song
   open (no concert) it gives a simple transport (Start, Play, Stop), the sections, the instruments and the
   rehearsal loop.
+- **Lighting** — grandMA3 desk: cues of the open song or concert (number, SMPTE timecode, name; current cue
+  highlighted) and the current timecode; `gma3_*` settings without editing the file (export, fps, start,
+  TC Slot, LTC output from the audio interface's outputs, MTC device from the MIDI outputs, concert gap and
+  slot); **Create / update the timecode tracks**, **Export now**, **Open the grandMA3 folder**;
+  **communication test**: chips (LTC output present, MIDI device found and enabled, `TIMECODE` tracks with
+  their generator, generator set) and **Send a 10 s test** (only the `TIMECODE` tracks play, soloed, then
+  solo / mute / position / playback are restored). LTC / MTC goes one way: the desk shows it receives
+  (TC Slot turns green).
 - **Settings** — a **simple** view (language, count-in, cues, voices, click + voice outputs, structure
   detection, licences) and **Advanced settings** (PIN, cue lead, count language, voice and speed, volumes,
   tempo, separation model, folders). *Check the installation* opens the assistant again. Changes apply at the
@@ -546,13 +554,47 @@ of the project, count-in included).
   and download links for the three files (served by REAPER's web interface, no internet needed).
 - On the desk: import the Sequence(s) first, then the Timecode (test on an empty slot first).
 
-**Recommended: REAPER sends the timecode to the desk.** In REAPER, send **MTC** (MIDI timecode) or **LTC**
-(audio timecode) to the grandMA3 and set its Timecode show to follow it: the desk then follows the project
-position, which matters because the concert **stops between songs** (a free-running timecode would drift).
-ReaCue never changes REAPER's settings: enable the timecode output yourself (REAPER: *Preferences → Audio →
-MIDI Devices* / *Project settings*, or a timecode generator plug-in on a spare output for LTC). Settings
-`gma3_tc_start` (desk timecode of project time 0), `gma3_fps`, `gma3_song_gap` and `gma3_song_slot` (start
-each song on a round time, e.g. every 10 min: easier to find on the desk) are listed in [Settings](#settings).
+**REAPER sends the timecode to the desk (MTC or LTC), automatically.** The desk follows the project
+position, which matters because the concert **stops between songs**: stopping REAPER stops the desk's
+timecode show, playing again restarts it. Give `gma3_ltc_output` and/or `gma3_mtc_output` and every
+preparation and every concert build creates (or replaces, never duplicates) the tracks:
+
+- `TIMECODE LTC`: REAPER's *SMPTE LTC/MTC Timecode Generator* item over the whole project, sent to the audio
+  output `gma3_ltc_output` (`7` = output 7 alone, `"7/8"` = pair), never to the master;
+- `TIMECODE MTC`: the same generator sent to the MIDI output `gma3_mtc_output` (device name, e.g.
+  `"IAC Driver Bus 1"`), no audio.
+
+Sent time = project time + `gma3_tc_start`, at `gma3_fps`: the same times as the Timecode XML. A concert
+gets **one** track per output over the whole concert (the songs' tracks are not copied). Empty settings
+(default) = no track.
+
+**Once, in REAPER:** the generator's settings are not documented in the project file, so ReaCue does not
+invent them. After the first preparation, double-click the generator item → *Source properties*: frame rate
+= `gma3_fps`, start = `gma3_tc_start`, *Send MIDI (MTC)* ticked on `TIMECODE MTC` only, unticked on
+`TIMECODE LTC`; OK, then prepare again. ReaCue remembers it (per frame rate + start) and reapplies it to every
+song and concert; until then each preparation reminds you. Also enable the MIDI output in *Preferences →
+Audio → MIDI Devices*.
+
+**grandMA3 plugin “ReaCue”.** The export folder also holds `gma3_library/datapools/plugins/ReaCue.xml`
+(+ `ReaCue.lua`) and copies of the XML files in `gma3_library/datapools/sequences/` and `…/timecodes/`.
+Copy the **contents** of the export folder into `grandMA3/` at the root of a USB stick; on the desk: Plugins
+pool → new plugin → *Import* → `ReaCue.xml`, then run it. In one tap it imports the Sequences (an existing
+Sequence of the same name is kept: your programming stays), the Timecode (asks before replacing it), sets
+its TC Slot (`gma3_tc_slot`, 1 by default), Auto Start and Auto Stop, and reminds you of the input setup.
+Re-import the plugin after each export (it carries the song's or concert's file list).
+
+| Setup | ReaCue setting | Desk / onPC, once |
+|---|---|---|
+| Console, LTC | `gma3_ltc_output`: sound card output wired to the desk's **LTC XLR** input | Menu → In & Out (Connector Configuration): SMPTE Mode = In, SMPTE TC column = slot |
+| Console, MTC | `gma3_mtc_output`: MIDI interface wired to **MIDI In** | MIDI TC Mode = In, MIDI TC column = slot |
+| onPC on the same Mac | `gma3_mtc_output`: `"IAC Driver Bus 1"` (Audio MIDI Setup → MIDI Studio → IAC Driver: *Device is online*) | MIDI TC input on the slot |
+| onPC on another computer | `gma3_mtc_output`: `"Network Session 1"` (macOS Network MIDI); rtpMIDI on the Windows PC | MIDI TC input on the slot |
+
+To test on the desk (not verified yet): the plugin's import commands and the `sequences/` / `timecodes/`
+folders, the TC Slot / Auto Stop properties set by the plugin, onPC MIDI timecode input. If the plugin cannot
+import a file, import the Sequence then the Timecode by hand and set TC Slot in the Timecode settings.
+Settings `gma3_song_gap` and `gma3_song_slot` (start each song on a round time, e.g. every 10 min) are listed
+in [Settings](#settings).
 
 ## Lyrics
 
@@ -659,6 +701,9 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `gma3_tc_start` | `"00:00:00:00"` | desk timecode of the project start (e.g. `"01:00:00:00"`): added to every cue time |
 | `gma3_song_gap` | `null` | concert: minimum gap between songs (s), replaces the setlist's (4 s); `null` = unchanged |
 | `gma3_song_slot` | `0` | concert: each song starts on the next multiple of this time (s, e.g. `600` = 0, 10 min, 20 min…; the gap is lengthened by whole bars); `0` = off |
+| `gma3_ltc_output` | `null` | `TIMECODE LTC` track: audio output of the LTC (`7` = output 7, `"7/8"` = pair); `null` = no track |
+| `gma3_mtc_output` | `null` | `TIMECODE MTC` track: MIDI output device name (`"IAC Driver Bus 1"`, `"Network Session 1"`…; part of the name is enough, any case); `null` = no track |
+| `gma3_tc_slot` | `1` | grandMA3 TC Slot (1–8) set by the ReaCue plugin |
 
 Voices: on Windows, extra voices (e.g. French) are added in *Settings → Time & language → Speech*. Only
 voices visible to SAPI (“Desktop” voices) are used. If no voice is available, everything works except the
@@ -807,7 +852,7 @@ Project layout:
 |---|---|
 | `reacue_mcp/` | Python package: analysis, planner, bridge client, prompter, chords, lyrics, drums, voice, i18n, settings, CLI, MCP server |
 | `reacue_mcp/web/prompteur.html` | The prompter page (single file) |
-| `reaper/` | REAPER scripts: bridge and the actions (`ReaCue_stems.lua`: stem separation; `ReaCue.lua`: the main window, with `ReaCue_ui.lua` (drawing, buttons) and one module per tab `ReaCue_tab_song.lua`, `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_settings.lua`; `ReaCue_Concert.lua`: same window on the Stage tab; `ReaCue_concert_lib.lua`: concert, instruments, rehearsal, checks and Stage control; `ReaCue_qrcode.lua`: QR encoder, luaqrcode, BSD) |
+| `reaper/` | REAPER scripts: bridge and the actions (`ReaCue_stems.lua`: stem separation; `ReaCue.lua`: the main window, with `ReaCue_ui.lua` (drawing, buttons) and one module per tab `ReaCue_tab_song.lua`, `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_lighting.lua`, `ReaCue_tab_settings.lua`; `ReaCue_Concert.lua`: same window on the Stage tab; `ReaCue_concert_lib.lua`: concert, instruments, rehearsal, checks and Stage control; `ReaCue_qrcode.lua`: QR encoder, luaqrcode, BSD) |
 | `reacue_stems.py`, `requirements-stems.txt` | Stem separation launcher (runs in `.venv-demucs`) and its pinned dependencies |
 | `install/` | Installers (macOS, Windows) and the shared `reacue_setup.py` |
 | `tests/` | pytest suite (fake REAPER bridge, Lua run through `lupa`, installer, prompter page) |

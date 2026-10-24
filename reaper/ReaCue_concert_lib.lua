@@ -525,7 +525,8 @@ end
 -- ---------------------------------------------------------------------------------------
 -- Contrôle avant concert (« Vérifier ») : liste de {id, status = ok|warn|bad|info, label, detail, fix}
 -- ---------------------------------------------------------------------------------------
-local GEN_TRACKS = { CLICK = true, VOIX = true, VOICE = true, CUES = true }
+-- pistes générées (jamais coupées par la répétition ; le timecode continue de piloter la lumière)
+local GEN_TRACKS = { CLICK = true, VOIX = true, VOICE = true, CUES = true, ["TIMECODE LTC"] = true, ["TIMECODE MTC"] = true }
 local VOICE_TRACKS = { VOIX = true, VOICE = true }
 
 -- Adler-32 (même valeur que zlib.adler32 côté Python) : empreinte du projet d'un morceau

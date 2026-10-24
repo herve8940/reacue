@@ -22,6 +22,7 @@ from . import lyrics
 from . import drums
 from . import sheet
 from . import structure
+from . import timecode
 from .regions import regions_to_sections, same_structure
 
 mcp = FastMCP(
@@ -41,7 +42,7 @@ bridge = Bridge()
 SESSION = BRIDGE_DIR / "last_session.json"
 
 
-GENERATED_TRACKS = ("CLICK", "CUES", "VOIX", "VOICE")
+GENERATED_TRACKS = ("CLICK", "CUES", "VOIX", "VOICE") + timecode.TRACKS
 
 
 def _new_options(**kw) -> Options:
@@ -106,8 +107,22 @@ async def _apply(analysis: Analysis, item: dict, opts: Options, items: list[dict
     plan, summary = await asyncio.to_thread(build_plan, analysis, item, opts, render, render_count, items,
                                             vtrack)
     timeline = plan.pop("prompter", None)
+    # pistes timecode pour la console lumière (réglages gma3_ltc_output / gma3_mtc_output)
+    tc_cfg = timecode.config()
+    tc_warn = []
+    if tc_cfg["enabled"] and info is None:
+        info = await bridge.call("ping")
+    if info is not None and _bridge_version(info) >= (1, 4):
+        plan["timecode"] = timecode.plan_block(tc_cfg, summary["song_end_s"] + timecode.TAIL_S)
+    elif tc_cfg["enabled"]:
+        tc_warn.append(t("tc_old_bridge"))
     await _check_items(plan, info)
     res = await bridge.call("apply_plan", plan, timeout=60)
+    if res.get("timecode"):
+        tc_sum, w = timecode.handle_result(res["timecode"], tc_cfg)
+        if tc_sum:
+            summary["timecode"] = tc_sum
+        tc_warn += w
     _save(analysis, item, opts, items)
     if timeline:
         if info is None:
@@ -122,7 +137,7 @@ async def _apply(analysis: Analysis, item: dict, opts: Options, items: list[dict
             summary.setdefault("warnings", []).append(t("prompter_not_updated", e=e))
     if analysis.stems:
         summary["stem_roles"] = analysis.stems
-    summary["warnings"] += vwarn + res.get("warnings", [])
+    summary["warnings"] += vwarn + res.get("warnings", []) + tc_warn
     summary["reaper"] = {"regions": len(res["state"]["regions"]), "markers": len(res["state"]["markers"]),
                          "tempo_markers": len(res["state"]["tempo"]),
                          "click_items": res.get("click_items"), "cue_items": res.get("cue_items"),
@@ -205,6 +220,24 @@ async def _publish_only(analysis, item, opts, items) -> dict:
     out = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items, project)
     return {"prompteur": out, "reaper": t("unchanged"), "warnings": [],
             "sections": [{"name": s.name, "bars": f"{s.start_bar + 1}-{s.end_bar}"} for s in analysis.sections]}
+
+
+async def update_timecode_tracks() -> dict:
+    """Pistes TIMECODE LTC / MTC seules (bouton de l'onglet Lumière de la fenêtre ReaCue, CLI « timecode ») :
+    même plan et même suivi que la préparation (timecode.plan_block / handle_result), sans toucher au reste
+    du projet. Réglages vides : les pistes timecode existantes sont retirées. Pont ≥ 1.5."""
+    use_settings_lang()
+    cfg = timecode.config()
+    info = await bridge.call("ping")
+    if _bridge_version(info) < (1, 5):
+        return {"error": t("tc_old_bridge")}
+    block = timecode.plan_block(cfg, 0.0)
+    block["tail"] = timecode.TAIL_S
+    res = await bridge.call("timecode_tracks", block, timeout=60)
+    tc = (res or {}).get("timecode") or {}
+    summ, warns = timecode.handle_result(tc, cfg)
+    return {"enabled": cfg["enabled"], "timecode": summ, "length_s": tc.get("length"),
+            "warnings": warns}
 
 
 def _project_of(info: dict | None) -> str | None:

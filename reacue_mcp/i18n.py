@@ -266,6 +266,47 @@ MSG = {
     "concert_prompter_failed": ("Prompteur du concert non publié : {e}", "Concert prompter not published: {e}"),
     "gma3_failed": ("Export lumière grandMA3 non écrit : {e}", "grandMA3 lighting export not written: {e}"),
     "gma3_written": ("Lumière grandMA3 : {n} cues → {d}", "grandMA3 lighting: {n} cues → {d}"),
+    # pistes timecode (timecode.py, ReaCue_Bridge.lua ≥ 1.4)
+    "tc_old_bridge": ("Pistes timecode non créées : pont REAPER trop ancien (relance l'installateur puis redémarre REAPER).",
+                      "Timecode tracks not created: REAPER bridge too old (run the installer again, then restart REAPER)."),
+    "tc_no_generator": ("{track} : générateur de timecode non inséré (action REAPER 40208 indisponible ?).",
+                        "{track}: timecode generator not inserted (REAPER action 40208 unavailable?)."),
+    "tc_configure_ltc": ("{track} : à faire une seule fois : double-clic sur l'item du générateur → Propriétés de la "
+                         "source : {fps} i/s, départ {tc}, « Send MIDI (MTC) » décoché ; OK, puis relance la préparation "
+                         "(ReaCue mémorise ce réglage pour tous les morceaux).",
+                         "{track}: one-time step: double-click the generator item → Source properties: {fps} fps, "
+                         "start {tc}, “Send MIDI (MTC)” unticked; OK, then prepare again (ReaCue remembers it for "
+                         "every song)."),
+    "tc_configure_mtc": ("{track} : à faire une seule fois : double-clic sur l'item du générateur → Propriétés de la "
+                         "source : {fps} i/s, départ {tc}, cocher « Send MIDI (MTC) » ; OK, puis relance la préparation "
+                         "(ReaCue mémorise ce réglage pour tous les morceaux).",
+                         "{track}: one-time step: double-click the generator item → Source properties: {fps} fps, "
+                         "start {tc}, tick “Send MIDI (MTC)”; OK, then prepare again (ReaCue remembers it for every "
+                         "song)."),
+    "tc_midi_missing": ("Sortie MIDI « {dev} » introuvable : active-la dans REAPER (Préférences > Audio > MIDI Devices) "
+                        "ou corrige le réglage gma3_mtc_output.",
+                        "MIDI output “{dev}” not found: enable it in REAPER (Preferences > Audio > MIDI Devices) or fix "
+                        "the gma3_mtc_output setting."),
+    "tc_concert_missing": ("{track} : aucun morceau du concert n'a de générateur de timecode : prépare d'abord un "
+                           "morceau avec ce réglage, puis reconstruis le concert.",
+                           "{track}: no song of the concert has a timecode generator: prepare a song with this setting "
+                           "first, then rebuild the concert."),
+    "tc_concert_route": ("{track} : routage à vérifier dans le concert (aucun morceau ne l'avait).",
+                         "{track}: check its routing in the concert (no song had it)."),
+    # onglet Lumière de la fenêtre ReaCue : CLI « timecode » et « concert-lighting »
+    "tc_tracks_title": ("Pistes timecode mises à jour", "Timecode tracks updated"),
+    "tc_tracks_running": ("Pistes timecode…", "Timecode tracks…"),
+    "tc_tracks_line": ("  {track} → {out} · {len} s · générateur {state}", "  {track} → {out} · {len} s · generator {state}"),
+    "tc_tracks_set": ("réglé ✓", "set ✓"),
+    "tc_tracks_unset": ("à régler (voir ci-dessous)", "to set (see below)"),
+    "tc_tracks_none": ("Aucune sortie timecode réglée (onglet Lumière) : pistes TIMECODE retirées.",
+                       "No timecode output set (Lighting tab): TIMECODE tracks removed."),
+    "gma3_running": ("Export lumière…", "Lighting export…"),
+    "gma3_concert_title": ("Export lumière du concert « {name} »", "Lighting export of the concert “{name}”"),
+    "gma3_disabled": ("Export lumière désactivé (onglet Lumière : Export grandMA3).",
+                      "Lighting export disabled (Lighting tab: grandMA3 export)."),
+    "gma3_concert_missing": ("Prompteur du concert introuvable ({f}) : reconstruis le concert.",
+                             "Concert prompter not found ({f}): rebuild the concert."),
     "concert_extra_failed": ("{title} : {what} non disponible ({e})", "{title}: {what} not available ({e})"),
     "concert_built": ("Concert « {name} » construit", "Concert “{name}” built"),
     "concert_line": ("  {n}. {title}  ·  {bpm:g} BPM  ·  {bars} mesures", "  {n}. {title}  ·  {bpm:g} BPM  ·  {bars} bars"),

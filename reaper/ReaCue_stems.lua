@@ -22,7 +22,7 @@ S.MODELS = {
 }
 S.DEFAULT_MODEL = "htdemucs_6s"
 -- pistes générées par ReaCue (jamais séparées), comme dans ReaCue_Bridge.lua
-S.GENERATED = { CLICK = true, CUES = true, VOIX = true, VOICE = true }
+S.GENERATED = { CLICK = true, CUES = true, VOIX = true, VOICE = true, ["TIMECODE LTC"] = true, ["TIMECODE MTC"] = true }
 
 local TXT = {
   fr = {

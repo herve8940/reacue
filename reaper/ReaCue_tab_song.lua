@@ -111,7 +111,7 @@ return function(ctx)
   local sel = nil           -- section choisie (bande / liste)
   local hist, redo = {}, {} -- historique de la structure (instantanés des régions)
   local last_summary = nil  -- message de la dernière préparation (bouton « Résumé »)
-  local GEN = { CLICK = true, CUES = true, VOIX = true, VOICE = true }
+  local GEN = { CLICK = true, CUES = true, VOIX = true, VOICE = true, ["TIMECODE LTC"] = true, ["TIMECODE MTC"] = true }
 
   -- projet ---------------------------------------------------------------------------------
   -- état gardé dans le projet (.RPP) : moteur de structure, débuts de sections douteux
@@ -234,7 +234,7 @@ return function(ctx)
 
   local function published(titles)
     local src = L.read(reaper.GetResourcePath() .. SEP .. "reaper_www_root" .. SEP .. "reacue_song.json")
-    if not src or src:find('"concert"%s*:') then return nil end
+    if not src or src:find('"concert"%s*:%s*{') then return nil end   -- concert : objet ; lighting.concert = false
     local title = R.jfield(src, "title")
     if not title or not title_matches(title, titles) then return nil end
     local chords = src:find('"chords"%s*:%s*%[%s*{') ~= nil
@@ -322,6 +322,12 @@ return function(ctx)
                   bar1 = regs[1] and regs[1].start or 0, bars = i.bars, bpm = i.bpm or 120, key = i.key,
                   sections = #regs } },
     }
+  end
+
+  -- prompteur publié pour ce morceau ({chords, drums, title}) ou nil ; relu toutes les 2 s (onglet Lumière)
+  function M.published_info()
+    if not info or reaper.time_precise() - (info.t or 0) > 2 then scan() end
+    return info.pub
   end
 
   function M.project_changed() info = nil; dirty = false; sel = nil; hist, redo = {}, {}; last_summary = nil end
