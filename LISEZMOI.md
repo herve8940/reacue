@@ -11,8 +11,9 @@ carte de tempo, régions nommées et colorées, click avec count-in, annonces vo
 sur son téléphone, servi par l'interface web intégrée de REAPER : structure, accords (basse / guitares),
 paroles calées (chant) et une vue batteur dédiée avec les grooves et les fills transcrits.
 
-Tout tourne en local : aucun service en ligne et pas d'internet une fois installé (la séparation de stems et
-l'analyse de structure, facultatives, utilisent des modèles d'IA qui tournent eux aussi sur ton ordinateur).
+Tout tourne en local : aucun service en ligne et pas d'internet une fois installé (les composants facultatifs —
+séparation de stems, analyse de structure, accords, batterie, paroles mot par mot et automatiques — utilisent
+des modèles d'IA qui tournent eux aussi sur ton ordinateur).
 Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serveur MCP).
 
 > **Nouveau sur ReaCue ? Suis le tutoriel pas à pas : [docs/TUTORIEL_fr.md](docs/TUTORIEL_fr.md)**
@@ -52,6 +53,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
 - [Paroles](#paroles)
+- [Grille PDF](#grille-pdf)
 - [Lumière : export grandMA3](#lumière--export-grandma3)
 - [Réglages](#réglages)
 - [Facultatif : piloter ReaCue avec Claude (MCP)](#facultatif--piloter-reacue-avec-claude-mcp)
@@ -80,6 +82,14 @@ en cinq onglets (Morceau, Concert, Scène, Lumière, Réglages) :
 - **Séparation de stems** (facultatif) : transforme un seul MP3/WAV en 6 stems (voix, batterie, basse,
   guitare, piano, autres) avec [Demucs](https://github.com/facebookresearch/demucs), sur ton ordinateur, sans
   abonnement ni envoi en ligne — puis ReaCue prépare le morceau à partir des stems.
+- **Analyse de structure** par SongFormer (installée par défaut, usage non commercial) ; **accords** et
+  **batterie** par modèles entraînés (facultatifs) ; **paroles calées mot par mot** et **paroles
+  automatiques** (brouillon transcrit par Whisper quand tu n'as pas de texte, facultatif). Tous tournent en
+  local, avec repli automatique sur la détection de ReaCue.
+- **Grille PDF** à imprimer (accords et paroles mesure par mesure) dans le dossier du morceau, à chaque
+  publication.
+- **Lumière grandMA3** : un cue par section (Sequence, Timecode, fiche de conduite, plugin), rôle Lumière du
+  prompteur et pistes qui envoient le timecode (LTC / MTC) à la console, réglables dans l'onglet **Lumière**.
 - **Mode concert** : plusieurs morceaux préparés enchaînés dans un seul projet, arrêt automatique à la fin
   de chaque morceau, un onglet **Scène** pour piloter le concert, un **QR code** pour les
   musiciens et une télécommande **Régie** sur téléphone (code PIN) ; un bouton **Vérifier** (contrôle
@@ -94,12 +104,15 @@ Sur les téléphones et tablettes des musiciens (prompteur web) :
 
 - section en cours, mesure et temps, mesures restantes, section suivante, décompte sur la dernière mesure ;
 - **Basse / guitares** : accord en cours et suivant avec décompte, grille de la section, tonalité ;
-- **Chant** : paroles défilantes calées sur le morceau, ligne suivante et décompte avant chaque entrée ;
-- **Batterie** : groove de la section, grille 16 pas de la mesure en cours, fills, crashs, arrêts et reprises ;
+- **Chant** : paroles défilantes calées sur le morceau, ligne suivante et décompte avant chaque entrée
+  (mot en cours surligné avec les paroles mot par mot) ;
+- **Batterie** : groove de la section, grille 16 pas (ou triolets) de la mesure en cours, charley ouvert,
+  fills, crashs, arrêts et reprises ;
 - entrées et silences de chaque instrument détectés sur les stems (« STOP à la prochaine mesure »,
   « Entrée dans 2 mesures ») ;
 - français / anglais ; suit le curseur de lecture de REAPER (sur scène, seul REAPER doit tourner) ;
-- en mode concert : morceau x/N et morceau suivant ; rôle **Régie** pour piloter le concert depuis un téléphone.
+- en mode concert : morceau x/N et morceau suivant ; rôle **Régie** pour piloter le concert depuis un téléphone ;
+- rôle **Lumière** : cues grandMA3, cue en cours, timecode, fichiers à télécharger.
 
 ## Principe
 
@@ -119,8 +132,8 @@ Sur les téléphones et tablettes des musiciens (prompteur web) :
 
 - **REAPER 7** ou plus récent (la 6.x marche probablement, non testée).
 - **macOS 12+** (Intel ou Apple Silicon) ou **Windows 10/11** (bêta).
-- Environ 1,5 Go d'espace disque (environnement Python et bibliothèques), plus 1,5 Go environ pour la
-  séparation de stems facultative.
+- Environ 1,5 Go d'espace disque (environnement Python et bibliothèques), plus l'espace des composants
+  facultatifs installés (voir le tableau de l'[Installation](#installation)).
 - **Internet seulement pendant l'installation** (téléchargement de Python et des bibliothèques). Rien n'est
   envoyé ensuite ; aucune parole n'est jamais téléchargée.
 - Pour le prompteur : téléphones et ordinateur sur le même réseau Wi-Fi.
@@ -145,7 +158,7 @@ Sur les téléphones et tablettes des musiciens (prompteur web) :
    déjà présents sur l'ordinateur sont réutilisés ([détails](#analyse-de-structure-songformer-par-défaut)).
 5. Lance REAPER. Le pont démarre tout seul et les actions sont disponibles dans *Actions → Show action list*
    (au premier lancement, la fenêtre ReaCue ouvre un assistant qui vérifie l'installation) :
-   - **ReaCue** — la fenêtre principale (onglets Morceau, Concert, Scène, Réglages) : **ajoute celle-ci à
+   - **ReaCue** — la fenêtre principale (onglets Morceau, Concert, Scène, Lumière, Réglages) : **ajoute celle-ci à
      une barre d'outils** (clic droit sur une barre → *Customize toolbar* → *Add*), elle suffit au quotidien ;
    - **ReaCue - Concert** — la même fenêtre, ouverte sur l'onglet Scène ;
    - **ReaCue - Préparer le morceau**, **ReaCue - Republier le prompteur**, **ReaCue - Séparer les stems**
@@ -160,6 +173,21 @@ environnement Python 3.12 privé dans le dossier `.venv` (paquets précompilés 
 nécessaire), copie les scripts REAPER dans `<ressources REAPER>/Scripts/ReaCue/`, ajoute le pont à
 `Scripts/__startup.lua`, enregistre les actions dans `reaper-kb.ini` (seulement si REAPER est fermé) et
 écrit `<ressources REAPER>/ReaCueMCP/reacue_settings.json`. Rien d'autre n'est modifié sur le système.
+
+**Composants facultatifs.** Chacun a son installateur (double-clic, `.command` sur Mac, `.bat` sous Windows),
+son environnement Python séparé dans le dossier de ReaCue, et un repli automatique sur la méthode de ReaCue
+s'il manque ou échoue :
+
+| Composant | Installateur | À télécharger | Licence | Détails |
+|---|---|---|---|---|
+| Séparation de stems (Demucs) | `Install ReaCue Stems` (ou question de l'installateur) | ≈ 1 Go | MIT | [Séparation de stems](#séparation-de-stems-facultatif) |
+| Analyse de structure (SongFormer) | `Install ReaCue Structure` (ou question de l'installateur) | ≈ 3 Go | non commercial (CC BY-NC 4.0), « J'accepte » | [Analyse de structure](#analyse-de-structure-songformer-par-défaut) |
+| Accords (modèle entraîné) | `Install ReaCue Chords` | ≈ 800 Mo + 60 Mo | MIT | [Reconnaissance d'accords](#reconnaissance-daccords-modèle-facultatif) |
+| Batterie (ADTOF) | `Install ReaCue Drums` | ≈ 300 Mo + 16 Mo | non commercial (CC BY-NC-SA 4.0), « J'accepte » | [Transcription de batterie](#transcription-de-batterie-adtof-facultatif) |
+| Paroles mot par mot + automatiques (Whisper) | `Install ReaCue Words` | ≈ 1 Go + 1,3 Go par langue + 1,6 Go | Apache-2.0, MIT | [Paroles mot par mot](#paroles-mot-par-mot-facultatif), [Paroles automatiques](#paroles-automatiques-facultatif) |
+
+PyTorch est téléchargé une fois : il vient du cache si un autre composant l'a déjà installé. Pas à pas :
+[tutoriel, chapitre 20](docs/TUTORIEL_fr.md#20-composants-facultatifs).
 
 Si REAPER était ouvert pendant l'installation, charge les actions une fois à la main : *Actions → Show action
 list → New action → Load ReaScript…* → choisis `ReaCue.lua` (et, si tu les veux en actions séparées,
@@ -618,7 +646,7 @@ Réimporte le plugin après chaque export (il contient la liste des fichiers du 
 
 | Installation | Réglage ReaCue | Console / onPC, une fois |
 |---|---|---|
-| Console, LTC | `gma3_ltc_output` : sortie de la carte son reliée à l'entrée **LTC XLR** | Menu → In & Out (Connector Configuration) : SMPTE Mode = In, colonne SMPTE TC = slot |
+| Console, LTC | `gma3_ltc_output` : sortie de la carte son reliée à l'entrée **LTC XLR** | Menu → Output Configuration → Connector Configuration : SMPTE Mode = In, colonne SMPTE TC = slot |
 | Console, MTC | `gma3_mtc_output` : interface MIDI reliée au **MIDI In** | MIDI TC Mode = In, colonne MIDI TC = slot |
 | onPC sur le même Mac | `gma3_mtc_output` : `"IAC Driver Bus 1"` (Configuration audio et MIDI → Studio MIDI → Gestionnaire IAC : *Le périphérique est en ligne*) | entrée MIDI TC sur le slot |
 | onPC sur un autre ordinateur | `gma3_mtc_output` : `"Réseau MIDI"` / `"Network Session 1"` (MIDI réseau de macOS) ; rtpMIDI sur le PC Windows | entrée MIDI TC sur le slot |
@@ -710,6 +738,22 @@ par ligne, puis mot par mot). C'est un brouillon : la reconnaissance du chant fa
   brouillon s'il n'existe pas.
 - **Désactiver** : réglage `lyrics_auto` = `"off"`.
 
+## Grille PDF
+
+À chaque publication du prompteur (*Analyser et préparer*, *Re-préparer*, *Tout faire*, *Mettre à jour les
+téléphones*), ReaCue écrit une grille A4 à imprimer, **`Grille - <Titre>.pdf`** (`Chart - <Titre>.pdf` en
+anglais), dans le **dossier du morceau** (celui des fichiers audio, ou le parent d'un dossier `…-stems`). Elle
+est construite à partir des données du prompteur : ce que montre le PDF est ce que voient les téléphones.
+
+- En-tête : titre, tempo, mesure, décompte, tonalité (« estimée » si elle vient des accords).
+- Chaque section (nom, couleur, nombre de mesures) en lignes de 4 mesures, avec l'accord de chaque mesure
+  (case coupée s'il y en a deux) et le texte chanté dans la mesure (case colorée ; mot par mot si le
+  composant est installé ; sans paroles, les cases colorées montrent où la voix chante).
+- Pied de page : « à vérifier », et mention des paroles automatiques (brouillon) le cas échéant.
+- Onglet Morceau : pastille **Grille PDF** (clic = ouvrir, ou créer). Jamais bloquante : en cas d'erreur,
+  « Grille PDF non créée : … ». Pas de grille pour un concert (celles des morceaux restent dans leurs dossiers).
+- Aucune dépendance : PDF écrit par ReaCue lui-même (`reacue_mcp/sheet.py`, polices standard).
+
 ## Réglages
 
 Le plus simple : l'onglet **Réglages** de la fenêtre ReaCue (écrit tout de suite, les autres clés du fichier
@@ -738,6 +782,7 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `words_language` | `"auto"` | langue chantée pour le calage mot par mot : `"auto"` (déduite du texte), `"fr"` ou `"en"` |
 | `lyrics_auto` | `"auto"` | sans fichier de paroles : `"auto"` (brouillon `paroles (auto).txt` par Whisper s'il est installé) ou `"off"` |
 | `chords_engine` | `"auto"` | accords : `"auto"` (modèle d'accords s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
+| `drums_engine` | `"auto"` | batterie : `"auto"` (ADTOF s'il est installé) ou `"reacue"` (règles de ReaCue seules) |
 | `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
 | `gma3_export` | `true` | écrire les fichiers lumière grandMA3 à chaque préparation / construction de concert |
@@ -883,7 +928,10 @@ Double-clic sur **`Uninstall ReaCue.command`** (macOS) ou **`Uninstall ReaCue.ba
 Cela retire les scripts REAPER, la ligne de démarrage du pont, les actions et l'entrée Claude Desktop. Tes
 réglages et le dernier morceau préparé restent dans `<ressources REAPER>/ReaCueMCP/` (ajoute `--purge` au
 script de désinstallation pour les supprimer ; `--purge` supprime aussi l'environnement de séparation de
-stems `.venv-demucs`). Supprime ensuite le dossier de ReaCue. Les modèles Demucs restent dans le cache de
+stems `.venv-demucs` et l'analyse de structure `.venv-structure` + `structure/`). Supprime ensuite le dossier de ReaCue
+(les autres composants facultatifs, `.venv-chords` + `chords/`, `.venv-drums` + `drums/`, `.venv-words` +
+`words/`, partent avec lui ; pour n'en retirer qu'un, supprime seulement ses dossiers : ReaCue reprend sa
+propre méthode). Les modèles Demucs restent dans le cache de
 PyTorch (`~/.cache/torch/hub/checkpoints`, quelques centaines de Mo) : supprime ce dossier si tu n'en as plus
 besoin. Les stems séparés restent à côté de tes morceaux.
 

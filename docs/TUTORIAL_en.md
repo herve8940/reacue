@@ -11,11 +11,20 @@ At the end, for each song, you will have in REAPER:
 - a tempo map locked to the song, named and coloured regions (Intro, Verse 1, Chorus…);
 - a **CLICK** track with a 2-bar count-in, a **VOICE** track that says “Chorus” before each section and
   counts “one two three four”;
-- a **prompter** on every musician's phone: structure, chords, lyrics, drums.
+- a **prompter** on every musician's phone: structure, chords, lyrics (word by word when the component is
+  installed), drums, plus **Stage control** (remote) and a **Lighting** role;
+- a printable **PDF chart** (chords and lyrics, bar by bar) in the song's folder;
+- the files of a show for a **grandMA3** lighting desk (one cue per section) and, if you want, tracks that
+  send **timecode** to the desk.
 
 Everything is done from **one window, “ReaCue”**, with five tabs: **Song** (prepare a song), **Concert**
 (put a concert together and build it, prepare several songs at once), **Stage** (play: transport,
 instruments, rehearsal, Stage control), **Lighting** (grandMA3 desk: cues, timecode, test) and **Settings**.
+
+**Optional components**, which also run on your computer, improve the analysis: stem separation (Demucs),
+structure analysis (SongFormer), chords and drums by a trained model, word-by-word lyrics and automatic lyrics
+(Whisper). Without them, everything works with ReaCue's own detection
+([chapter 20](#20-optional-components)).
 
 **For each song it comes down to two clicks**: **+ New song**, then **Do everything**. A big button always
 gives the next step, a line at the bottom of the window explains the button under the mouse, and an error
@@ -46,6 +55,8 @@ Time needed: 30 to 45 minutes the first time (installation included), then 5 to 
 17. [At rehearsal](#17-at-rehearsal)
 18. [Troubleshooting](#18-troubleshooting)
 19. [Cheat sheet: a new song, a concert](#19-cheat-sheet-a-new-song-a-concert)
+20. [Optional components](#20-optional-components)
+21. [Appendix: all settings](#21-appendix-all-settings)
 
 ---
 
@@ -55,7 +66,7 @@ Time needed: 30 to 45 minutes the first time (installation included), then 5 to 
 |---|---|
 | Computer | Mac (macOS 12 or later, Intel or Apple Silicon) or Windows 10/11 PC (Windows: beta) |
 | REAPER | Version 7 or later, already installed ([reaper.fm](https://www.reaper.fm/)) |
-| Disk space | 1.5 GB for ReaCue, + 1.5 GB if you install stem separation |
+| Disk space | 1.5 GB for ReaCue; more for each optional component you install (from a few hundred MB to about 5 GB, see [chapter 20](#20-optional-components)) |
 | Internet | Only during installation |
 | Audio | The stems of a song (one file per instrument), **or** a single MP3/WAV |
 | Phones | On the **same Wi-Fi** as the computer, with a browser (Safari, Chrome…) |
@@ -71,9 +82,20 @@ Time needed: 30 to 45 minutes the first time (installation included), then 5 to 
 2. Open the downloaded ZIP file: a `reacue-main` folder appears.
 3. **Move this folder to its final place**, for example in *Documents*, and rename it `ReaCue`.
 
-**You should see** in the `ReaCue` folder: `Install ReaCue.command`, `Install ReaCue.bat`,
-`Install ReaCue Stems.command`, `Install ReaCue Stems.bat`, `README.md`, `LISEZMOI.md` and the folders
-`reacue_mcp`, `reaper`, `install`, `docs`.
+**You should see** in the `ReaCue` folder: `README.md`, `LISEZMOI.md`, the folders `reacue_mcp`, `reaper`,
+`install`, `docs`, and the installers (`.command` for Mac, `.bat` for Windows):
+
+| File | What it does |
+|---|---|
+| `Install ReaCue` | ReaCue itself; also offers stem separation and structure analysis (step 4) |
+| `Install ReaCue Stems` | splitting an MP3 into stems (Demucs) |
+| `Install ReaCue Structure` | structure analysis (SongFormer) |
+| `Install ReaCue Chords` | chords by a trained model |
+| `Install ReaCue Drums` | drums by a trained model (ADTOF) |
+| `Install ReaCue Words` | word-by-word lyrics and automatic lyrics (Whisper) |
+| `Uninstall ReaCue` | uninstall |
+
+The five optional components are described in [chapter 20](#20-optional-components).
 
 > ⚠️ Do not move this folder after installation. If you have to, run the installer again from the new place.
 
@@ -140,6 +162,10 @@ Press Enter to close the window.
 | `structure analysis not installed` | ReaCue keeps its own detection. Try again later with `Install ReaCue Structure.command` / `.bat` (it resumes where it stopped) |
 
 > You can run the installer as many times as you like: it repairs the installation and keeps your settings.
+
+**The other optional components** (chords, drums, word-by-word and automatic lyrics) are not offered by this
+installer: each has its own (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), to run
+whenever you like, even later. See [chapter 20](#20-optional-components).
 
 ---
 
@@ -339,7 +365,7 @@ on the same MP3, the import is immediate (no new separation).
    (e.g. *Start the bridge*); **Resume** starts again at the failed step.
 3. At the end: **“Song ready ✓”** (*Summary*: tempo, bars, structure, what was published). **Close**. The big
    button now says **Ready ✓** and the **pills** are green: Stems ✓ · Structure: SongFormer ✓ · 120 BPM ·
-   Chords ✓ · Drums ✓ · Lyrics · Prompter published ✓ · Saved ✓.
+   Chords ✓ · Drums ✓ · Lyrics · PDF chart ✓ · Prompter published ✓ · Saved ✓.
 
 <img src="images/window_doall_en.png" width="420">
 
@@ -361,6 +387,13 @@ song** does *Analyse and prepare*.
 > failed: … → ReaCue structure used” and the pill shows **Structure: ReaCue**. To compare: *Settings* →
 > *Structure detection* → **ReaCue only**, then *Re-analyse from scratch*.
 
+> **Chords, drums, lyrics**: during the preparation or *Update the phones*, the list may show **“Chords
+> (model)… N s”**, **“Word-by-word lyrics… N s”** or **“Automatic lyrics (Whisper)… N s”**: these are the
+> optional components of [chapter 20](#20-optional-components), used automatically when they are installed
+> (ADTOF drums has no line of its own). Each costs this time only once per song (result remembered). If one
+> fails, the *Summary* says so (e.g. “Chord model unavailable: … → ReaCue's chord detection used”) and the song
+> is ready anyway.
+
 Press **Space**: you hear 2 bars of click with “one two three four”, then the song, the click and the cues.
 
 **If it does not work:** the window shows the cause, what to do and a button. In short:
@@ -371,6 +404,25 @@ Press **Space**: you hear 2 bars of click with “one two three four”, then th
 | “ReaCue program not found” | The ReaCue folder was moved: run the installer again from its new place |
 | “A preparation is already running” | Wait for the previous one to finish (1 minute max) |
 | The tempo is double or half the real one | Put the tempo in the file names (e.g. `-94bpm`) and *Re-analyse from scratch* |
+
+### The song's PDF chart
+
+Each time the prompter is published (*Analyse and prepare*, *Prepare again*, *Do everything*, *Update the
+phones*, *Apply*), ReaCue also writes a **printable chart** (A4) in the **song's folder**: the folder of the
+audio files, or the folder of the original MP3 when the stems are in `…-stems/`. It is called **`Chart -
+<Title>.pdf`** (`Grille - <Title>.pdf` when the language is French) and is replaced at each publication.
+
+| It shows | Details |
+|---|---|
+| Header | title, tempo, time signature (4/4…), count-in, key (“estimated” when guessed from the chords) |
+| One row per group of 4 bars | each section with its name, colour and number of bars |
+| Chords | the chord of each bar; a box split in two when there are two |
+| Lyrics | the words sung in each bar (coloured box); with word-by-word lyrics, each word is in the bar where it is really sung; without lyrics, the coloured boxes show the bars where the voice sings |
+| Footer | “chords and lyrics detected automatically, please check” (or “lyrics transcribed automatically (draft)” with automatic lyrics), page number |
+
+In the **Song** tab, the **PDF chart ✓** pill opens it (**PDF chart —**: click = create it by updating the
+phones). The chart never blocks the preparation: if something goes wrong, a warning “PDF chart not created:
+…” shows and everything else is ready. A concert has no chart of its own: print those of its songs.
 
 ---
 
@@ -449,9 +501,12 @@ ReaCue never downloads lyrics: **you provide the text**.
    - Mac: **TextEdit**, then menu **Format → Make Plain Text** (important: plain text);
    - Windows: **Notepad**.
 2. Type (or paste) the lyrics: **one line = one sung phrase**, an empty line between blocks (verse,
-   chorus…). Lines like `[Chorus]` or `Verse 2:` are ignored. `(x2)` at the end of a line repeats it.
-3. Save the file as **`lyrics.txt`** (**UTF-8** encoding), **in the stems folder**. For an MP3 split by
-   ReaCue, you can put it **next to the original MP3** (or in the `…-stems/htdemucs_6s/` folder).
+   chorus…). Lines like `[Chorus]` or `Verse 2:` are ignored, and so are lines starting with `#` (comments).
+   `(x2)` or `bis` at the end of a line repeats it. A chorus written only once is found automatically when it
+   is sung again (vocal stem needed).
+3. Save the file as **`lyrics.txt`** (**UTF-8** encoding), **in the stems folder**. Any name starting with
+   `lyrics`, `paroles` or `parole`, as `.txt` or `.rtf`, works too. For an MP3 split by ReaCue, you can put it
+   **next to the original MP3** (or in the `…-stems/htdemucs_6s/` folder).
 4. **Song** tab: the pill shows **Lyrics: N lines** (click it, or **Open folder**, to see where). Click
    **Update the phones** (or the action **ReaCue - Republish the prompter**): nothing in the project is changed.
 
@@ -461,11 +516,24 @@ ReaCue never downloads lyrics: **you provide the text**.
 The lines are aligned automatically on the vocal stem. If a line is off, you can place it by hand with a
 timing file `lyrics_timing.json` (see the *Lyrics* section of the README).
 
-**No text at hand?** If *automatic lyrics* are installed (Whisper, with `Install ReaCue Words`), ReaCue
-transcribes the vocal stem and writes a draft **`paroles (auto).txt`** in the song folder; the pill turns
-orange: **Lyrics: auto (N lines)**. Click it to open the draft, correct it by ear (in place, or rename it
-`lyrics.txt`), then **Update the phones**. Your own `lyrics.txt` always wins, and the draft is never
-overwritten.
+**Word by word** (optional component `Install ReaCue Words`, [chapter 20.5](#205-word-by-word-lyrics-and-automatic-lyrics)):
+each word is placed at its real moment, inside the lines already timed. On the phone (**Vocals** view), the
+**current word is highlighted** and the words already sung are dimmed; in the PDF chart, each word goes in its
+bar. A badly recognised line simply keeps its line timing.
+
+**No text at hand?** If *automatic lyrics* are installed (Whisper, with the same `Install ReaCue Words`) and
+the song has a **vocal stem**, ReaCue transcribes that stem and writes a draft **`paroles (auto).txt`** in the
+song folder; the pill turns orange: **Lyrics: auto (N lines)**. Click it to open the draft, correct it by ear
+(in place, or rename it `lyrics.txt`), then **Update the phones**. The lines at the top starting with `#` are
+comments (ignored).
+
+| Rule | Details |
+|---|---|
+| Your file first | a `lyrics.txt` (or `paroles.txt`…) of your own always wins: the draft is then no longer used |
+| Only once | the draft is created once and **never overwritten**; to get a new one, delete it |
+| It is a draft | singing recognition makes mistakes: read it before rehearsal; the PDF chart says so in its footer |
+| Never blocking | if the transcription fails or finds no singing, the song is ready without lyrics, as before |
+| Turn off | setting `lyrics_auto` = `"off"` ([appendix](#21-appendix-all-settings)) |
 
 ---
 
@@ -477,8 +545,8 @@ overwritten.
    - Windows: *Settings → Network & Internet → Wi-Fi → network properties* → **IPv4 address**.
 3. On the phone, open the browser and type: **`http://<IP address>:8080/prompteur.html`**
    (example: `http://192.168.1.20:8080/prompteur.html`). Careful: `http`, not `https`.
-4. Pick your role: **Drums**, **Bass**, **Rhythm gtr**, **Lead gtr**, **Vocals** or **Overview** (the choice
-   is remembered on this phone; the **Role** button changes it).
+4. Pick your role: **Drums**, **Bass**, **Rhythm gtr**, **Lead gtr**, **Vocals**, **Overview**, **Stage
+   control** or **Lighting** (the choice is remembered on this phone; the **Role** button changes it).
 5. Start playback in REAPER: the prompter follows the position (section, bar, beat).
 
 **You should see** a green dot (link with REAPER alive), the current section and the next one.
@@ -486,6 +554,24 @@ overwritten.
 <img src="images/prompter_drums_en.png" width="200"> <img src="images/prompter_vocals_en.png" width="200">
 
 <img src="images/prompter_vocals_en_tablet.png" width="600">
+
+| Role | What it shows |
+|---|---|
+| **Drums** | groove of the section, grid of the current bar (16 steps, or triplets for a shuffle song), fills, crashes, stops and re-entries; one lane per piece: Crash, Ride, Hi-hat, **Open hi-hat**, Snare, Tom 1, Tom 2, Floor tom, Kick |
+| **Bass**, **Rhythm gtr** | current and next chord with a count-down, chord chart of the section, key, entries and exits |
+| **Lead gtr** | solos, chords, entries |
+| **Vocals** | scrolling lyrics, next line and count-down before each entry; with word-by-word lyrics, the **current word highlighted** |
+| **Overview** | structure and chords |
+| **Stage control** | concert remote, protected by a PIN code ([16.5](#165-drive-the-concert-from-a-phone-stage-control)) |
+| **Lighting** | grandMA3 cues, current cue, timecode, files to import ([16.9](#169-lighting-grandma3)) |
+
+On a tablet in landscape, the Drums view puts the position (section, bar, coming fill) and the grid of the bar
+side by side; only the lanes of the pieces played are shown:
+
+<img src="images/prompter_drums_en_tablet.png" width="600">
+
+The Drums view is more accurate when the **ADTOF transcription** is installed, the chords when the **chord
+model** is ([chapter 20](#20-optional-components)); otherwise ReaCue uses its own rules.
 
 Tips:
 
@@ -523,13 +609,22 @@ Common examples:
 | Click and voice only in the in-ears (outputs 3/4), not front of house | *Click + voice output*: **outputs 3/4**, *Also to front of house*: **no** | `"click_hw_output": 2` and `"click_to_master": false` |
 | 4 stems instead of 6 | *Stem separation*: **4 stems** | `"stems_model": "htdemucs"` |
 | Sections by ReaCue only (not SongFormer) | *Structure detection*: **ReaCue only** | `"structure_engine": "reacue"` |
+| Chords by ReaCue's detection, even with the model installed | (file only) | `"chords_engine": "reacue"` |
+| Drums by ReaCue's rules, even with ADTOF installed | (file only) | `"drums_engine": "reacue"` |
+| Lyrics timed by line only (not word by word) | (file only) | `"words_engine": "off"` |
+| Force the sung language (word by word, automatic lyrics) | (file only) | `"words_language": "en"` |
+| No automatic lyrics draft | (file only) | `"lyrics_auto": "off"` |
+
+<img src="images/window_settings_advanced_en.png" width="420">
 
 The tab also shows the **installed version**. The settings live in the file **`reacue_settings.json`**
 (REAPER's resource folder, menu *Options → Show REAPER resource path in explorer/finder* → folder
 **`ReaCueMCP`**): you can also edit it with TextEdit or Notepad, keeping the JSON syntax. For
 `click_hw_output`: `0` = outputs 1/2, `2` = outputs 3/4, `4` = outputs 5/6, and so on.
 
-For the cue voices (`announce_voice`), see the *Settings* section of the README.
+For the cue voices (`announce_voice`), see the *Settings* section of the README. The full list of keys, with
+their default values, is in the [appendix (chapter 21)](#21-appendix-all-settings); the lighting settings are
+in the **Lighting** tab ([16.9](#169-lighting-grandma3)).
 
 ---
 
@@ -821,7 +916,7 @@ a cue sheet (CSV with a suggested effect per section).
 4. Desk: copy the contents of the export folder (`grandMA3/` next to the project, or
    `Concerts/grandMA3/<concert>/`) into `grandMA3/` at the root of a USB stick, import the plugin
    `ReaCue.xml` (Plugins pool → Import) and run it: Sequences, Timecode and TC Slot in one tap.
-5. Desk input (once): *Menu → In & Out (Connector Configuration)*: SMPTE Mode = In and SMPTE TC = slot
+5. Desk input (once): *Menu → Output Configuration → Connector Configuration*: SMPTE Mode = In and SMPTE TC = slot
    (LTC), or MIDI TC Mode = In and MIDI TC = slot (MTC).
 
 <img src="images/window_lighting_en.png" width="420">
@@ -885,6 +980,9 @@ needs to run during rehearsal: Claude is not needed.
 | Stem separation very slow | Busy processor | Close other applications; count 1.5 to 2 times the song length |
 | Wrong structure | Automatic detection is not perfect | Step 11: structure band (orange boxes), fix then *Apply*, or ask Claude; wrong tempo: tempo in the file names |
 | “Structure: ReaCue” pill in orange | SongFormer is not installed | Click the pill → installer; or *Settings → Check the installation* |
+| Summary: “Chord model unavailable…”, “Drum transcription by model (ADTOF) failed…”, “Word-by-word timing failed…” | Optional component missing, broken or too slow | Nothing is lost: ReaCue used its own method. Run the component's installer again ([chapter 20](#20-optional-components)); after a chord failure, ReaCue does not retry on the same audio for 1 h |
+| No `paroles (auto).txt` | No vocal stem, Whisper not installed, `lyrics_auto` = `"off"`, or you already have a lyrics file | Split the stems, run `Install ReaCue Words` again; a failure is remembered for that song (no new attempt at every publication) |
+| No PDF chart | The song's folder was not found, or writing failed (warning “PDF chart not created”) | Click the **PDF chart —** pill; check that the song's folder exists and is not read-only |
 | Stage tab: “No concert or song open” | The current project tab is empty | **Concert** tab → **Open** a concert, or open a song's project |
 | A song of the concert has no sections | Its project was saved before the preparation | Open its project, *Do everything*, then *Rebuild the concert* |
 | Phone (Stage control): “Open the ReaCue window…” | ReaCue window closed | Run the **ReaCue** action on the computer |
@@ -904,7 +1002,8 @@ needs to run during rehearsal: Claude is not needed.
 2. **Do everything** (stems for a single MP3, structure, click, cues, phones, save).
 3. Check the structure (orange boxes of the band, names); if needed **Rename** / **◀ ▶** / **Merge** /
    **Split** / **Delete** / **+ Section** (**Undo** if needed), then **Apply**.
-4. Optional: `lyrics.txt` next to the files → **Update the phones**.
+4. Optional: `lyrics.txt` next to the files → **Update the phones** (no file, with Whisper installed: correct
+   the draft `paroles (auto).txt`). The chart `Chart - <Title>.pdf` is in the song's folder.
 5. Several songs: **Concert** tab → **Prepare all songs not prepared**.
 6. Phones: `http://<IP>:8080/prompteur.html`, pick your role.
 
@@ -918,3 +1017,189 @@ needs to run during rehearsal: Claude is not needed.
 6. **QR** → the musicians scan it; the person in charge picks **Stage control** and types the PIN.
 7. **Space** for each song; playback stops by itself at the end of each one.
 8. At rehearsal: **Rehearsal**, then a section to loop it (2nd section = range), speed if needed.
+
+---
+
+## 20. Optional components
+
+ReaCue works on its own. Each optional component improves one part of the analysis, **runs on your
+computer** (nothing is uploaded, internet only during its installation), installs into its **own Python
+environment** inside the `ReaCue` folder (ReaCue's `.venv` is never touched), and can be installed, run again
+or removed at any time.
+
+| Component | Installer | What it brings | Download | Installation | Computing per song (Intel Mac, once) | Licence |
+|---|---|---|---|---|---|---|
+| Stem separation | `Install ReaCue Stems` (or the question in step 4) | one MP3 → 6 stems (Demucs) | ≈ 1 GB | 5 to 15 min | 5 to 8 min | MIT |
+| Structure analysis | `Install ReaCue Structure` (or the question in step 4, yes by default) | more accurate sections (SongFormer) | ≈ 3 GB | 10 to 40 min | several minutes | **non-commercial** (MuQ: CC BY-NC 4.0); “I accept” |
+| Chords | `Install ReaCue Chords` | chords by a trained model | ≈ 800 MB (PyTorch, already cached if stems are installed) + 60 MB | 2 to 10 min | 1 to 2 min | MIT |
+| Drums | `Install ReaCue Drums` | ADTOF transcription of the drum stem | ≈ 300 MB (PyTorch, same) + 16 MB | 3 to 10 min | 20 to 60 s | **non-commercial** (CC BY-NC-SA 4.0); “I accept” |
+| Word-by-word and automatic lyrics | `Install ReaCue Words` | each word at its real moment; lyrics draft by Whisper | ≈ 1 GB (PyTorch, nothing if stems are installed) + 1.3 GB per language (French, English) + 1.6 GB (Whisper) | several minutes (≈ 5 GB in all, depending on the connection) | 1 to 3 min (word by word), about 3 to 6 min (Whisper) | Apache-2.0 (wav2vec2), MIT (Whisper) |
+
+**To install**: ReaCue first (step 4), then double-click the installer in the `ReaCue` folder (Mac:
+`.command`; Windows: `.bat`), language `en`, then follow the window. On a Mac, the first time, same trick as in
+step 4 if macOS blocks the file (right-click → **Open**). Each installer ends with a short test (e.g.
+`CHORDS_OK`, `WORDS_OK`, `STRUCTURE_OK`); if it fails it says why, and **running it again resumes where it
+stopped**. REAPER may stay open: the component is used from the next preparation on (*Prepare again* or
+*Update the phones* for a song already ready).
+
+**Automatic fallback, always.** If a component is not installed, is turned off by its setting, fails or
+exceeds its time limit, ReaCue uses its own method and says so in the *Summary*: the preparation is never
+blocked.
+
+**Licences.** The models are not in the repository: each installer downloads them from their authors, at a
+pinned version. Two components are for **non-commercial use only** (structure analysis, drums): their
+installer shows the licence summary and installs nothing until you type exactly **`I accept`** (remembered,
+not asked again on updates). Details: [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) (this is not legal
+advice).
+
+### 20.1 Stem separation (Demucs)
+
+- **Brings**: a single MP3/WAV becomes six stems (Vocals, Drums, Bass, Guitar, Piano, Other), which gives the
+  drum view, per-instrument entries, better chords and the vocal stem needed for lyrics. How to use it:
+  [step 9](#9-split-an-mp3-into-stems).
+- **Installs**: `.venv-demucs`; Demucs models in PyTorch's cache (`~/.cache/torch/hub/checkpoints`). The
+  installer measures your computer's speed.
+- **Setting**: `stems_model` = `"htdemucs_6s"` (6 stems, default) or `"htdemucs"` (4 stems; guitar and keys
+  stay in “other”). *Settings* tab → *Stem separation*.
+- **Without it**: prepare the song straight from the MP3 (less detail), or provide your own stems.
+
+### 20.2 Structure analysis (SongFormer)
+
+- **Brings**: more accurate section boundaries and names. ReaCue keeps its grid (tempo, bars, count-in):
+  SongFormer only says where the sections are and what they are, each boundary is snapped to the nearest bar;
+  the orange boxes of the Song tab flag the doubts ([step 11](#11-check-the-structure)).
+- **Installs**: `.venv-structure` and `structure/` (SongFormer, MuQ, MusicFM). Models already on the computer
+  (Hugging Face cache, another copy of SongFormer) are reused instead of downloaded again.
+- **Memory**: 8 GB of RAM recommended; with 15 GB or more the model looks at the song in 420 s windows (more
+  accurate), otherwise 120 s.
+- **Setting**: *Settings* tab → *Structure detection*: **auto (SongFormer)** or **ReaCue only**
+  (`structure_engine`). Result remembered per song (`.reacue/` next to the audio).
+- **Fallback**: not installed or “ReaCue only” → ReaCue's detection (pill **Structure: ReaCue**); error or more
+  than 30 min → “SongFormer analysis failed: … → ReaCue structure used”.
+- Installation without questions (licence agreement): variable `REACUE_STRUCTURE_ACCEPT=yes`.
+
+### 20.3 Chords by a trained model
+
+- **Brings**: more accurate chords for the prompter and the PDF chart (major / minor, 7th, maj7, m7, sus, dim,
+  aug, inversions like `D/F#`). Model by Jiang et al. (ISMIR 2019, Music X Lab), **code and weights under the
+  MIT licence**.
+- **How**: it listens to the stems **without vocals or drums** (otherwise the single file), follows the beats
+  of ReaCue's grid (at most two chords per bar, `N.C.` when nothing plays), spells sharps / flats from the
+  key; 9ths, 11ths and 13ths are shown as the matching 7th (`G9` → `G7`).
+- **Installs**: `.venv-chords` and `chords/model` (≈ 60 MB, pinned version from GitHub).
+- **Setting**: `chords_engine` = `"auto"` (the model when installed, default) or `"reacue"`.
+- **Fallback**: not installed, `"reacue"`, error or more than 10 min → ReaCue's detection (“Chord model
+  unavailable: …”); after a failure, no new attempt on the same audio for 1 h. The result is remembered in the
+  song's `.reacue` folder (a grid change only re-runs the decoding).
+- **Compare** on your songs: `.venv/bin/python tools/compare_chords.py <song folder or audio file>` (Windows:
+  `.venv\Scripts\python tools\compare_chords.py …`), which prints both charts bar by bar and how often they
+  agree.
+
+### 20.4 Drums by a trained model (ADTOF)
+
+- **Brings**: a much more reliable **Drums** view of the prompter on snare and cymbals. ADTOF (M. Zehren et
+  al.) is trained on 359 hours of real music; ReaCue then tells high / mid / floor tom, closed / **open**
+  hi-hat (lane **Open hi-hat**, `HO`), crash or ride per section, and snaps each hit to its grid in
+  **sixteenths**, or **triplets** for a shuffle song (chosen per song). Same patterns, fills and crashes as
+  before, more accurate.
+- **Needs** a drum stem (stems you provide, or stem separation).
+- **Licence**: ADTOF weights under **CC BY-NC-SA 4.0** (non-commercial); the PyTorch port used (ADTOF-pytorch)
+  states no licence. The installer asks you to type **`I accept`** (`J'accepte` in French); otherwise nothing
+  is downloaded. Installation without questions: `REACUE_DRUMS_ACCEPT=yes`.
+- **Installs**: `.venv-drums` and `drums/` (code and weights, 16 MB, pinned version).
+- **Setting**: `drums_engine` = `"auto"` (ADTOF when installed, default) or `"reacue"` (ReaCue's rules).
+- **Fallback**: not installed, `"reacue"`, error or more than 15 min → ReaCue's rules (“Drum transcription by
+  model (ADTOF) failed: … → ReaCue method used”). Result remembered next to the stem, in `.reacue/`.
+- **Compare**: `.venv/bin/python tools/compare_drums.py <drum stem>`.
+
+### 20.5 Word-by-word lyrics and automatic lyrics
+
+A single installer, **`Install ReaCue Words`**, installs both (environment `.venv-words`, models in `words/`).
+Running it again on an existing installation only adds what is missing.
+
+**Word-by-word lyrics** (wav2vec2 XLSR-53 fine-tuned in French and English by J. Grosman, Apache-2.0):
+
+- **Brings**: each word of **your** lyrics placed at its real moment on the vocal stem, inside the lines
+  already timed (line timing and `lyrics_timing.json` remain the anchor). Vocals prompter: current word
+  highlighted, sung words dimmed; PDF chart: each word in its bar.
+- **Language**: guessed from the lyrics text; `words_language` = `"fr"` or `"en"` to force it. A single model
+  language at installation: variable `REACUE_WORDS_LANGS=en` (or `fr`).
+- **Setting**: `words_engine` = `"auto"` (default) or `"off"` (lines only).
+- **Fallback**: error or more than 15 min → lyrics timed by line (“Word-by-word timing failed: …”); a badly
+  recognised line keeps its line timing.
+- **Compare**: `.venv/bin/python tools/compare_words.py` (last prepared song) shows the positions before /
+  after without ever printing the text.
+
+**Automatic lyrics** (OpenAI's Whisper `large-v3-turbo`, code and weights MIT, ≈ 1.6 GB in `words/whisper/`):
+
+- **Brings**: without a lyrics file, a draft **`paroles (auto).txt`** in the song's folder, transcribed from
+  the vocal stem, then timed like a normal file (by line, then word by word). Rules and orange pill:
+  [step 12](#12-add-the-lyrics).
+- **Against made-up text**: only the parts where the voice sings are transcribed; looping repetitions and
+  typical captions are removed; one line per sung phrase, an empty line between two blocks.
+- **Setting**: `lyrics_auto` = `"auto"` (default) or `"off"`; language detected, or forced by
+  `words_language`. Installation without Whisper: variable `REACUE_WHISPER=0`.
+- **Fallback**: error, no singing recognised or more than 20 min → no lyrics, as before; the failure is
+  remembered for that song (no new attempt at every publication).
+- **Try it by hand**: `.venv/bin/python tools/transcribe_lyrics.py` (last prepared song) prints statistics
+  only, never the text; `--write` writes the draft if there is none.
+
+### 20.6 Removing a component
+
+- **Put it aside without deleting anything**: its setting (`structure_engine` / `chords_engine` /
+  `drums_engine` = `"reacue"`, `words_engine` / `lyrics_auto` = `"off"`), then *Prepare again*.
+- **Delete it**: delete its folders inside the `ReaCue` folder (`.venv-demucs`; `.venv-structure` and
+  `structure`; `.venv-chords` and `chords`; `.venv-drums` and `drums`; `.venv-words` and `words`). ReaCue goes
+  back to its own method automatically. The Demucs models stay in PyTorch's cache
+  (`~/.cache/torch/hub/checkpoints`, a few hundred MB): delete them too if you like.
+- **Uninstall everything**: double-click `Uninstall ReaCue.command` / `.bat`, REAPER closed (scripts, actions,
+  bridge start-up, Claude Desktop entry). Run with `--purge`, the script also deletes your settings,
+  `.venv-demucs`, `.venv-structure` and `structure`. Then delete the `ReaCue` folder: all components go with
+  it. Your songs, stems, lyrics and PDF charts stay next to your projects.
+
+---
+
+## 21. Appendix: all settings
+
+File **`reacue_settings.json`**, in the `ReaCueMCP` folder of REAPER's resources (menu *Options → Show REAPER
+resource path in explorer/finder*). The **Settings** and **Lighting** tabs write it for you; you can also edit
+it (TextEdit as plain text, Notepad), keeping the JSON syntax. A missing key takes its default value; an
+unknown key is ignored. Changes apply at the next preparation (*Prepare again*, *Rebuild the concert*).
+
+| Key | Default | Role | Where to set it |
+|---|---|---|---|
+| `language` | `"fr"` | `"fr"` or `"en"`: region names, spoken cues, prompter, messages | Settings |
+| `count_in_bars` | `2` | bars of click before bar 1 | Settings |
+| `cue_lead_bars` | `2` | spoken cue N bars before the section (2 = second-to-last bar) | Advanced settings |
+| `voice_cues` | `true` | spoken section cues (“Chorus”) | Settings |
+| `voice_count_in` | `true` | “one two three four” on the last bar of the count-in | Settings |
+| `voice_count_each` | `true` | “one two three four” on the last bar of each section | file |
+| `count_lang` | `"en"` | count language: `"en"` (one two…) or `"fr"` (un deux…) | Advanced settings |
+| `announce_voice` | `null` | system voice for the cues; `null` = automatic | Settings |
+| `count_voice` | `null` | count voice; `null` = automatic | Advanced settings |
+| `count_rate` | `240` | count speed (words per minute) | Advanced settings |
+| `voice_volume` | `0.8` | volume of the VOICE track | Advanced settings |
+| `click_volume` | `0.5` | volume of the CLICK track | Advanced settings |
+| `click_to_master` | `true` | `false` = click and voice only on `click_hw_output` (in-ears), not front of house | Settings |
+| `click_hw_output` | `null` | hardware output for click and voice: `0` = 1/2, `2` = 3/4…; `null` = none | Settings |
+| `tempo_mode` | `"auto"` | `"auto"`, `"constant"` (fixed tempo) or `"beatmap"` (one tempo per bar) | Advanced settings |
+| `stems_model` | `"htdemucs_6s"` | separation: `"htdemucs_6s"` (6 stems) or `"htdemucs"` (4 stems) | Advanced settings |
+| `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` | Settings |
+| `chords_engine` | `"auto"` | chords: `"auto"` (model when installed) or `"reacue"` | file |
+| `drums_engine` | `"auto"` | drums: `"auto"` (ADTOF when installed) or `"reacue"` | file |
+| `words_engine` | `"auto"` | lyrics: `"auto"` (word by word when installed) or `"off"` (lines only) | file |
+| `words_language` | `"auto"` | sung language (word by word, Whisper): `"auto"`, `"fr"` or `"en"` | file |
+| `lyrics_auto` | `"auto"` | without a lyrics file: `"auto"` (Whisper draft when installed) or `"off"` | file |
+| `projects_dir` | `null` | folder of the songs' projects; `null` = `<Documents>/REAPER Media` | Advanced settings |
+| `concert_dir` | `null` | folder of the concerts; `null` = `<projects folder>/Concerts` | Advanced settings |
+| `gma3_export` | `true` | write the grandMA3 files at each preparation / concert build | Lighting |
+| `gma3_fps` | `25` | timecode frames per second (24, 25, 29.97, 30) | Lighting |
+| `gma3_tc_start` | `"00:00:00:00"` | timecode of the start of the project (e.g. `"01:00:00:00"`) | Lighting |
+| `gma3_song_gap` | `null` | concert: minimum gap between two songs (s); `null` = the setlist's (4 s) | Lighting |
+| `gma3_song_slot` | `0` | concert: each song starts at the next multiple of this time (s, e.g. `600`); `0` = off | Lighting |
+| `gma3_ltc_output` | `null` | `TIMECODE LTC` track: audio output (`7`, or `"7/8"` for a pair); `null` = no track | Lighting |
+| `gma3_mtc_output` | `null` | `TIMECODE MTC` track: MIDI device name (`"IAC Driver Bus 1"`…); `null` = no track | Lighting |
+| `gma3_tc_slot` | `1` | grandMA3 TC Slot (1 to 8) set by the ReaCue plugin | Lighting |
+
+The **Stage control PIN code** is not in this file: REAPER keeps it, and you change it with the **PIN** button
+of the Stage tab (or in *Advanced settings*).
