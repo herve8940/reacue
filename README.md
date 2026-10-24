@@ -24,7 +24,7 @@ language with Claude (MCP server).
 > and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) — the optional structure analysis is for
 > **non-commercial use only**.
 
-> **Status: 1.1.0.** Developed and used on macOS (Intel). Windows and Apple Silicon support has **not yet been
+> **Status: 1.2.0.** Developed and used on macOS (Intel). Windows and Apple Silicon support has **not yet been
 > tested on a real machine** — feedback welcome.
 
 | The ReaCue window in REAPER | The prompter on a phone | Stage control (remote, PIN) |

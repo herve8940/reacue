@@ -1,6 +1,6 @@
 # Changelog
 
-## Non publié / Unreleased
+## 1.2.0 — 2026-10-24 — timecode automatique grandMA3, onglet Lumière, tutoriels complets
 
 ### Docs
 - Tutorials FR / EN: new chapter 20 “Composants facultatifs / Optional components” (installers, what each brings,
