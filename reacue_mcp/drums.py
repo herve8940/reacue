@@ -1,6 +1,14 @@
 """Transcription de la batterie par mesure pour le prompteur des musiciens (vue « batteur »).
 
-Méthode (librosa / numpy uniquement, quelques secondes) :
+Deux moteurs, même format de sortie (cf. prompter.build_song) :
+  - ADTOF (modèle entraîné sur 359 h de musique réelle, composant facultatif .venv-drums, lancé en
+    sous-processus par reacue_drums.py) : coups de grosse caisse, caisse claire, toms, charley,
+    cymbales ; le signal du stem précise toms aigu/médium/basse, charley fermé/ouvert, crash/ride ;
+    quantification sur la grille de ReaCue (double-croches ou triolets selon le morceau), puis motifs,
+    fills et crashs comme ci-dessous (from_model) ;
+  - règles sur le signal (repli, ou réglage drums_engine = « reacue »), décrites ici.
+
+Méthode par règles (librosa / numpy uniquement, quelques secondes) :
   1. stem batterie (obligatoire : sur un mix, la transcription n'est pas fiable) placé dans le temps
      du stem de référence ; STFT fine (hop 128 à 22 050 Hz, ~6 ms) ;
   2. grille à la double-croche (16 pas par mesure en 4/4) ; décalage global attaque/grille estimé ;
@@ -16,15 +24,20 @@ Méthode (librosa / numpy uniquement, quelques secondes) :
 """
 from __future__ import annotations
 
+import os
 import re
+import sys
+from pathlib import Path
 
 import numpy as np
 
 from .analysis import Analysis, SR, _place, assign_roles
 
-VERSION = "drums-1"
-LANES = ["CR", "HH", "RD", "SD", "T1", "T2", "FT", "BD"]
-GM = {"BD": 36, "SD": 38, "HH": 42, "CR": 49, "RD": 51, "T1": 48, "T2": 45, "FT": 43}
+VERSION = "drums-2"
+# HO (charley ouvert) : voie ajoutée avec le moteur ADTOF ; une ancienne page l'affiche sous son code
+LANES = ["CR", "HH", "HO", "RD", "SD", "T1", "T2", "FT", "BD"]
+GM = {"BD": 36, "SD": 38, "HH": 42, "HO": 46, "CR": 49, "RD": 51, "T1": 48, "T2": 45, "FT": 43}
+CYM = ("HH", "HO", "RD")                  # flux de cymbale du groove (le crash est compté à part)
 H = 128                       # pas d'analyse (≈ 5,8 ms)
 NFFT = 1024
 
@@ -219,14 +232,15 @@ def _cymbal_lanes(bars, steps=16, sections=None):
     return bars
 
 
-W = {"BD": 1.0, "SD": 1.0, "T1": 1.0, "T2": 1.0, "FT": 1.0, "HH": 0.5, "RD": 0.5, "CR": 0.0}
+W = {"BD": 1.0, "SD": 1.0, "T1": 1.0, "T2": 1.0, "FT": 1.0, "HH": 0.5, "HO": 0.5, "RD": 0.5, "CR": 0.0}
 
 
-def _vec(bar):
-    v = np.zeros((len(LANES), 16))
+def _vec(bar, steps=16):
+    v = np.zeros((len(LANES), max(16, steps)))
     for k, lane in enumerate(LANES):
         for s in bar.get(lane, {}):
-            v[k, int(s)] = 1
+            if 0 <= int(s) < v.shape[1]:
+                v[k, int(s)] = 1
     return v
 
 
@@ -235,11 +249,13 @@ _CORE = np.array([1.0 if l in ("BD", "SD", "T1", "T2", "FT") else 0.0 for l in L
 
 
 def _dist(u, v):
-    """BD/SD/toms : 1 par écart ; cymbales : 0,5 (charley/ride confondus) + 0,4 si la voie diffère."""
-    hh, rd = LANES.index("HH"), LANES.index("RD")
-    d = (np.abs(u - v) * _WV).sum() - 0.5 * (np.abs(u[hh] - v[hh]).sum() + np.abs(u[rd] - v[rd]).sum())
-    cu, cv = np.maximum(u[hh], u[rd]), np.maximum(v[hh], v[rd])
-    return d + 0.5 * np.abs(cu - cv).sum() + 0.4 * (np.abs(u[hh] - v[hh]).sum() + np.abs(u[rd] - v[rd]).sum())
+    """BD/SD/toms : 1 par écart ; cymbales : 0,5 (charley fermé / ouvert / ride confondus) + 0,4 si la
+    voie diffère."""
+    ci = [LANES.index(c) for c in CYM]
+    lane_d = sum(np.abs(u[i] - v[i]).sum() for i in ci)
+    d = (np.abs(u - v) * _WV).sum() - 0.5 * lane_d
+    cu, cv = u[ci].max(0), v[ci].max(0)
+    return d + 0.5 * np.abs(cu - cv).sum() + 0.4 * lane_d
 
 
 def _hits(bar):
@@ -248,7 +264,7 @@ def _hits(bar):
 
 def group(bars, sections, n_bars, rest, steps=16, near=2.5, fill_d=4.0):
     """Motifs, grooves de section, fills."""
-    V = [_vec(b) for b in bars]
+    V = [_vec(b, steps) for b in bars]
     patterns, pvec, order = {}, [], []
     sec_of = [None] * n_bars
     for si, s in enumerate(sections):
@@ -272,7 +288,8 @@ def group(bars, sections, n_bars, rest, steps=16, near=2.5, fill_d=4.0):
         if pvec:
             # même groove : mêmes grosse caisse / caisse claire (à 2 coups près) et même voie de cymbale
             def lane_(u):
-                h, r = u[LANES.index("HH")].sum(), u[LANES.index("RD")].sum()
+                h = u[LANES.index("HH")].sum() + u[LANES.index("HO")].sum()
+                r = u[LANES.index("RD")].sum()
                 return "RD" if r > h else ("HH" if h else None)
             dd = [float((np.abs(g - pv) * _CORE).sum()) if lane_(g) == lane_(pv) else 99 for pv in pvec]
             if min(dd) <= 2:
@@ -349,27 +366,17 @@ def group(bars, sections, n_bars, rest, steps=16, near=2.5, fill_d=4.0):
     return patterns, out
 
 
-def detect_drums(a: Analysis, items=None) -> dict:
-    """Transcription de la batterie (format du prompteur, cf. module) ; ValueError sans stem batterie."""
-    import librosa
-    src = _drum_source(a, items)
-    if src is None:
-        from .i18n import t as _t
-        raise ValueError(_t("no_drum_stem"))
-    f, shift = src
-    y = librosa.load(f, sr=SR, mono=True)[0]
-    n = max(len(y) + max(0, int(round(shift * SR))), int((a.downbeats[-1] + 1.0) * SR))
-    y = _place(y, shift, SR, n)
-    if a.beats_per_bar == 4 and a.denominator in (4, None):
-        steps = 16
-    else:
-        steps = 4 * int(a.beats_per_bar) if a.denominator == 4 else 2 * int(a.beats_per_bar)
-    n_bars = a.n_bars
-    bars, diag = transcribe(y, a.downbeats[:n_bars + 1], steps)
-    bars = _cymbal_lanes(bars, steps, a.sections)
-    lvl = diag["level"]
-    loud = np.percentile(lvl, 90)
-    rest = [bool(lvl[b] < loud - 2.5 or not any(bars[b].values())) for b in range(n_bars)]
+def default_steps(beats_per_bar, denominator) -> int:
+    """Pas par mesure : double-croches (16 en 4/4) ; croches subdivisées en 2 pour les mesures en /8."""
+    if beats_per_bar == 4 and denominator in (4, None):
+        return 16
+    return 4 * int(beats_per_bar) if denominator == 4 else 2 * int(beats_per_bar)
+
+
+def _rest_and_finish(a: Analysis, bars, level, steps, n_bars, offset, engine) -> dict:
+    """Mesures silencieuses, motifs, fills, noms des grooves -> format du prompteur."""
+    loud = np.percentile(level, 90) if len(level) else 0.0
+    rest = [bool(level[b] < loud - 2.5 or not any(bars[b].values())) for b in range(n_bars)]
     # au moins 3 coups pour parler de batterie (repisse / baguettes isolées)
     rest = [r or sum(len(v) for v in bars[b].values()) < 3 for b, r in enumerate(rest)]
     patterns, out = group(bars, a.sections, n_bars, rest, steps)
@@ -383,17 +390,401 @@ def detect_drums(a: Analysis, items=None) -> dict:
                 ts.append(t)
         p["name"] = f"Groove {k} — " + " / ".join(ts)
     return {"steps": steps, "lanes": used, "patterns": patterns, "bars": out,
-            "offset_ms": round(diag["offset"] * 1000, 1), "version": VERSION}
+            "offset_ms": round(offset * 1000, 1), "version": VERSION, "engine": engine}
+
+
+def _load_placed(a: Analysis, f, shift):
+    import librosa
+    y = librosa.load(f, sr=SR, mono=True)[0]
+    n = max(len(y) + max(0, int(round(shift * SR))), int((a.downbeats[-1] + 1.0) * SR))
+    return _place(y, shift, SR, n)
+
+
+def detect_rules(a: Analysis, y) -> dict:
+    """Méthode historique (règles sur le signal, sans modèle)."""
+    steps = default_steps(a.beats_per_bar, a.denominator)
+    n_bars = a.n_bars
+    bars, diag = transcribe(y, a.downbeats[:n_bars + 1], steps)
+    bars = _cymbal_lanes(bars, steps, a.sections)
+    return _rest_and_finish(a, bars, diag["level"], steps, n_bars, diag["offset"], "reacue")
+
+
+def detect_drums(a: Analysis, items=None, engine: str | None = None, install_dir=None) -> dict:
+    """Transcription de la batterie (format du prompteur, cf. module) ; ValueError sans stem batterie.
+
+    Moteur : ADTOF (modèle entraîné, composant facultatif) s'il est installé et que le réglage
+    `drums_engine` vaut « auto », sinon les règles de ReaCue ; tout échec du modèle retombe sur les règles
+    (clé « warning » dans le résultat)."""
+    src = _drum_source(a, items)
+    if src is None:
+        from .i18n import t as _t
+        raise ValueError(_t("no_drum_stem"))
+    f, shift = src
+    y = _load_placed(a, f, shift)
+    eng = engine or engine_setting()
+    warn = None
+    if eng == "auto" and available(install_dir):
+        try:
+            res, cached = model_onsets(f, install_dir)
+            out = from_model(a, y, res, shift)
+            out["model_cached"] = cached
+            return out
+        except Exception as e:                    # noqa: BLE001 - les règles de ReaCue prennent le relais
+            from .i18n import t as _t
+            warn = _t("drums_model_failed", e=e)
+            print(warn, file=sys.stderr)
+    out = detect_rules(a, y)
+    if warn:
+        out["warning"] = warn
+    return out
+
+
+def _file_sig(f) -> list:
+    try:
+        st = Path(f).stat()
+        return [str(f), st.st_size, int(st.st_mtime)]
+    except (OSError, TypeError):
+        return [str(f), None, None]
 
 
 def drums_cache_key(a: Analysis, items) -> str:
     import hashlib
     import json
     src = _drum_source(a, items)
-    return hashlib.md5(json.dumps([src and src[0], src and round(src[1], 4),
+    eng = engine_setting()
+    model = [ENGINE, ADTOF_REV, MODEL_CACHE_VERSION] if eng == "auto" and available() else None
+    return hashlib.md5(json.dumps([src and _file_sig(src[0]), src and round(src[1], 4),
                                    [round(float(x), 4) for x in a.downbeats], a.beats_per_bar,
-                                   [(s.start_bar, s.end_bar, s.name) for s in a.sections],
-                                   VERSION]).encode()).hexdigest()
+                                   a.denominator, [(s.start_bar, s.end_bar, s.name) for s in a.sections],
+                                   VERSION, model]).encode()).hexdigest()
+
+
+# --------------------------------------------------------------------------- #
+# Moteur ADTOF (modèle entraîné, composant facultatif .venv-drums)
+# --------------------------------------------------------------------------- #
+ROOT = Path(__file__).resolve().parent.parent          # dossier d'installation de ReaCue
+ENGINE = "adtof"
+# révision figée du portage PyTorch d'ADTOF (même valeur dans install/install_drums_*)
+ADTOF_REV = "85c192e78f716ea0b111cc8a5ee4a8f6a3a4f8a9"
+MODEL_CACHE_VERSION = 1
+TIMEOUT_S = 900                  # 15 min : CPU lent + 1er lancement ; au-delà, règles de ReaCue
+CLASSES = ("BD", "SD", "TT", "HH", "CY")
+
+
+def drums_python(install_dir: Path | None = None, windows: bool | None = None) -> Path:
+    d = Path(install_dir or ROOT)
+    windows = (os.name == "nt") if windows is None else windows
+    if windows:
+        return d / ".venv-drums" / "Scripts" / "python.exe"
+    return d / ".venv-drums" / "bin" / "python"
+
+
+def available(install_dir: Path | None = None) -> bool:
+    d = Path(install_dir or ROOT)
+    return (drums_python(d).exists() and (d / "reacue_drums.py").is_file()
+            and (d / "drums" / "ADTOF-pytorch" / "src" / "adtof_pytorch" / "model.py").is_file())
+
+
+def engine_setting() -> str:
+    """« auto » (ADTOF s'il est installé) | « reacue » (règles seules) ; REACUE_DRUMS_ENGINE l'emporte."""
+    env = os.environ.get("REACUE_DRUMS_ENGINE", "").lower()
+    if env in ("auto", "reacue"):
+        return env
+    try:
+        from .settings import load_settings
+        v = str(load_settings().get("drums_engine") or "auto").lower()
+    except Exception:
+        v = "auto"
+    return v if v in ("auto", "reacue") else "auto"
+
+
+def run_model(audio: str, out_json: Path, install_dir: Path | None = None, timeout: float = TIMEOUT_S,
+              python: str | None = None, script: str | None = None) -> dict:
+    """Lance reacue_drums.py analyze ; renvoie le résultat (dict) ou lève RuntimeError."""
+    import json
+    import subprocess
+    import time
+    from .i18n import t
+    d = Path(install_dir or ROOT)
+    py = python or str(drums_python(d))
+    sc = script or str(d / "reacue_drums.py")
+    out_json = Path(out_json)
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    status = out_json.with_name(out_json.stem + "_status.json")
+    for p in (out_json, status):
+        try:
+            p.unlink()
+        except OSError:
+            pass
+    cmd = [py, sc, "analyze", "--input", str(audio), "--out", str(out_json), "--status", str(status)]
+    kw = {"creationflags": 0x08000000} if os.name == "nt" else {}       # CREATE_NO_WINDOW
+    log = out_json.with_name(out_json.stem + ".log")
+    t0 = time.time()
+    with open(log, "w", encoding="utf-8") as lf:
+        proc = subprocess.Popen(cmd, stdout=lf, stderr=subprocess.STDOUT, cwd=str(d), **kw)
+        while proc.poll() is None:
+            if time.time() - t0 > timeout:
+                proc.kill()
+                proc.wait()
+                raise RuntimeError(t("drums_model_timeout", min=max(1, int(timeout // 60))))
+            time.sleep(0.2)
+    try:
+        res = json.loads(out_json.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        res = None
+    if proc.returncode != 0 or not isinstance(res, dict) or not isinstance(res.get("onsets"), dict):
+        msg = ""
+        try:
+            msg = json.loads(status.read_text(encoding="utf-8")).get("message") or ""
+        except (OSError, ValueError):
+            pass
+        raise RuntimeError(msg or f"exit {proc.returncode} ({log})")
+    return res
+
+
+def model_cache_path(f) -> Path:
+    p = Path(f)
+    return p.parent / ".reacue" / f"{p.stem}_drums_{ENGINE}.json"
+
+
+def model_cache_key(f) -> str:
+    import hashlib
+    import json
+    return hashlib.sha1(json.dumps([ENGINE, ADTOF_REV, MODEL_CACHE_VERSION,
+                                    _file_sig(Path(f).resolve())]).encode()).hexdigest()
+
+
+def model_onsets(f, install_dir: Path | None = None) -> tuple[dict, bool]:
+    """Coups détectés par ADTOF dans le stem batterie (temps du fichier) ; mis en cache à côté du stem
+    (.reacue/<stem>_drums_adtof.json) : changer la grille ou les sections ne relance pas le modèle."""
+    import json
+    import tempfile
+    cpath, key = model_cache_path(f), model_cache_key(f)
+    try:
+        c = json.loads(cpath.read_text(encoding="utf-8"))
+        if c.get("key") == key and isinstance(c.get("onsets"), dict):
+            return c, True
+    except (OSError, ValueError):
+        pass
+    with tempfile.TemporaryDirectory(prefix="reacue_drums_") as tmp:
+        res = run_model(str(f), Path(tmp) / "result.json", install_dir)
+    res = {"key": key, "engine": ENGINE, "rev": ADTOF_REV, "fps": res.get("fps", 100),
+           "onsets": {c: res["onsets"].get(c, []) for c in CLASSES}, "seconds": res.get("seconds")}
+    try:
+        cpath.parent.mkdir(parents=True, exist_ok=True)
+        cpath.write_text(json.dumps(res), encoding="utf-8")
+    except OSError:
+        pass
+    return res, False
+
+
+# ----------------------------------------------------------------- quantification sur la grille de ReaCue
+def quantize(times, downbeats, steps):
+    """Temps (s) -> (indice de mesure 0-based, pas) sur la grille (mesures de longueurs variables
+    comprises) ; un coup juste avant une barre de mesure va sur le 1er pas de la mesure suivante.
+    Renvoie deux tableaux et un masque « dans la grille »."""
+    db = np.asarray(downbeats, float)
+    t = np.asarray(times, float).reshape(-1)
+    nb = len(db) - 1
+    if nb < 1 or not len(t):
+        return np.zeros(0, int), np.zeros(0, int), np.zeros(0, bool)
+    k = np.clip(np.searchsorted(db, t, side="right") - 1, 0, nb - 1)
+    frac = (t - db[k]) / (db[k + 1] - db[k])
+    s = np.round(frac * steps).astype(int)
+    bar = k + np.floor_divide(s, steps)
+    s = np.mod(s, steps)
+    ok = (bar >= 0) & (bar < nb)
+    return bar, s, ok
+
+
+def grid_offset(times, downbeats, beats_per_bar, limit=0.04) -> float:
+    """Retard global (s) des coups par rapport à la grille : médiane des écarts à la croche la plus
+    proche (coups forts de grosse caisse / caisse claire), borné à ±40 ms."""
+    t = np.asarray(times, float)
+    if len(t) < 4:
+        return 0.0
+    sub = 2 * int(beats_per_bar)
+    bar, s, ok = quantize(t, downbeats, sub)
+    if ok.sum() < 4:
+        return 0.0
+    db = np.asarray(downbeats, float)
+    g = db[bar[ok]] + (db[bar[ok] + 1] - db[bar[ok]]) * s[ok] / sub
+    return float(np.clip(np.median(t[ok] - g), -limit, limit))
+
+
+def choose_steps(times, downbeats, beats_per_bar, denominator) -> int:
+    """Double-croches (4 pas par temps) ou triolets de croches (3 pas par temps) selon le morceau :
+    seuls les coups hors des temps comptent ; triolets si l'écart moyen à leur grille est nettement plus
+    petit. Mesures en /8 : pas de choix (croches subdivisées en 2)."""
+    base = default_steps(beats_per_bar, denominator)
+    if denominator not in (4, None):
+        return base
+    bpb = int(beats_per_bar)
+    bar, s, ok = quantize(times, downbeats, 48 * bpb)            # position fine : 1/48 de temps
+    pos = (s[ok] / 48.0) % 1.0                                    # position dans le temps (0..1)
+    pos = pos[(pos > 0.1) & (pos < 0.9)]
+    if len(pos) < 8:
+        return base
+    eb = np.abs(pos * 4 - np.round(pos * 4)) / 4
+    et = np.abs(pos * 3 - np.round(pos * 3)) / 3
+    return 3 * bpb if et.mean() < 0.6 * eb.mean() else base
+
+
+def _tom_lanes(f0s) -> list[str]:
+    """Hauteurs des coups de tom -> T1 / T2 / FT : groupes de hauteur du morceau (écart > 15 %), du plus
+    aigu (T1) au plus grave (FT) ; une seule hauteur : seuils absolus (FT < 110 Hz < T2 < 170 Hz < T1)."""
+    if not len(f0s):
+        return []
+    f = np.asarray(f0s, float)
+    order = np.argsort(f)
+    groups, cur = [], [order[0]]
+    for i in order[1:]:
+        if f[i] > f[cur[-1]] * 1.15:
+            groups.append(cur)
+            cur = [i]
+        else:
+            cur.append(i)
+    groups.append(cur)
+    out = [""] * len(f)
+    if len(groups) == 1:
+        return ["FT" if x < 110 else ("T2" if x < 170 else "T1") for x in f]
+    for gi, g in enumerate(groups):
+        lane = "FT" if gi == 0 else ("T1" if gi == len(groups) - 1 else "T2")
+        for i in g:
+            out[i] = lane
+    return out
+
+
+def from_model(a: Analysis, y, res: dict, shift: float = 0.0) -> dict:
+    """Coups ADTOF (temps du stem) -> format du prompteur, sur la grille de ReaCue.
+
+    ADTOF donne 5 classes ; le signal du stem précise : toms aigu / médium / basse (hauteur), charley
+    fermé / ouvert (l'aigu tient après le coup), crash / ride (flux régulier dans la section = ride, coup
+    plus fort sur le 1er temps = crash ; hors flux = crash)."""
+    n_bars = a.n_bars
+    db = np.asarray(a.downbeats[:n_bars + 1], float)
+    bpb = int(a.beats_per_bar)
+    ons = {}
+    for c in CLASSES:
+        v = np.asarray(res.get("onsets", {}).get(c) or [], float).reshape(-1, 2)
+        ons[c] = np.c_[v[:, 0] + shift, v[:, 1]] if len(v) else np.zeros((0, 2))
+    strong = np.concatenate([ons[c][ons[c][:, 1] >= 0.4, 0] for c in ("BD", "SD")])
+    off = grid_offset(strong, db, bpb)
+    tune = np.concatenate([ons[c][ons[c][:, 1] >= 0.3, 0] for c in ("BD", "SD", "HH", "CY")]) - off
+    steps = choose_steps(tune, db, bpb, a.denominator)
+
+    bands, lowspec, lowfr, broad = _features(y)
+    n = len(bands["bd"])
+    ref = {k: np.percentile(v, 99) for k, v in bands.items()}
+    cym = bands["cym"]
+    fr = lambda t: int(np.clip(round(t * SR / H), 0, n - 1))          # noqa: E731
+    band_of = {"BD": "bd", "SD": "snr", "TT": "body", "HH": "cym", "CY": "cym"}
+
+    def level(c, t):
+        i = fr(t)
+        e = bands[band_of[c]]
+        return round(float(e[max(0, i - 2):i + 7].max() - ref[band_of[c]]), 1)
+
+    bars = [dict() for _ in range(n_bars)]
+
+    def put(lane, b, s, lv):
+        d = bars[b].setdefault(lane, {})
+        d[int(s)] = max(lv, d.get(int(s), -999.0))
+
+    # attaques aiguës (charley + cymbales) : la tenue d'un coup est mesurée jusqu'au coup suivant
+    hi_t = np.sort(np.concatenate([ons["HH"][:, 0], ons["CY"][:, 0]]))
+
+    def next_gap(t):
+        j = np.searchsorted(hi_t, t + 0.02)
+        return float(hi_t[j] - t) if j < len(hi_t) else 1.0
+
+    for c in ("BD", "SD"):
+        bar, s, ok = quantize(ons[c][:, 0] - off, db, steps)
+        for t, b, st, o in zip(ons[c][:, 0], bar, s, ok):
+            if o:
+                put(c, b, st, level(c, t))
+    # toms
+    bar, s, ok = quantize(ons["TT"][:, 0] - off, db, steps)
+    toms = [(t, b, st) for t, b, st, o in zip(ons["TT"][:, 0], bar, s, ok) if o]
+    f0s = []
+    for t, _, _ in toms:
+        i = fr(t)
+        if lowspec.shape[1] <= i + 1:
+            f0s.append(100.0)
+            continue
+        # hauteur de ce qui vient d'arriver (le tom précédent résonne encore) : hausse du spectre grave
+        now = lowspec[:, i:i + 8].mean(1)
+        rise = np.maximum(0.0, now - lowspec[:, max(0, i - 6):max(1, i - 1)].mean(1))
+        f0s.append(float(lowfr[int(np.argmax(rise if rise.max() > 0 else now))]))
+    for (t, b, st), lane in zip(toms, _tom_lanes(f0s)):
+        put(lane, b, st, level("TT", t))
+    # charley et cymbales : décision par section (flux régulier = voie du groove), puis coup par coup
+    low_t = np.sort(np.concatenate([ons["SD"][:, 0], ons["BD"][:, 0]]))
+    hi = []                                   # (classe ADTOF, mesure, pas, niveau, tenue, ouvert, long)
+    for c in ("HH", "CY"):
+        bar, s, ok = quantize(ons[c][:, 0] - off, db, steps)
+        for t, b, st, o in zip(ons[c][:, 0], bar, s, ok):
+            if not o:
+                continue
+            i = fr(t)
+            pre = float(cym[max(0, i - 7):max(1, i - 2)].mean())
+            pk = float(cym[max(0, i - 2):i + 7].max())
+            dec = float(cym[fr(t + 0.18)]) - pk                        # tenue à 180 ms (ride / charley)
+            long_ = float(cym[fr(t + 0.3):fr(t + 0.45) + 1].min()) - pk  # creux à 300-450 ms (crash)
+            # ouvert : l'aigu tient jusqu'au coup suivant (baisse <= 60 dB/s, au moins 6 dB permis ;
+            # mesurable sur 50 ms au moins, 150 ms si une caisse claire ou une grosse caisse tombe en même
+            # temps : son timbre tient aussi un peu)
+            w = min(0.2, next_gap(t) - 0.015)
+            j = np.searchsorted(low_t, t - 0.03)
+            with_low = j < len(low_t) and abs(low_t[j] - t) <= 0.03
+            opened = False
+            if w >= (0.15 if with_low else 0.05):
+                drop = pk - float(cym[fr(t + w)])
+                opened = pk - pre > 3 and drop <= max(6.0, 60.0 * w)
+            hi.append((c, int(b), int(st), level(c, t), dec, long_, opened))
+    spans = [(sc.start_bar, min(sc.end_bar, n_bars)) for sc in a.sections] or [(0, n_bars)]
+    q = max(1, steps // bpb)
+    for b0, b1 in spans:
+        mine = [x for x in hi if b0 <= x[1] < b1]
+        if not mine:
+            continue
+
+        def stream(cls):
+            per_bar = {}
+            for x in mine:
+                if x[0] == cls:
+                    per_bar.setdefault(x[1], set()).add(x[2])
+            return bool(per_bar) and np.median([len(v) for v in per_bar.values()]) >= 3 \
+                and len(per_bar) >= 0.5 * max(1, b1 - b0)
+        ride_cy = stream("CY")
+        # charley en flux dont le son tient (médiane > -12 dB à 180 ms) : c'est une ride
+        hh_dec = [x[4] for x in mine if x[0] == "HH"]
+        ride_hh = stream("HH") and not ride_cy and float(np.median(hh_dec)) > -12
+        med = float(np.median([x[3] for x in mine]))
+        # crash dans un flux de ride : seulement le 1er coup de cymbale du 1er temps, plus fort que le flux
+        first = {}
+        for x in mine:
+            if x[0] == "CY" and x[2] < q:
+                first[x[1]] = min(first.get(x[1], q), x[2])
+        for c, b, st, lv, dec, long_, opened in mine:
+            loud_long = lv >= max(-4.0, med + 4) and long_ > -10
+            if c == "CY":
+                lane = "RD" if ride_cy and not (first.get(b) == st and lv >= med + 4) else "CR"
+            elif ride_hh:
+                lane = "CR" if loud_long else "RD"
+            else:
+                lane = "CR" if loud_long else ("HO" if opened else "HH")
+            put(lane, b, st, lv)
+    # crash et charley / ride au même pas : on garde le crash
+    for bar_ in bars:
+        for lane in CYM:
+            for st in list(bar_.get(lane, {})):
+                if st in bar_.get("CR", {}):
+                    del bar_[lane][st]
+            if lane in bar_ and not bar_[lane]:
+                del bar_[lane]
+    level_ = np.array([broad[fr(db[b]):max(fr(db[b]) + 1, fr(db[b + 1]))].max() for b in range(n_bars)])
+    return _rest_and_finish(a, bars, level_, steps, n_bars, off, ENGINE)
 
 
 def cached_drums(a: Analysis, items=None, cache=None) -> dict:

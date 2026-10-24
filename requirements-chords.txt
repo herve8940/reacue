@@ -1,0 +1,15 @@
+# ReaCue — reconnaissance d'accords (modèle Jiang et al., ISMIR 2019), environnement SÉPARÉ .venv-chords.
+# Installé par install/install_chords_mac.sh et install/install_chords_windows.ps1 avec :
+#   uv pip install --only-binary :all: -r requirements-chords.txt
+# Mêmes versions de PyTorch que la séparation de stems (Demucs) : uv les reprend dans son cache, sans
+# nouveau téléchargement, si les stems sont déjà installés. Le modèle (5 × 5,7 Mo) vient de GitHub.
+# Mac Intel : PyTorch n'existe plus pour Mac Intel après 2.2.2, qui exige numpy < 2 — testé le 23/10/2026
+torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+numba==0.62.1 ; sys_platform == "darwin" and platform_machine == "x86_64"
+llvmlite==0.45.1 ; sys_platform == "darwin" and platform_machine == "x86_64"
+# Mac Apple Silicon, Windows, Linux
+torch==2.5.1 ; sys_platform != "darwin" or platform_machine != "x86_64"
+numpy<2
+scipy<1.14
+librosa>=0.10,<0.12
+soundfile>=0.12

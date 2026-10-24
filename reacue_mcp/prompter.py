@@ -126,8 +126,47 @@ def _timeline_time(timeline: dict, bpb: int, bar: int, pos: float) -> float:
     return round(float(bt[k] + L * ((idx - k) + pos / max(1, bpb))), 4)
 
 
-def lyrics_on_timeline(lyrics: list[dict], timeline: dict, bpb: int, n_bars: int) -> list[dict]:
-    """Paroles calées (temps du fichier) -> temps de la timeline REAPER via mesure/temps."""
+def _file_bar_pos(downbeats, bpb: int, t: float) -> tuple[int, float]:
+    """Temps du fichier de référence -> (mesure 1-based, position en temps), comme lyrics._bar_pos."""
+    db = np.asarray(downbeats, dtype=float)
+    m = max(1, int(bpb))
+    if t < db[0]:
+        L = db[1] - db[0]
+        k = int(np.floor((t - db[0]) / L))
+        pos = (t - (db[0] + k * L)) / L * m
+    else:
+        k = int(min(len(db) - 2, np.searchsorted(db, t, "right") - 1))
+        pos = (t - db[k]) / (db[k + 1] - db[k]) * m
+    return k + 1, max(0.0, float(pos))
+
+
+def _words_on_timeline(o: dict, t0: float, t1: float, timeline: dict, bpb: int, downbeats) -> list[dict]:
+    """Mots d'une ligne (temps du fichier) -> temps de la timeline : par la grille (downbeats) si elle est
+    connue, sinon proportionnellement entre le début et la fin de la ligne. Bornés à la ligne, croissants."""
+    ws = o.get("words") or []
+    ft0, ft1 = float(o.get("t", 0.0)), float(o.get("end", 0.0))
+    use_grid = downbeats is not None and len(downbeats) >= 2
+
+    def conv(x):
+        if use_grid:
+            return _timeline_time(timeline, bpb, *_file_bar_pos(downbeats, bpb, float(x)))
+        if ft1 - ft0 <= 1e-6:
+            return t0
+        return t0 + (float(x) - ft0) * (t1 - t0) / (ft1 - ft0)
+    out, last = [], t0
+    for w in ws:
+        if not isinstance(w, dict) or "t" not in w:
+            return []
+        a = max(last, min(conv(w["t"]), t1))
+        b = max(a, min(conv(w.get("end", w["t"])), t1))
+        out.append({"w": str(w.get("w", "")), "t": round(a, 4), "end": round(b, 4)})
+        last = a
+    return out
+
+
+def lyrics_on_timeline(lyrics: list[dict], timeline: dict, bpb: int, n_bars: int, downbeats=None) -> list[dict]:
+    """Paroles calées (temps du fichier) -> temps de la timeline REAPER via mesure/temps.
+    Mots ("words", facultatifs) : convertis aussi (downbeats = grille du fichier de référence)."""
     out = []
     for o in lyrics or []:
         bar, pos = int(o["bar"]), float(o.get("pos", o.get("beat", 0)))
@@ -136,9 +175,16 @@ def lyrics_on_timeline(lyrics: list[dict], timeline: dict, bpb: int, n_bars: int
         eb, ep = int(o.get("end_bar", bar)), float(o.get("end_pos", pos + 1))
         t0 = _timeline_time(timeline, bpb, bar, pos)
         t1 = max(t0 + 0.2, _timeline_time(timeline, bpb, eb, ep))
-        out.append({"i": o["i"], "line": o.get("line", o["i"] + 1), "bar": bar, "beat": int(o.get("beat", 0)),
-                    "pos": round(pos, 3), "t": t0, "end": round(t1, 4), "text": o["text"],
-                    "confidence": o.get("confidence", 0.5), "copy": bool(o.get("copy", False))})
+        e = {"i": o["i"], "line": o.get("line", o["i"] + 1), "bar": bar, "beat": int(o.get("beat", 0)),
+             "pos": round(pos, 3), "t": t0, "end": round(t1, 4), "text": o["text"],
+             "confidence": o.get("confidence", 0.5), "copy": bool(o.get("copy", False))}
+        if o.get("auto"):                    # brouillon automatique (Whisper, lyrics_auto.py)
+            e["auto"] = True
+        if o.get("words"):
+            ws = _words_on_timeline(o, t0, t1, timeline, bpb, downbeats)
+            if ws:
+                e["words"] = ws
+        out.append(e)
     out.sort(key=lambda x: x["t"])
     return out
 
@@ -189,8 +235,10 @@ def build_song(a: Analysis, item: dict, timeline: dict, items: list[dict] | None
         # une entrée par mesure (1-based) : {"bar", "chords": [{"beat", "chord", "bass", "confidence"}]}
         song["chords"] = [c for c in chords if 1 <= int(c.get("bar", 0)) <= a.n_bars]
     if lyrics:
-        # une entrée par ligne chantée : {"i", "line", "bar", "beat", "pos", "t", "end" (timeline), "text", …}
-        song["lyrics"] = lyrics_on_timeline(lyrics, timeline, a.beats_per_bar, a.n_bars)
+        # une entrée par ligne chantée : {"i", "line", "bar", "beat", "pos", "t", "end" (timeline), "text", …,
+        #  "words" facultatif : [{"w", "t", "end"}] (timeline), si le calage mot par mot est installé}
+        song["lyrics"] = lyrics_on_timeline(lyrics, timeline, a.beats_per_bar, a.n_bars,
+                                            downbeats=a.downbeats if len(a.downbeats or []) >= 2 else None)
     if drums and drums.get("bars"):
         # {"steps", "lanes", "patterns": {"A": {"name", "hits", "accents"}}, "bars": [{"bar", "pattern", "fill",
         #  "crash", "rest", "hits"}]} : une entrée par mesure (1-based)

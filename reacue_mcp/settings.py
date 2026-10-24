@@ -30,8 +30,15 @@ DEFAULTS: dict = {
     "count_rate": 240,           # débit du décompte (mots/min)
     "stems_model": "htdemucs_6s",  # séparation de stems (action REAPER) : htdemucs_6s (6 stems) | htdemucs (4)
     "structure_engine": "auto",  # sections : "auto" (SongFormer s'il est installé, sinon ReaCue) | "reacue"
+    "chords_engine": "auto",     # accords : "auto" (modèle entraîné s'il est installé, sinon ReaCue) | "reacue"
+    "drums_engine": "auto",      # batterie : "auto" (ADTOF s'il est installé, sinon règles ReaCue) | "reacue"
     "projects_dir": None,        # mode concert : dossier des projets des morceaux ; None = <Documents>/REAPER Media
     "concert_dir": None,         # mode concert : dossier des concerts ; None = <dossier des projets>/Concerts
+    # paroles mot par mot (composant optionnel .venv-words)
+    "words_engine": "auto",      # "auto" (calage mot par mot s'il est installé) | "off" (lignes seulement)
+    "words_language": "auto",    # langue chantée : "auto" (déduite du texte des paroles) | "fr" | "en"
+    # paroles automatiques (Whisper, dans .venv-words) : brouillon « paroles (auto).txt » sans fichier de paroles
+    "lyrics_auto": "auto",       # "auto" (si Whisper est installé) | "off"
     # lumière grandMA3 (lighting.py) : Sequence + Timecode + fiche de conduite à chaque préparation / concert
     "gma3_export": True,         # False : aucun fichier lumière
     "gma3_fps": 25,              # images/s du timecode SMPTE (24, 25, 29.97, 30)
@@ -65,6 +72,16 @@ def load_settings(path: Path | None = None) -> dict:
     out["count_lang"] = cl if cl in LANGS else "en"
     se = str(out.get("structure_engine") or "auto").lower()
     out["structure_engine"] = se if se in ("auto", "reacue") else "auto"
+    we = str(out.get("words_engine") or "auto").lower()
+    out["words_engine"] = we if we in ("auto", "off") else "auto"
+    wl = str(out.get("words_language") or "auto").lower()[:4]
+    out["words_language"] = wl if wl in ("auto", "fr", "en") else "auto"
+    la = str(out.get("lyrics_auto") or "auto").lower()
+    out["lyrics_auto"] = la if la in ("auto", "off") else "auto"
+    ce = str(out.get("chords_engine") or "auto").lower()
+    out["chords_engine"] = ce if ce in ("auto", "reacue") else "auto"
+    de = str(out.get("drums_engine") or "auto").lower()
+    out["drums_engine"] = de if de in ("auto", "reacue") else "auto"
     out["gma3_export"] = out["gma3_export"] is not False and str(out["gma3_export"]).lower() not in ("0", "false", "no")
     return out
 

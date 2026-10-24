@@ -20,6 +20,7 @@ from . import prompter
 from . import chords
 from . import lyrics
 from . import drums
+from . import sheet
 from . import structure
 from .regions import regions_to_sections, same_structure
 
@@ -225,8 +226,8 @@ def _export_lighting(song: dict, project: str | None) -> tuple[dict | None, str 
 def _publish_prompter(analysis, item, timeline, items, project: str | None = None):
     act = prompter.stem_activity(analysis, items)
     grid, chord_warn = None, None
+    names = [d["file"] for d in items] if items else [item.get("file", "")]
     try:                                # les accords ne doivent jamais bloquer le prompteur
-        names = [d["file"] for d in items] if items else [item.get("file", "")]
         grid = chords.cached_chords(analysis, items, prompter.key_from_names(names))
     except Exception as e:
         chord_warn = t("chords_failed", e=e)
@@ -249,7 +250,14 @@ def _publish_prompter(analysis, item, timeline, items, project: str | None = Non
     out["drums"] = bool(song.get("drums"))
     if light:
         out["grandma3"] = {"cues": light["cues"], "dossier": light.get("dir")}
-    warns = [w for w in (chord_warn, lyr_warn, drum_warn, light_warn) if w]
+    pdf_warn = None
+    try:                                # grille PDF dans le dossier du morceau (jamais bloquante)
+        folder = sheet.song_folder(names)
+        if folder is not None:
+            out["pdf"] = str(sheet.write_sheet(song, folder))
+    except Exception as e:
+        pdf_warn = t("sheet_failed", e=e)
+    warns = [w for w in (chord_warn, lyr_warn, drum_warn, light_warn, pdf_warn) if w]
     if warns:
         out["warning"] = " ; ".join(warns)
     out["url"] = t("prompter_url", page=prompter.PAGE_NAME)

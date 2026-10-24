@@ -47,6 +47,8 @@ language with Claude (MCP server).
 - [Enable REAPER's web interface (prompter)](#enable-reapers-web-interface-prompter)
 - [Stem separation (optional)](#stem-separation-optional)
 - [Structure analysis (SongFormer, default)](#structure-analysis-songformer-default)
+- [Chord recognition (model, optional)](#chord-recognition-model-optional)
+- [Drum transcription (ADTOF, optional)](#drum-transcription-adtof-optional)
 - [The ReaCue window](#the-reacue-window)
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
@@ -288,6 +290,45 @@ Memory and time:
 model whose **weights are licensed CC BY-NC 4.0 (non-commercial)**; the analysis is therefore for
 personal / non-commercial use. See [Credits and licence](#credits-and-licence). The repository contains no
 model weights: they are downloaded by the installer from their authors.
+
+## Chord recognition (model, optional)
+
+By default ReaCue detects the prompter and PDF-chart chords with its own rules (chroma + bass). For more
+accurate chords (major / minor, 7, maj7, m7, sus, dim, aug, inversions such as `D/F#`) it can use a
+**trained model**: *Large-Vocabulary Chord Transcription via Chord Structure Decomposition* (Junyan Jiang,
+Ke Chen, Wei Li, Gus Xia — ISMIR 2019), **code and weights under the MIT licence**.
+
+**Install:** double-click **`Install ReaCue Chords.command`** (Mac) or **`Install ReaCue Chords.bat`**
+(Windows). It creates a separate `.venv-chords` environment, downloads the model from GitHub at a pinned
+revision into `chords/model` (about 60 MB), installs PyTorch (already cached if stem separation is installed;
+Mac Intel: PyTorch 2.2.2, numpy < 2, nothing to compile), tests it on synthetic audio and prints `CHORDS_OK`.
+
+The model listens to the stems **without vocals and drums** (or to the single file), its decoding follows
+ReaCue's beat grid, and the result keeps the usual format (at most two chords per bar, beats 1 and 3);
+sharps / flats follow the key, inversion basses are spelled as chord tones (`E/G#`, `Ab/C`), 9ths, 11ths
+and 13ths show as the matching 7th chord. About 1 to 2 min per 4-minute song on an Intel Mac CPU, about
+1.2 GB of memory, cached in the song's `.reacue` folder. Fallback to ReaCue's detection when it is not installed,
+when `chords_engine` is `"reacue"`, or on error / timeout (10 min). Compare both methods on your songs:
+`.venv/bin/python tools/compare_chords.py <song folder or audio file>…`.
+## Drum transcription (ADTOF, optional)
+
+The prompter's **Drums** view (groove, fills, crashes) comes from the drum stem. By default ReaCue
+transcribes it with its own rules; if you install this component, it uses **ADTOF**, a model trained on
+359 hours of real music (kick, snare, toms, hi-hat, cymbals), much more reliable on snare and cymbals.
+ReaCue then tells high / mid / floor tom, closed / **open** hi-hat (new “Open hi-hat” row) and crash / ride
+apart, and snaps every hit to its grid (sixteenths, or triplets for a shuffle).
+
+- Install: double-click **`Install ReaCue Drums.command`** (Mac) or **`Install ReaCue Drums.bat`**
+  (Windows). About 300 MB to download (PyTorch, already cached if stem separation is installed) + 16 MB for
+  the model, 3 to 10 minutes. Separate `.venv-drums` environment.
+- Then it is automatic (setting `drums_engine`: `auto`; `reacue` to go back to the rules); if it fails,
+  ReaCue falls back to its rules. About 20 to 60 s per song on an Intel Mac, only once (result cached next
+  to the stem, in `.reacue/`).
+- Compare before / after on a song: `.venv/bin/python tools/compare_drums.py <drum stem>`.
+
+**Licences — non-commercial use only.** ADTOF's weights are **CC BY-NC-SA 4.0**; the PyTorch port used
+(ADTOF-pytorch) states no licence. The installer asks you to type “I accept”. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## The ReaCue window
 
@@ -545,6 +586,44 @@ positions on the bar grid:
 
 Then click *Update the phones* (Song tab).
 
+### Word-by-word lyrics (optional)
+
+By default ReaCue knows where each **line** starts and ends, not each word. The optional **word-by-word
+lyrics** component places every word at its real time by *forced alignment* of the known text on the vocal
+stem, with a speech model (wav2vec2 XLSR-53 fine-tuned in **French** or **English**, Apache-2.0), on your
+computer. Line timing stays the anchor (repeats, backing vocals, unsung lines, `lyrics_timing.json` anchors):
+words are searched **inside** each line; a poorly recognised line keeps its line timing.
+
+- **Install**: double-click `Install ReaCue Words.command` (Mac) or `Install ReaCue Words.bat` (Windows).
+  Separate `.venv-words` environment (same PyTorch versions as stem separation), then the two models
+  (≈ 1.3 GB each; one language only: `REACUE_WORDS_LANGS=en bash install/install_words_mac.sh`).
+- **Use**: automatic at the next prompter update; the language is guessed from the lyrics text
+  (`words_language` setting to force it). About 1–3 minutes per song on an Intel Mac, once (cached).
+- **Result**: on the prompter (Vocals role) the current word is highlighted; in the PDF chart each word goes
+  in the bar where it is sung. `tools/compare_words.py` shows before / after without ever printing the lyrics.
+
+### Automatic lyrics (optional)
+
+No lyrics file? If the `.venv-words` component also contains **Whisper** (OpenAI, code and model under the
+MIT licence), ReaCue transcribes the vocal stem on your computer and writes a **draft** `paroles (auto).txt`
+in the song folder, then used like a normal lyrics file (line timing, then word by word). It is a draft:
+speech recognition makes mistakes on singing.
+
+- **Your file first**: `lyrics.txt` (or `paroles.txt`…) always wins. The draft is created once and **never
+  overwritten**: correct it in place, or rename it `lyrics.txt` once corrected, then *Update the phones*.
+  Lines starting with `#` (at the top of the draft) are ignored.
+- **ReaCue window**: orange pill *Lyrics: auto (N lines)*; click = open the draft. The PDF chart mentions it
+  in its footer.
+- **Install** (or complete an existing install without redoing everything): run `Install ReaCue Words`
+  again (or `bash install/install_words_mac.sh`): it adds Whisper and downloads the `large-v3-turbo` model
+  (≈ 1.6 GB) into `words/whisper/`. Without Whisper: `REACUE_WHISPER=0 bash install/install_words_mac.sh`.
+- **Time**: several minutes per song on an Intel Mac (once). Only the sung parts of the vocal stem are
+  transcribed (no invented text on silences); one line = one sung phrase, empty line between blocks
+  separated by a long silence. Language detected (mostly French / English) or forced with `words_language`.
+- **Try it by hand**: `.venv/bin/python tools/transcribe_lyrics.py` (last prepared song) prints statistics
+  only (lines, words, language, computing time), never the text; `--write` writes the draft if missing.
+- **Turn off**: setting `lyrics_auto` = `"off"`.
+
 ## Settings
 
 Easiest: the **Settings** tab of the ReaCue window (written at once, other keys of the file kept).
@@ -569,6 +648,10 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `tempo_mode` | `"auto"` | `auto`, `constant` (one tempo) or `beatmap` (one tempo per bar) |
 | `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems) or `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
+| `words_engine` | `"auto"` | lyrics: `"auto"` (word by word when the component is installed) or `"off"` (lines only) |
+| `words_language` | `"auto"` | sung language for word timing: `"auto"` (guessed from the text), `"fr"` or `"en"` |
+| `lyrics_auto` | `"auto"` | without a lyrics file: `"auto"` (draft `paroles (auto).txt` by Whisper when installed) or `"off"` |
+| `chords_engine` | `"auto"` | chords: `"auto"` (chord model when installed) or `"reacue"` (ReaCue's own detection) |
 | `projects_dir` | `null` | concert mode: folder searched for song projects by name; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | concert mode: folder of the concerts; `null` = `<projects folder>/Concerts` |
 | `gma3_export` | `true` | write the grandMA3 lighting files at each preparation / concert build |
@@ -745,6 +828,15 @@ Project layout:
   by its authors. Do not use this optional component for a commercial product or service without the
   rights holders' permission. The rest of ReaCue (including stem separation with Demucs, MIT) is not
   affected; you can always use ReaCue without it (setting *Structure detection: ReaCue only*).
+- **Word-by-word lyrics (optional)**: J. Grosman's wav2vec2 XLSR-53 models (Apache-2.0, from Meta's
+  XLSR-53, Apache-2.0), downloaded from Hugging Face by the installer; no non-commercial restriction.
+- **Automatic lyrics (optional)**: OpenAI's openai-whisper and Whisper `large-v3-turbo` model (code and
+  weights **MIT**), downloaded by the installer; transcription runs on your computer, from your own files,
+  and the draft stays in the song folder.
+- **Chord recognition (optional):** model by Jiang et al. (Music X Lab), code and weights under the **MIT**
+  licence, downloaded from GitHub by `Install ReaCue Chords`; no known commercial restriction.
+- **Drum transcription (ADTOF) — non-commercial use only.** Optional component whose weights are licensed
+  **CC BY-NC-SA 4.0 (non-commercial)**; without it, ReaCue transcribes drums with its own rules.
 - **Your music:** you alone are responsible for having the rights to the audio, stems and lyrics you
   process with ReaCue. ReaCue provides **no audio and no lyrics**, and never downloads lyrics.
 - **Trademarks:** REAPER is a trademark of Cockos Incorporated; Claude is a trademark of Anthropic; other
@@ -766,6 +858,10 @@ Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), which uses
 CC BY-NC 4.0, non-commercial**) and [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
 ByteDance; code MIT; the licence of its MSD checkpoint is not stated by its authors). Downloaded by the
 installer at fixed versions, never included in this repository.
+
+Automatic lyrics (optional): [Whisper](https://github.com/openai/whisper) (OpenAI, code and weights MIT;
+[arXiv:2212.04356](https://arxiv.org/abs/2212.04356)), `large-v3-turbo` model, downloaded by the installer,
+never included in this repository.
 
 QR codes by [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach and contributors,
 3-clause BSD licence; the licence header is kept in `reaper/ReaCue_qrcode.lua`).

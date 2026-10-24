@@ -461,6 +461,12 @@ ReaCue never downloads lyrics: **you provide the text**.
 The lines are aligned automatically on the vocal stem. If a line is off, you can place it by hand with a
 timing file `lyrics_timing.json` (see the *Lyrics* section of the README).
 
+**No text at hand?** If *automatic lyrics* are installed (Whisper, with `Install ReaCue Words`), ReaCue
+transcribes the vocal stem and writes a draft **`paroles (auto).txt`** in the song folder; the pill turns
+orange: **Lyrics: auto (N lines)**. Click it to open the draft, correct it by ear (in place, or rename it
+`lyrics.txt`), then **Update the phones**. Your own `lyrics.txt` always wins, and the draft is never
+overwritten.
+
 ---
 
 ## 13. Open the prompter on the phones

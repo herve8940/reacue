@@ -792,3 +792,87 @@ def test_english_new_views(concert, tmp_path):
     press_text(L, g, "Advanced settings", exact=True); frame(L, g)
     T = TL.texts(g)
     assert "Click volume" in T and "Count speed" in T and "Simple settings" in T and "Check the installation" in T, T
+
+
+@pytest.mark.parametrize("title, ok", [
+    ("Song One-A minor-120bpm", True),              # stems : début commun des noms (serveur, _common_title)
+    ("Song One-A minor-120bpm-vocals", True),       # un seul fichier : son nom
+    ("Song One", True),                             # titre plus court, suivi d'un séparateur
+    ("Song Two", False), ("Song On", False),        # autre morceau / coupé au milieu d'un mot
+])
+def test_published_pills_match_stem_titles(concert, tmp_path, title, ok):
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path, structure=True)
+    song = {"version": 1, "title": title, "chords": [{"bar": 1, "chords": []}],
+            "drums": {"steps": 16, "bars": []}}
+    (Path(g.RES) / "reaper_www_root" / "reacue_song.json").write_text(json.dumps(song), encoding="utf-8")
+    open_window(L, g)
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    want = ("Accords ✓", "Batterie ✓", "Prompteur publié ✓") if ok else ("Accords —", "Batterie —", "Prompteur —")
+    for p in want:
+        assert p in T, (title, p, T)
+
+
+def test_sheet_pill_opens_pdf_or_publishes(concert, tmp_path):
+    L, g, res = song_runtime(concert, tmp_path)
+    install(g, tmp_path, structure=True)
+    www = Path(g.RES) / "reaper_www_root" / "reacue_song.json"
+    www.write_text(json.dumps({"version": 1, "title": "Song One-A minor-120bpm"}), encoding="utf-8")
+    open_window(L, g)
+    frame(L, g); frame(L, g)
+    assert "Grille PDF —" in TL.texts(g)
+    # pas encore de grille : clic = mettre à jour les téléphones (qui écrit la grille)
+    press_text(L, g, "Grille PDF —", exact=True)
+    assert "-m reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
+    status(g, state="done", cmd="publish", message="ok")
+    frame(L, g); press_text(L, g, "OK", exact=True)
+    pdf = tmp_path / "Song One" / "Grille - Song One-A minor-120bpm.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+    g.state.t = g.state.t + 3                      # relecture du dossier (toutes les 2 s)
+    frame(L, g); frame(L, g)
+    assert "Grille PDF ✓" in TL.texts(g), TL.texts(g)
+    n = len(g.state.shell)
+    press_text(L, g, "Grille PDF ✓", exact=True)
+    cmds = list(g.state.shell.values())[n:]
+    assert any(str(pdf) in c for c in cmds), cmds
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_lyrics_pill_auto_draft(concert, tmp_path, lang):
+    """Paroles venues du brouillon automatique (Whisper) : pastille orange « auto (N lignes) », aide au survol,
+    clic = ouvrir le fichier ; le fichier de l'utilisateur reste prioritaire. Texte fictif."""
+    L, g, res = song_runtime(concert, tmp_path, lang=lang)
+    install(g, tmp_path, structure=True)
+    d = tmp_path / "Song One"
+    (d / "paroles.txt").unlink()
+    auto = d / "paroles (auto).txt"
+    auto.write_text("# Brouillon automatique\n# à corriger\n\nZorblat quimpe\nVaxu frimbel\n\nDostra klop\n",
+                    encoding="utf-8")
+    open_window(L, g)
+    frame(L, g); frame(L, g)
+    lab = "Paroles : auto (3 lignes)" if lang == "fr" else "Lyrics: auto (3 lines)"
+    T = TL.texts(g)
+    assert lab in T, T
+    x, y = text_xy(g, lab)
+    # pastille orange (U.WARN) : contour arrondi de la couleur d'avertissement autour du texte
+    rr = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "rrect"]
+    near = [o for o in rr if o[1] <= x <= o[1] + o[3] and o[2] <= y <= o[2] + o[4]]
+    assert near and all(round(o[5] * 255) == 239 and round(o[6] * 255) == 159 for o in near), near
+    gx = L.globals().gfx
+    gx.mouse_x, gx.mouse_y = x + 2, y + 2
+    frame(L, g)
+    tip = ("Paroles transcrites automatiquement (Whisper)" if lang == "fr"
+           else "Lyrics transcribed automatically (Whisper)")
+    assert any(t.startswith(tip) for t in TL.texts(g)), TL.texts(g)
+    gx.mouse_x, gx.mouse_y = 0, 0
+    n = len(g.state.shell)
+    press_text(L, g, lab, exact=True)
+    cmds = list(g.state.shell.values())[n:]
+    assert any(str(auto) in c for c in cmds), cmds
+    # le fichier de l'utilisateur est prioritaire
+    (d / "paroles.txt").write_text("ligne un\nligne deux\n", encoding="utf-8")
+    g.state.t = g.state.t + 3
+    frame(L, g); frame(L, g)
+    T = TL.texts(g)
+    assert ("Paroles : 2 lignes" if lang == "fr" else "Lyrics: 2 lines") in T and lab not in T, T

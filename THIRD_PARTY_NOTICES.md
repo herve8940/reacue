@@ -19,12 +19,15 @@ is responsible for complying with their licences.
 L'**analyse de structure (SongFormer)**, composant facultatif, télécharge les poids **MuQ-large-msd-iter**,
 publiés sous **CC BY-NC 4.0 : usage non commercial uniquement**. Le modèle MusicFM (MSD) n'a pas de
 licence propre clairement indiquée (voir plus bas). N'utilise pas ce composant dans un cadre commercial
-(produit ou service payant) sans l'accord des ayants droit. Le reste de ReaCue n'est pas concerné.
+(produit ou service payant) sans l'accord des ayants droit. De même, la **transcription de batterie
+(ADTOF)**, composant facultatif, télécharge des poids sous **CC BY-NC-SA 4.0 (non commerciale)**. Le reste
+de ReaCue n'est pas concerné.
 
 The optional **structure analysis (SongFormer)** component downloads the **MuQ-large-msd-iter** weights,
 released under **CC BY-NC 4.0: non-commercial use only**. The MusicFM (MSD) checkpoint has no clearly
 stated licence of its own (see below). Do not use this component commercially (paid product or service)
-without the rights holders' permission. The rest of ReaCue is not affected.
+without the rights holders' permission. Likewise, the optional **drum transcription (ADTOF)** component
+downloads weights under **CC BY-NC-SA 4.0 (non-commercial)**. The rest of ReaCue is not affected.
 
 ## Inclus dans le dépôt / Included in this repository
 
@@ -40,16 +43,30 @@ without the rights holders' permission. The rest of ReaCue is not affected.
 | **SongFormer** (`SongFormer.safetensors`) | Analyse de structure (facultatif) / structure analysis (optional) | [ASLP-lab/SongFormer](https://github.com/ASLP-lab/SongFormer), [HF ASLP-lab/SongFormer](https://huggingface.co/ASLP-lab/SongFormer) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (attribution obligatoire / attribution required) | Page HF : badge CC BY 4.0, pas d'étiquette de licence formelle / HF page: CC BY 4.0 badge, no formal licence tag |
 | **MuQ** `OpenMuQ/MuQ-large-msd-iter` | Dépendance de SongFormer / SongFormer dependency | [tencent-ailab/MuQ](https://github.com/tencent-ailab/MuQ) (Tencent AI Lab), [HF OpenMuQ/MuQ-large-msd-iter](https://huggingface.co/OpenMuQ/MuQ-large-msd-iter) | MIT | **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — non commercial** (fichier `LICENSE_weights` du dépôt et étiquette HF / `LICENSE_weights` file and HF tag) |
 | **MusicFM** MSD (`pretrained_msd.pt`, `msd_stats.json`) | Dépendance de SongFormer / SongFormer dependency | [minzwon/musicfm](https://github.com/minzwon/musicfm) (Minz Won, Yun-Ning Hung, Duc Le — ByteDance), [HF minzwon/MusicFM](https://huggingface.co/minzwon/MusicFM) | MIT (+ Apache-2.0 pour `modules/flash_conformer.py`) | **Incertaine / uncertain** : le dépôt HF est étiqueté MIT mais n'a pas de carte et rien n'est dit sur `pretrained_msd.pt` ; ce modèle est entraîné sur le Million Song Dataset, et le README des auteurs ne publie volontairement que le modèle FMA « pour éviter des complications de licence ». / The HF repo is tagged MIT but has no model card and says nothing about `pretrained_msd.pt`; this checkpoint is trained on the Million Song Dataset, and the authors' README says they chose to release the FMA model “to avoid potential licensing complications”. |
+| **wav2vec2 XLSR-53 français / anglais** `jonatasgrosman/wav2vec2-large-xlsr-53-french`, `jonatasgrosman/wav2vec2-large-xlsr-53-english` | Paroles calées mot par mot (facultatif) / word-by-word lyrics timing (optional) | [HF jonatasgrosman/wav2vec2-large-xlsr-53-french](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-french), [HF jonatasgrosman/wav2vec2-large-xlsr-53-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english) (Jonatas Grosman), affinés à partir de / fine-tuned from [facebook/wav2vec2-large-xlsr-53](https://huggingface.co/facebook/wav2vec2-large-xlsr-53) (Meta AI) sur / on Common Voice (CC0) | — (pas de code : ReaCue lit les poids avec PyTorch / torchaudio ; no code: ReaCue reads the weights with PyTorch / torchaudio) | Apache-2.0 (étiquette des pages HF des modèles et du modèle de base / tag of the model pages and of the base model; à revérifier sur ces pages, non consultables depuis l'environnement de développement le 23 octobre 2026 / to be re-checked on those pages, not reachable from the development environment on 23 October 2026) |
+| **Reconnaissance d'accords / chord recognition** — Jiang et al., ISMIR 2019 (5 réseaux `joint_chord_net_ismir_naive_v1.0_reweight(0.0,10.0)_s0…s4.best.sdict`, ~29 Mo) | Accords du prompteur et de la grille PDF (facultatif) / prompter and PDF chart chords (optional) | [music-x-lab/ISMIR2019-Large-Vocabulary-Chord-Recognition](https://github.com/music-x-lab/ISMIR2019-Large-Vocabulary-Chord-Recognition) (Junyan Jiang, Ke Chen, Wei Li, Gus Xia — Music X Lab), révision figée / pinned revision `481f4ce7`, téléchargée dans `chords/model` | MIT (© 2023 Music X Lab) | MIT : les poids sont fournis dans le même dépôt GitHub, sous la même licence, sans licence séparée (vérifié le 23 octobre 2026). Entraîné sur des annotations publiques et des enregistrements commerciaux non redistribués. / MIT: the weights ship in the same GitHub repository, under the same licence, with no separate licence (checked on 23 October 2026). Trained on public annotations and commercial recordings that are not redistributed. |
+| **ADTOF** Frame_RNN (`adtof_frame_rnn_pytorch_weights.pth`, 16 Mo / MB) | Transcription de batterie (facultatif) / drum transcription (optional) | [MZehren/ADTOF](https://github.com/MZehren/ADTOF) (Mickaël Zehren, Marco Alunno, Paolo Bientinesi) ; poids convertis pour PyTorch par / weights converted to PyTorch by [xavriley/ADTOF-pytorch](https://github.com/xavriley/ADTOF-pytorch) (Xavier Riley), téléchargés depuis GitHub / downloaded from GitHub | ADTOF : **[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)** ; ADTOF-pytorch : **aucune licence indiquée / no licence stated** | **CC BY-NC-SA 4.0 — non commercial** (poids d'origine d'ADTOF, fichier `LICENSE` du dépôt ; la conversion PyTorch en dérive / original ADTOF weights, repository `LICENSE` file; the PyTorch conversion derives from them) |
+| **Whisper** `large-v3-turbo` (`large-v3-turbo.pt`, ≈ 1,6 Go / GB) | Paroles automatiques : brouillon « paroles (auto).txt » quand le morceau n'a pas de fichier de paroles (facultatif) / automatic lyrics: draft when the song has no lyrics file (optional) | [openai/whisper](https://github.com/openai/whisper) (OpenAI) — téléchargé par l'installateur depuis le serveur d'OpenAI (contrôle SHA-256), repli / fallback [HF openai/whisper-large-v3-turbo](https://huggingface.co/openai/whisper-large-v3-turbo) converti localement / converted locally | MIT (openai-whisper, PyPI) | MIT (« Whisper's code and model weights are released under the MIT License », README d'openai/whisper ; carte du modèle HF : MIT / HF model card: MIT) |
 | Configuration `facebook/wav2vec2-conformer-rope-large-960h-ft` | Configuration lue par MusicFM (pas de poids) / config read by MusicFM (no weights) | [Hugging Face](https://huggingface.co/facebook/wav2vec2-conformer-rope-large-960h-ft) (Meta) | — | Apache-2.0 (étiquette HF / HF tag) |
 
 ## Code source téléchargé par l'installateur / Source code fetched by the installer
 
 Révisions figées (voir `reacue_mcp/structure.py`) / Pinned revisions: SongFormer (CC BY 4.0), MuQ (MIT),
 MusicFM (MIT / Apache-2.0) — téléchargés dans `structure/`, jamais redistribués par ce dépôt.
+Reconnaissance d'accords / chord recognition : dépôt music-x-lab (MIT, voir `reacue_mcp/chord_model.py`)
+téléchargé dans `chords/model` ; son code est importé tel quel par `reacue_chords.py` (sans modification).
+/ fetched into `chords/model`; its code is imported unmodified by `reacue_chords.py`.
+
+Transcription de batterie (voir `reacue_mcp/drums.py`) / Drum transcription: ADTOF-pytorch, révision
+figée / pinned revision `85c192e78f716ea0b111cc8a5ee4a8f6a3a4f8a9` (code sans licence indiquée + poids
+CC BY-NC-SA 4.0 / code with no stated licence + CC BY-NC-SA 4.0 weights) — téléchargé dans `drums/` après
+l'accord « J'accepte », jamais redistribué par ce dépôt ; ReaCue n'en utilise que le chargement du modèle
+(son propre code fait le reste) / fetched into `drums/` after the “I accept” step, never redistributed by
+this repository; ReaCue only uses its model loading (its own code does the rest).
 
 ## Paquets Python / Python packages
 
-Installés par l'installateur depuis PyPI dans `.venv`, `.venv-demucs` ou `.venv-structure` ; jamais
+Installés par l'installateur depuis PyPI dans `.venv`, `.venv-demucs`, `.venv-structure` ou `.venv-words` ; jamais
 redistribués par ce dépôt. Licences relevées sur PyPI le 22/10/2026. / Installed from PyPI by the
 installer; never redistributed by this repository.
 
@@ -61,22 +78,29 @@ installer; never redistributed by this repository.
 | numpy | tous / all | BSD-3-Clause (+ 0BSD, MIT, Zlib, CC0-1.0 pour des parties incluses / for bundled parts) |
 | scipy | tous / all | BSD |
 | demucs | `.venv-demucs` | MIT |
-| torch | `.venv-demucs`, `.venv-structure` | BSD-3-Clause (+ Apache-2.0 / LLVM exception et autres pour des parties incluses / for bundled parts) |
-| torchaudio, torchvision | `.venv-demucs`, `.venv-structure` | BSD |
-| numba, llvmlite | `.venv`, `.venv-structure` | BSD (llvmlite : BSD-2-Clause + Apache-2.0 with LLVM exception) |
+| torch | `.venv-demucs`, `.venv-structure`, `.venv-words` | BSD-3-Clause (+ Apache-2.0 / LLVM exception et autres pour des parties incluses / for bundled parts) |
+| torchaudio, torchvision | `.venv-demucs`, `.venv-structure`, `.venv-words` (torchaudio) | BSD |
+| numba, llvmlite | `.venv`, `.venv-structure`, `.venv-words` | BSD (llvmlite : BSD-2-Clause + Apache-2.0 with LLVM exception) |
+| openai-whisper | `.venv-words` | MIT |
+| tiktoken | `.venv-words` | MIT |
+| more-itertools | `.venv-words` | MIT |
 | omegaconf | `.venv-structure` | BSD |
 | hydra-core | `.venv-structure` | MIT |
 | einops | `.venv-structure` | MIT |
 | x-transformers, x-clip, ema-pytorch | `.venv-structure` | MIT |
-| transformers, safetensors, huggingface-hub | `.venv-structure` | Apache-2.0 |
+| transformers, safetensors, huggingface-hub | `.venv-structure` ; `.venv-words` (safetensors, huggingface-hub) | Apache-2.0 |
 | nnAudio | `.venv-structure` | MIT |
 | easydict | `.venv-structure` | **LGPL-3.0** (bibliothèque utilisée telle quelle, non modifiée, non redistribuée / used unmodified, not redistributed) |
 | pandas | `.venv-structure` | BSD 3-Clause |
 | matplotlib | `.venv-structure` | Licence matplotlib (de type PSF / PSF-based) |
 | requests | `.venv-structure` | Apache-2.0 |
-| tqdm | `.venv-structure` | MPL-2.0 AND MIT |
+| tqdm | `.venv-structure`, `.venv-words` | MPL-2.0 AND MIT |
 | uv (installateur / installer, Astral) | outil / tool | MIT OR Apache-2.0 |
 | Tests : pytest, lupa, playwright | développement / development | MIT, MIT, Apache-2.0 |
+
+Reconnaissance d'accords / chord recognition (`.venv-chords`, `requirements-chords.txt`) : torch
+(BSD-3-Clause), librosa (ISC), numpy, scipy, soundfile (BSD), numba / llvmlite (BSD) — les mêmes paquets
+que ci-dessus / the same packages as above.
 
 Les dépendances indirectes de ces paquets suivent leurs propres licences (voir PyPI). / Transitive
 dependencies follow their own licences (see PyPI).
@@ -99,5 +123,16 @@ dependencies follow their own licences (see PyPI).
   Vector Quantization*, arXiv:2501.01108, 2025. https://arxiv.org/abs/2501.01108
 - Minz Won, Yun-Ning Hung, Duc Le, *A Foundation Model for Music Informatics*, arXiv:2311.03318, 2023.
   https://arxiv.org/abs/2311.03318
+- Alexis Conneau, Alexei Baevski, Ronan Collobert, Abdelrahman Mohamed, Michael Auli (Meta AI), *Unsupervised
+  Cross-lingual Representation Learning for Speech Recognition* (XLSR-53), arXiv:2006.13979, 2020.
+  https://arxiv.org/abs/2006.13979 — modèles affinés / fine-tuned models : Jonatas Grosman, *Fine-tuned XLSR-53 large
+  model for speech recognition in French / English*, Hugging Face, 2021.
+- Alec Radford, Jong Wook Kim, Tao Xu, Greg Brockman, Christine McLeavey, Ilya Sutskever (OpenAI), *Robust Speech
+  Recognition via Large-Scale Weak Supervision* (Whisper), arXiv:2212.04356, 2022. https://arxiv.org/abs/2212.04356
+- Mickaël Zehren, Marco Alunno, Paolo Bientinesi, *ADTOF: A large dataset of non-synthetic music for
+  automatic drum transcription*, ISMIR 2021, pp. 818–824 ; *High-Quality and Reproducible Automatic Drum
+  Transcription from Crowdsourced Data*, Signals 4(4), 768–787, 2023. https://doi.org/10.3390/signals4040042
 - Simon Rouard, Francisco Massa, Alexandre Défossez, *Hybrid Transformers for Music Source Separation*,
   ICASSP 2023, arXiv:2211.08553. https://arxiv.org/abs/2211.08553
+- Junyan Jiang, Ke Chen, Wei Li, Gus Xia, *Large-Vocabulary Chord Transcription via Chord Structure
+  Decomposition*, ISMIR 2019. https://archives.ismir.net/ismir2019/paper/000078.pdf

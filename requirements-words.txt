@@ -1,0 +1,25 @@
+# ReaCue — paroles calées mot par mot (alignement forcé wav2vec2) et paroles automatiques (Whisper),
+# environnement SÉPARÉ .venv-words / separate environment.
+# Installé par install/install_words_mac.sh et install/install_words_windows.ps1 avec :
+#   uv pip install --only-binary :all: -r requirements-words.txt
+# Mêmes versions de PyTorch que la séparation de stems (Demucs) : le cache de uv évite un 2e téléchargement.
+# Pas de transformers : les poids Hugging Face sont convertis par reacue_words.py vers torchaudio.
+# Mac Intel : PyTorch n'existe plus pour Mac Intel après 2.2.2, qui exige numpy < 2
+torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+torchaudio==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+numpy<2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+# Mac Apple Silicon, Windows, Linux (torchaudio.functional.forced_align : 2.1 et suivantes)
+torch==2.5.1 ; sys_platform != "darwin" or platform_machine != "x86_64"
+torchaudio==2.5.1 ; sys_platform != "darwin" or platform_machine != "x86_64"
+numpy ; sys_platform != "darwin" or platform_machine != "x86_64"
+soundfile>=0.12
+safetensors>=0.4
+huggingface-hub>=0.23
+# Paroles automatiques (Whisper) : dépendances d'openai-whisper (lui-même installé ensuite par
+# requirements-whisper.txt avec --no-deps : code Python pur, publié sans roue). numba / llvmlite épinglés sur des
+# versions qui ont des roues Mac Intel (macosx x86_64) pour Python 3.12 ; numba 0.62 accepte numpy < 2.
+numba==0.62.1
+llvmlite==0.45.1
+tiktoken==0.9.0
+more-itertools>=10
+tqdm>=4.66

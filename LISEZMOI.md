@@ -46,6 +46,8 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [Activer l'interface web de REAPER (prompteur)](#activer-linterface-web-de-reaper-prompteur)
 - [Séparation de stems (facultatif)](#séparation-de-stems-facultatif)
 - [Analyse de structure (SongFormer, par défaut)](#analyse-de-structure-songformer-par-défaut)
+- [Reconnaissance d'accords (modèle, facultatif)](#reconnaissance-daccords-modèle-facultatif)
+- [Transcription de batterie (ADTOF, facultatif)](#transcription-de-batterie-adtof-facultatif)
 - [La fenêtre ReaCue](#la-fenêtre-reacue)
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
@@ -295,6 +297,52 @@ s'appuie sur le modèle **MuQ** dont les **poids sont sous licence CC BY-NC 4.0 
 l'analyse est donc réservée à un usage personnel / non commercial. Voir [Crédits et
 licence](#crédits-et-licence). Le dépôt ne contient aucun poids de modèle : l'installateur les télécharge
 chez leurs auteurs.
+
+## Reconnaissance d'accords (modèle, facultatif)
+
+Par défaut, ReaCue détecte les accords du prompteur et de la grille PDF avec ses propres règles (chroma +
+basse). Pour des accords plus justes (majeur / mineur, 7e, maj7, m7, sus, dim, aug, renversements comme
+`D/F#`), il peut utiliser un **modèle entraîné** : *Large-Vocabulary Chord Transcription via Chord Structure
+Decomposition* (Junyan Jiang, Ke Chen, Wei Li, Gus Xia — ISMIR 2019), **code et poids sous licence MIT**.
+
+**Installer :** double-clic sur **`Install ReaCue Chords.command`** (Mac) ou **`Install ReaCue Chords.bat`**
+(Windows), ou `bash install/install_chords_mac.sh`. L'installateur crée un environnement séparé
+`.venv-chords` (le `.venv` de ReaCue n'est pas touché), télécharge le modèle depuis GitHub à une version
+figée dans `chords/model` (environ 60 Mo), installe PyTorch (déjà en cache si la séparation de stems est
+installée ; sur Mac Intel : PyTorch 2.2.2, numpy < 2, aucun paquet à compiler), puis fait un essai sur un
+audio synthétique et affiche `CHORDS_OK`.
+
+| | |
+|---|---|
+| Entrée | les stems **sans la voix ni la batterie** (guitares, basse, claviers, other), sinon le fichier unique |
+| Calage | le décodage suit les temps de la grille de ReaCue (changements sur les temps, surtout 1 et 3), puis au plus deux accords par mesure, comme avant |
+| Nommage | dièses / bémols selon la tonalité (nom du fichier, sinon estimée) ; basse des renversements épelée comme note de l'accord (`E/G#`, `Ab/C`) |
+| Lisibilité | 9e, 11e, 13e affichées comme la 7e correspondante (`G9` → `G7`) |
+| Temps | environ 1 à 2 min par morceau de 4 min sur un Mac Intel (processeur), environ 1,2 Go de mémoire ; résultat mémorisé dans le dossier `.reacue` du morceau (un changement de grille ne relance que le décodage) |
+| Repli | modèle non installé, réglage `chords_engine` = `"reacue"`, erreur ou délai dépassé (10 min) → détection de ReaCue (message « Modèle d'accords indisponible : … ») ; après un échec, pas de nouvel essai sur le même audio pendant 1 h |
+
+**Comparer** les deux méthodes sur tes morceaux : `.venv/bin/python tools/compare_chords.py <dossier du
+morceau ou fichier audio>…` (affiche les deux grilles mesure par mesure et leur taux d'accord).
+## Transcription de batterie (ADTOF, facultatif)
+
+La vue **Batterie** du prompteur (groove, fills, crashs) vient du stem batterie. Par défaut ReaCue le
+transcrit avec ses propres règles ; si tu installes ce composant, il utilise **ADTOF**, un modèle entraîné
+sur 359 heures de musique réelle (grosse caisse, caisse claire, toms, charley, cymbales), bien plus fiable
+sur la caisse claire et les cymbales. ReaCue précise ensuite tom aigu / médium / basse, charley fermé /
+**ouvert** (nouvelle ligne « Charley ouv. »), crash / ride, et cale chaque coup sur sa grille
+(double-croches, ou triolets pour un morceau shuffle).
+
+- Installation : double-clique **`Install ReaCue Drums.command`** (Mac) ou **`Install ReaCue Drums.bat`**
+  (Windows). Environ 300 Mo à télécharger (PyTorch, déjà en cache si la séparation de stems est installée)
+  + 16 Mo pour le modèle, 3 à 10 minutes. Environnement séparé `.venv-drums`.
+- Ensuite c'est automatique (réglage `drums_engine` : `auto` ; `reacue` pour revenir aux règles) ; en cas
+  d'échec, ReaCue reprend ses règles. Calcul : environ 20 à 60 s par morceau sur un Mac Intel, une seule
+  fois (résultat mémorisé à côté du stem, dans `.reacue/`).
+- Comparer avant / après sur un morceau : `.venv/bin/python tools/compare_drums.py <stem batterie>`.
+
+**Licences — usage non commercial uniquement.** Les poids d'ADTOF sont sous **CC BY-NC-SA 4.0** ; le
+portage PyTorch utilisé (ADTOF-pytorch) n'indique pas de licence. L'installateur demande de taper
+« J'accepte ». Voir [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## La fenêtre ReaCue
 
@@ -570,6 +618,55 @@ seulement des numéros de ligne et des positions sur la grille :
 
 Clique ensuite *Mettre à jour les téléphones* (onglet Morceau).
 
+### Paroles mot par mot (facultatif)
+
+Par défaut, ReaCue sait où commence et finit chaque **ligne**, pas chaque mot : la grille PDF répartit les
+mots régulièrement dans la ligne. Le composant facultatif **paroles mot par mot** place chaque mot à son vrai
+moment par *alignement forcé* du texte connu sur le stem voix, avec un modèle de reconnaissance de la parole
+(wav2vec2 XLSR-53 affiné en **français** ou en **anglais**, licence Apache-2.0), sur ton ordinateur.
+Le calage par ligne reste l'ancrage (reprises, chœurs, lignes non chantées, ancres de `paroles_calage.json`) :
+les mots sont cherchés **à l'intérieur** de chaque ligne ; une ligne mal reconnue garde le calage par ligne.
+
+- **Installer** : double-clic sur `Install ReaCue Words.command` (Mac) ou `Install ReaCue Words.bat`
+  (Windows), ou `bash install/install_words_mac.sh`. Environnement séparé `.venv-words` (mêmes versions de
+  PyTorch que la séparation de stems : rien à retélécharger si elle est installée, sinon ≈ 1 Go), puis les
+  deux modèles (≈ 1,3 Go chacun) ; à la fin : `WORDS_OK` et la vitesse de ton ordinateur. Une seule langue :
+  `REACUE_WORDS_LANGS=fr bash install/install_words_mac.sh`.
+- **Utilisation** : automatique à la prochaine publication du prompteur (*Mettre à jour les téléphones*,
+  *Analyser et préparer*). La langue est déduite du texte des paroles (réglage `words_language` pour la
+  forcer). Compte environ 1 à 3 minutes par morceau sur un Mac Intel (une seule fois : résultat mémorisé).
+- **Résultat** : sur le prompteur (rôle Chant), le mot en cours est surligné et les mots déjà chantés sont
+  estompés ; dans la grille PDF, chaque mot va dans la mesure où il est vraiment chanté.
+- **Comparer** : `.venv/bin/python tools/compare_words.py` (dernier morceau préparé) affiche, ligne par
+  ligne, les positions avant / après sans jamais afficher le texte ; `--clicks controle.wav` écrit la voix
+  avec un clic à chaque début de mot, pour vérifier à l'oreille.
+- **Désactiver** : réglage `words_engine` = `"off"`.
+
+### Paroles automatiques (facultatif)
+
+Pas de fichier de paroles ? Si le composant `.venv-words` contient aussi **Whisper** (OpenAI, code et modèle
+sous licence MIT), ReaCue transcrit le stem voix sur ton ordinateur et écrit un **brouillon**
+`paroles (auto).txt` dans le dossier du morceau, utilisé ensuite comme un fichier de paroles normal (calage
+par ligne, puis mot par mot). C'est un brouillon : la reconnaissance du chant fait des erreurs.
+
+- **Ton fichier d'abord** : `paroles.txt` (ou `lyrics.txt`…) est toujours prioritaire. Le brouillon n'est créé
+  qu'une fois et n'est **jamais écrasé** : corrige-le sur place, ou renomme-le `paroles.txt` une fois corrigé,
+  puis *Mettre à jour les téléphones*. Les lignes qui commencent par `#` (en tête du brouillon) sont ignorées.
+- **Fenêtre ReaCue** : pastille orange *Paroles : auto (N lignes)* ; clic = ouvrir le brouillon. La grille
+  PDF le signale en bas de page.
+- **Installer** (ou compléter une installation existante, sans tout refaire) : relance
+  `Install ReaCue Words.command` / `.bat` (ou `bash install/install_words_mac.sh`) : il ajoute Whisper et
+  télécharge le modèle `large-v3-turbo` (≈ 1,6 Go) dans `words/whisper/`. Sans Whisper :
+  `REACUE_WHISPER=0 bash install/install_words_mac.sh`.
+- **Durée** : plusieurs minutes par morceau sur un Mac Intel (une seule fois). Seules les zones chantées du
+  stem voix sont transcrites (pas de texte inventé sur les silences) ; une ligne = une phrase chantée, ligne
+  vide entre deux blocs séparés par un long silence. Langue détectée (français / anglais surtout) ou forcée
+  par `words_language`.
+- **Essayer à la main** : `.venv/bin/python tools/transcribe_lyrics.py` (dernier morceau préparé) affiche
+  seulement des statistiques (lignes, mots, langue, temps de calcul), jamais le texte ; `--write` écrit le
+  brouillon s'il n'existe pas.
+- **Désactiver** : réglage `lyrics_auto` = `"off"`.
+
 ## Réglages
 
 Le plus simple : l'onglet **Réglages** de la fenêtre ReaCue (écrit tout de suite, les autres clés du fichier
@@ -594,6 +691,10 @@ nomme les sections des morceaux nouvellement analysés ; les noms de sections qu
 | `tempo_mode` | `"auto"` | `auto`, `constant` (un seul tempo) ou `beatmap` (un tempo par mesure) |
 | `stems_model` | `"htdemucs_6s"` | modèle de séparation de stems : `"htdemucs_6s"` (6 stems) ou `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections : `"auto"` (SongFormer s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
+| `words_engine` | `"auto"` | paroles : `"auto"` (mot par mot si le composant est installé) ou `"off"` (lignes seulement) |
+| `words_language` | `"auto"` | langue chantée pour le calage mot par mot : `"auto"` (déduite du texte), `"fr"` ou `"en"` |
+| `lyrics_auto` | `"auto"` | sans fichier de paroles : `"auto"` (brouillon `paroles (auto).txt` par Whisper s'il est installé) ou `"off"` |
+| `chords_engine` | `"auto"` | accords : `"auto"` (modèle d'accords s'il est installé) ou `"reacue"` (détection de ReaCue seule) |
 | `projects_dir` | `null` | mode concert : dossier où chercher les projets des morceaux par leur nom ; `null` = `<Documents>/REAPER Media` |
 | `concert_dir` | `null` | mode concert : dossier des concerts ; `null` = `<dossier des projets>/Concerts` |
 | `gma3_export` | `true` | écrire les fichiers lumière grandMA3 à chaque préparation / construction de concert |
@@ -781,6 +882,18 @@ Migration depuis une ancienne installation (dossier `~/Documents/reacue-mcp`) : 
   un service commercial sans l'accord des ayants droit. Le reste de ReaCue (y compris la séparation de stems
   avec Demucs, MIT) n'est pas concerné ; tu peux toujours utiliser ReaCue sans lui (réglage *Détection de
   structure : ReaCue seul*).
+- **Paroles mot par mot (facultatif)** : modèles wav2vec2 XLSR-53 de Jonatas Grosman (Apache-2.0, à partir
+  du modèle XLSR-53 de Meta, Apache-2.0), téléchargés depuis Hugging Face par l'installateur ; pas de
+  restriction non commerciale.
+- **Paroles automatiques (facultatif)** : openai-whisper et modèle Whisper `large-v3-turbo` d'OpenAI
+  (code et poids **MIT**), téléchargés par l'installateur ; la transcription se fait sur ton ordinateur, à
+  partir de tes propres fichiers, et le brouillon reste dans le dossier du morceau.
+- **Reconnaissance d'accords (facultative)** : modèle de Jiang et al. (Music X Lab), code et poids sous
+  licence **MIT**, téléchargés depuis GitHub par `Install ReaCue Chords` ; aucune restriction commerciale
+  connue.
+- **Transcription de batterie (ADTOF) — usage non commercial uniquement.** Composant facultatif dont les
+  poids sont sous licence **CC BY-NC-SA 4.0 (non commerciale)** ; sans lui, ReaCue transcrit la batterie
+  avec ses propres règles.
 - **Ta musique :** tu es seul responsable des droits sur l'audio, les stems et les paroles que tu traites
   avec ReaCue. ReaCue ne fournit **ni audio ni paroles**, et ne télécharge jamais de paroles.
 - **Marques :** REAPER est une marque de Cockos Incorporated ; Claude est une marque d'Anthropic ; les autres
@@ -802,6 +915,16 @@ Supervision*, [arXiv:2510.02797](https://arxiv.org/abs/2510.02797)), qui utilise
 CC BY-NC 4.0, non commerciaux**) et [MusicFM](https://github.com/minzwon/musicfm) (Minz Won et al.,
 ByteDance ; code MIT ; la licence de son modèle MSD n'est pas indiquée par ses auteurs). Téléchargés par
 l'installateur à des versions figées, jamais inclus dans ce dépôt.
+
+Paroles mot par mot (facultatif) : alignement forcé avec `torchaudio.functional.forced_align` et les modèles
+[wav2vec2-large-xlsr-53-french](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-french) /
+[-english](https://huggingface.co/jonatasgrosman/wav2vec2-large-xlsr-53-english) de Jonatas Grosman
+(Apache-2.0), affinés à partir de XLSR-53 (Meta AI, Apache-2.0 ; [arXiv:2006.13979](https://arxiv.org/abs/2006.13979)).
+Téléchargés par l'installateur, jamais inclus dans ce dépôt.
+
+Paroles automatiques (facultatif) : [Whisper](https://github.com/openai/whisper) (OpenAI, code et poids MIT ;
+[arXiv:2212.04356](https://arxiv.org/abs/2212.04356)), modèle `large-v3-turbo`, téléchargé par l'installateur,
+jamais inclus dans ce dépôt.
 
 QR codes par [luaqrcode](https://github.com/speedata/luaqrcode) (Patrick Gundlach et contributeurs,
 licence BSD 3 clauses ; l'en-tête de licence est conservé dans `reaper/ReaCue_qrcode.lua`).
