@@ -1,6 +1,6 @@
 # Changelog
 
-## Non publié / Unreleased
+## 1.1.0 — 2026-10-24 — lumière grandMA3, paroles mot par mot et automatiques, accords et batterie par modèle, grille PDF
 
 ### Lumière grandMA3 / grandMA3 lighting export
 - **grandMA3 export / export grandMA3** (`reacue_mcp/lighting.py`): one cue per section (named after the
