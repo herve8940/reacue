@@ -1,4 +1,4 @@
--- ReaCue : fenêtre principale, en 4 onglets / main window, 4 tabs (French / English).
+-- ReaCue : fenêtre principale, en 5 onglets / main window, 5 tabs (French / English).
 --   Morceau  : grand bouton « étape suivante » (Séparer les stems → Analyser et préparer → Prêt ✓),
 --              « Tout faire » (liste d'étapes), pastilles d'état, structure en bande colorée (écouter,
 --              renommer, déplacer, fusionner, couper, supprimer, annuler / rétablir), paroles, concert
@@ -6,6 +6,8 @@
 --              « joué en live » (stems coupés), concerts existants, préparation en lot
 --   Scène    : pilotage (transport, sections, setlist), instruments (mute / solo / tout entendre),
 --              répétition (boucle avec 1 mesure de décompte, ralenti), Vérifier, QR, PIN de la Régie
+--   Lumière  : console grandMA3 : cues et timecode, réglages gma3_*, pistes TIMECODE, export, test d'envoi
+--              (10 s, pistes TIMECODE seules, état rétabli)
 --   Réglages : reacue_settings.json sans éditer le fichier, vue simple / avancée, « Vérifier
 --              l'installation » (assistant du premier lancement), version, licences
 -- Ligne d'aide en bas : rôle de l'élément survolé. Erreurs : cause, solution et bouton d'action.
@@ -39,12 +41,12 @@ local SEP = package.config:sub(1, 1)
 
 local TXT = {
   fr = {
-    title = "ReaCue", tabs = { song = "Morceau", concert = "Concert", stage = "Scène", settings = "Réglages" },
+    title = "ReaCue", tabs = { song = "Morceau", concert = "Concert", stage = "Scène", lighting = "Lumière", settings = "Réglages" },
     bridge = "pont", web = "web", close = "Fermer", ok = "OK", running = "%s… %d s", again = "encore ?",
     working = "en cours", done_title = "Terminé", error_title = "Erreur",
   },
   en = {
-    title = "ReaCue", tabs = { song = "Song", concert = "Concert", stage = "Stage", settings = "Settings" },
+    title = "ReaCue", tabs = { song = "Song", concert = "Concert", stage = "Stage", lighting = "Lighting", settings = "Settings" },
     bridge = "bridge", web = "web", close = "Close", ok = "OK", running = "%s… %d s", again = "again?",
     working = "running", done_title = "Done", error_title = "Error",
   },
@@ -74,7 +76,7 @@ function ctx.tr(tbl, k)       -- textes d'un module : tbl = {fr = {...}, en = {.
   return v
 end
 
-local TAB_ORDER = { "song", "concert", "stage", "settings" }
+local TAB_ORDER = { "song", "concert", "stage", "lighting", "settings" }
 ctx.guide = dofile(script_dir .. "ReaCue_guide.lua")(ctx)          -- aide au survol, erreurs expliquées
 local tabs = {}
 for _, k in ipairs(TAB_ORDER) do
@@ -417,10 +419,23 @@ local function draw_header(w)
     sx = sx - 20
   end
   local avail = sx - x - 6
-  local tw = math.max(60, math.min(104, math.floor(avail / 4) - 4))
-  for _, k in ipairs(TAB_ORDER) do
-    if U.button("tab_" .. k, names[k], x, 9, tw, 26, ctx.tab == k and "on" or nil, 13) then ctx.goto_tab(k) end
-    x = x + tw + 4
+  -- onglets de même largeur s'il y a la place, sinon à la largeur de leur nom (réduits si besoin)
+  local n, gap = #TAB_ORDER, 4
+  local tw = math.min(104, math.floor((avail - (n - 1) * gap) / n))
+  local ws, tot, widest = {}, 0, 0
+  for i, k in ipairs(TAB_ORDER) do
+    ws[i] = U.text_w(names[k], 13) + 18
+    tot = tot + ws[i]
+    widest = math.max(widest, ws[i])
+  end
+  local room = avail - (n - 1) * gap
+  for i = 1, n do
+    if tw >= widest then ws[i] = tw
+    elseif tot > room then ws[i] = math.max(36, math.floor(ws[i] * room / tot)) end
+  end
+  for i, k in ipairs(TAB_ORDER) do
+    if U.button("tab_" .. k, names[k], x, 9, ws[i], 26, ctx.tab == k and "on" or nil, 13) then ctx.goto_tab(k) end
+    x = x + ws[i] + gap
   end
   return 44
 end
@@ -461,7 +476,7 @@ local function background(now)
     if L.reh.on then
       if L.loop_tick(loop_last, p) == "restart" then loop_last = nil else loop_last = p end
       last_pos = nil
-    elseif ctx.is_concert then
+    elseif ctx.is_concert and not ctx.tc_test then      -- test timecode (onglet Lumière) : pas d'arrêt auto
       local k = L.crossed_stop(c, last_pos, p)
       if k then L.after_stop(c, k); last_pos = nil else last_pos = p end
     end
@@ -469,7 +484,8 @@ local function background(now)
     if L.reh.on and c then L.loop_tick(nil, L.pos()) end
     last_pos, loop_last = nil, nil
   end
-  if c then L.mix_tick(c, now) end
+  for _, k in ipairs(TAB_ORDER) do if tabs[k].tick then tabs[k].tick(now) end end   -- test timecode : fin, Stop
+  if c and not ctx.tc_test then L.mix_tick(c, now) end   -- pendant le test : mutes des instruments laissés tels quels
   local g = reaper.GetExtState("ReaCue", "win_goto")
   if g ~= "" then
     reaper.SetExtState("ReaCue", "win_goto", "", false)
@@ -547,6 +563,7 @@ end
 
 reaper.atexit(function()
   if reaper.set_action_options then reaper.set_action_options(8) end
+  if tabs.lighting and tabs.lighting.test_stop then pcall(tabs.lighting.test_stop, "exit") end   -- solo / mute rétablis
   if L.reh.on then pcall(L.set_rehearsal, false) end
   reaper.SetExtState("ReaCue", "rehearsal", "", false)
   reaper.SetExtState("ReaCue", "win_alive", "", false)

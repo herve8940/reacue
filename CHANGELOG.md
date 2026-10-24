@@ -2,6 +2,30 @@
 
 ## Non publié / Unreleased
 
+### Onglet Lumière de la fenêtre ReaCue / Lighting tab of the ReaCue window
+- **New tab “Lumière / Lighting”** (`reaper/ReaCue_tab_lighting.lua`, between Stage and Settings, FR / EN,
+  hover help): cues of the open song or concert (number, SMPTE timecode from `gma3_tc_start` / `gma3_fps`,
+  name) read from the published prompter (`lighting` block) or computed from the regions, current cue
+  highlighted while playing, current timecode (project time + start); clear message when nothing is exported
+  or when settings / structure changed since the export.
+- **Configuration** written to `reacue_settings.json` like the Settings tab (other keys kept): export, fps,
+  start, TC Slot, LTC output (REAPER's audio outputs, mono or pair), MTC device (REAPER's MIDI outputs),
+  concert gap and slot.
+- **Actions**: *Create / update the timecode tracks* (new CLI command `timecode`, bridge 1.5.0 handler
+  `timecode_tracks`: same code as the preparation, generator setting kept, rest of the project untouched),
+  *Export now* (`publish` for a song, new CLI command `concert-lighting` for a built concert), *Open the
+  grandMA3 folder*.
+- **Communication test**: chips (LTC output exists, MIDI device found and enabled, `TIMECODE` tracks with a
+  generator and current settings, generator setting remembered, with the one-time how-to) and **Send a 10 s
+  test**: only the `TIMECODE` tracks play (solo; “solo defeat” tracks muted), then solo, mute, position and
+  playback are restored exactly (after 10 s, second press, REAPER Stop, window closed); during playback it
+  needs a second press. Concert auto-stop and instrument mutes are paused during the test.
+- Window header: tab widths follow their labels when five uniform tabs do not fit.
+- Fix: the Song tab's “Prompter published / Chords / Drums” chips ignored songs exported with a `lighting`
+  block (`"concert": false` was taken for a concert prompter).
+- An old bridge gets a clear explanation (“bridge too old: run the installer again, restart REAPER”).
+  Tests: `tests/test_lighting_tab.py`; screenshots `window_lighting_fr.png` / `_en.png`.
+
 ### Timecode automatique vers grandMA3 / Automatic timecode to grandMA3
 - **Timecode tracks / pistes timecode** (`reacue_mcp/timecode.py`, `ReaCue_Bridge.lua` 1.4.0): with
   `gma3_ltc_output` and/or `gma3_mtc_output`, each preparation creates `TIMECODE LTC` (REAPER's SMPTE

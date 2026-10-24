@@ -65,8 +65,8 @@ language with Claude (MCP server).
 
 ## Features
 
-In REAPER, from the audio already in your project — everything from **one window, “ReaCue”**, with four tabs
-(Song, Concert, Stage, Settings):
+In REAPER, from the audio already in your project — everything from **one window, “ReaCue”**, with five tabs
+(Song, Concert, Stage, Lighting, Settings):
 
 - **Tempo map** locked to the song: fixed tempo when the recording is quantised, or one tempo marker per
   bar when it was played without a click (the click then follows the band). The audio is moved so that
@@ -332,7 +332,7 @@ apart, and snaps every hit to its grid (sixteenths, or triplets for a shuffle).
 
 ## The ReaCue window
 
-Action **ReaCue** (put it on a toolbar). One window, four tabs; it opens on the right tab by itself
+Action **ReaCue** (put it on a toolbar). One window, five tabs; it opens on the right tab by itself
 (a concert project → **Stage**, a song project → **Song**, otherwise the last tab used). Right-click: dock /
 undock — docked low, it becomes a compact transport bar. While it is open, on any tab, it also runs the
 concert's automatic stop, the rehearsal loop, the Stage control remote and the “played live” profile.
@@ -356,8 +356,8 @@ address, program, stems, structure, projects folder) with a button for each miss
 | <img src="docs/images/window_check_en.png" width="380"> | <img src="docs/images/window_qr_en.png" width="380"> |
 | **Assistant (first launch)** | **Settings** |
 | <img src="docs/images/window_assistant_en.png" width="380"> | <img src="docs/images/window_settings_en.png" width="380"> |
-| **Advanced settings** |  |
-| <img src="docs/images/window_settings_advanced_en.png" width="380"> |  |
+| **Advanced settings** | **Lighting (grandMA3)** |
+| <img src="docs/images/window_settings_advanced_en.png" width="380"> | <img src="docs/images/window_lighting_en.png" width="380"> |
 
 *(Made-up demo songs, address 192.168.1.20, PIN 1234.)*
 
@@ -387,6 +387,14 @@ address, program, stems, structure, projects folder) with a button for each miss
   *Fix*, also for the bridge and the web interface), *Rehearsal*, *Setlist*, *PIN*, *QR*. With a single song
   open (no concert) it gives a simple transport (Start, Play, Stop), the sections, the instruments and the
   rehearsal loop.
+- **Lighting** — grandMA3 desk: cues of the open song or concert (number, SMPTE timecode, name; current cue
+  highlighted) and the current timecode; `gma3_*` settings without editing the file (export, fps, start,
+  TC Slot, LTC output from the audio interface's outputs, MTC device from the MIDI outputs, concert gap and
+  slot); **Create / update the timecode tracks**, **Export now**, **Open the grandMA3 folder**;
+  **communication test**: chips (LTC output present, MIDI device found and enabled, `TIMECODE` tracks with
+  their generator, generator set) and **Send a 10 s test** (only the `TIMECODE` tracks play, soloed, then
+  solo / mute / position / playback are restored). LTC / MTC goes one way: the desk shows it receives
+  (TC Slot turns green).
 - **Settings** — a **simple** view (language, count-in, cues, voices, click + voice outputs, structure
   detection, licences) and **Advanced settings** (PIN, cue lead, count language, voice and speed, volumes,
   tempo, separation model, folders). *Check the installation* opens the assistant again. Changes apply at the
@@ -844,7 +852,7 @@ Project layout:
 |---|---|
 | `reacue_mcp/` | Python package: analysis, planner, bridge client, prompter, chords, lyrics, drums, voice, i18n, settings, CLI, MCP server |
 | `reacue_mcp/web/prompteur.html` | The prompter page (single file) |
-| `reaper/` | REAPER scripts: bridge and the actions (`ReaCue_stems.lua`: stem separation; `ReaCue.lua`: the main window, with `ReaCue_ui.lua` (drawing, buttons) and one module per tab `ReaCue_tab_song.lua`, `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_settings.lua`; `ReaCue_Concert.lua`: same window on the Stage tab; `ReaCue_concert_lib.lua`: concert, instruments, rehearsal, checks and Stage control; `ReaCue_qrcode.lua`: QR encoder, luaqrcode, BSD) |
+| `reaper/` | REAPER scripts: bridge and the actions (`ReaCue_stems.lua`: stem separation; `ReaCue.lua`: the main window, with `ReaCue_ui.lua` (drawing, buttons) and one module per tab `ReaCue_tab_song.lua`, `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_lighting.lua`, `ReaCue_tab_settings.lua`; `ReaCue_Concert.lua`: same window on the Stage tab; `ReaCue_concert_lib.lua`: concert, instruments, rehearsal, checks and Stage control; `ReaCue_qrcode.lua`: QR encoder, luaqrcode, BSD) |
 | `reacue_stems.py`, `requirements-stems.txt` | Stem separation launcher (runs in `.venv-demucs`) and its pinned dependencies |
 | `install/` | Installers (macOS, Windows) and the shared `reacue_setup.py` |
 | `tests/` | pytest suite (fake REAPER bridge, Lua run through `lupa`, installer, prompter page) |

@@ -5,6 +5,9 @@ le prompteur » de REAPER (ou à la main).
     <python du venv> -m reacue_mcp.cli publish      # republie seulement le prompteur
     <python du venv> -m reacue_mcp.cli concert --setlist "<Concerts>/Concert.setlist.json"
     <python du venv> -m reacue_mcp.cli concert --name "Concert" --songs "Song A" "Song B"
+    <python du venv> -m reacue_mcp.cli timecode     # pistes TIMECODE LTC / MTC seules (onglet Lumière)
+    <python du venv> -m reacue_mcp.cli concert-lighting --setlist "<Concerts>/Concert.setlist.json"
+                                                    # export grandMA3 du concert déjà construit (onglet Lumière)
     (Windows : reacue_cli.py, à la racine, fait la même chose sans dépendre du dossier courant)
 
 Même code que le serveur MCP (mêmes réglages, même mémoire du dernier morceau) : on peut ensuite
@@ -56,6 +59,14 @@ def _message(res: dict, title: str) -> str:
         for s in secs:
             n = s.get("length_bars")
             lines.append(f"  {s.get('bars', ''):>9}  {s['name']}" + (f"  ({n})" if n else ""))
+    tcs = res.get("timecode") or {}
+    if "enabled" in res and not res.get("error"):          # commande « timecode » (onglet Lumière)
+        if not res["enabled"]:
+            lines.append(t("tc_tracks_none"))
+        for pt in tcs.get("pistes") or []:
+            lines.append(t("tc_tracks_line", track=pt.get("piste"), out=pt.get("sortie") or "?",
+                           len=round(float(pt.get("longueur_s") or 0)),
+                           state=t("tc_tracks_set") if pt.get("generateur_regle") else t("tc_tracks_unset")))
     p = res.get("prompteur") or {}
     if p:
         bits = [t(k) for k, v in (("cli_chords", p.get("chords")), ("cli_drums", p.get("drums"))) if v]
@@ -99,6 +110,10 @@ async def _run(cmd: str, args) -> dict:
         return await server.prepare_song(**kw)
     if cmd == "publish":
         return await server.set_sections([{"prompteur_seul": True}])
+    if cmd == "timecode":
+        res = await server.update_timecode_tracks()
+        res["_title"] = t("tc_tracks_title")
+        return res
     raise ValueError(t("cli_unknown", cmd=cmd))
 
 
@@ -168,9 +183,41 @@ def _concert(args, log) -> int:
     return 0
 
 
+def _concert_lighting(args) -> str:
+    """Export grandMA3 d'un concert déjà construit, à partir de son prompteur (<nom>.prompteur.json, à côté
+    de la setlist) : mêmes fichiers que la construction, réglages lumière actuels ; le bloc « lighting » du
+    prompteur est mis à jour (republié s'il est celui affiché par les téléphones)."""
+    from types import SimpleNamespace
+    from . import concert as conc, lighting
+    from .i18n import t
+    if not args.setlist:
+        raise ValueError(t("concert_args"))
+    sl = Path(args.setlist)
+    slug = sl.name[:-len(".setlist.json")] if sl.name.endswith(".setlist.json") else sl.stem
+    pf = sl.with_name(slug + ".prompteur.json")
+    try:
+        data = json.loads(pf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise ValueError(t("gma3_concert_missing", f=pf.name)) from None
+    name = (data.get("concert") or {}).get("name") or slug
+    lines = [t("gma3_concert_title", name=name), ""]
+    cfg = lighting.config()
+    if not cfg["export"]:
+        return "\n".join(lines + [t("gma3_disabled")])
+    from .prompter import WWW_DIR
+    out = lighting.export_concert(name, data, sl.parent, WWW_DIR, cfg)
+    data["lighting"] = lighting.web_data(lighting.show_from_songs(data.get("songs") or [], name), cfg)
+    lighting.rehash(data)
+    conc.write_prompter(SimpleNamespace(prompter=pf, name=name), data, publish=True, only_if_current=True)
+    if out:
+        lines.append(t("gma3_written", n=out["cues"], d=out.get("dir")))
+    return "\n".join(lines)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="reacue")
-    ap.add_argument("cmd", choices=["prepare", "publish", "concert", "concert-extras"])
+    ap.add_argument("cmd", choices=["prepare", "publish", "concert", "concert-extras", "timecode",
+                                    "concert-lighting"])
     ap.add_argument("--bpm", type=float, help="tempo approximatif (corrige double/moitié)")
     ap.add_argument("--count-in", type=int, help="mesures de count-in (défaut : réglages, 2)")
     ap.add_argument("--reanalyse", action="store_true",
@@ -195,6 +242,15 @@ def main(argv=None):
         except Exception:
             _log_exc(log)
             return 1
+    if args.cmd == "concert-lighting":         # onglet Lumière : export d'un concert déjà construit
+        _status("running", cmd="concert-lighting", step=t("gma3_running"))
+        try:
+            _status("done", cmd="concert-lighting", message=_concert_lighting(args))
+            return 0
+        except Exception as e:
+            _log_exc(log)
+            _status("error", cmd="concert-lighting", message=t("cli_error_log", e=e, log=log))
+            return 1
     if args.cmd == "concert":
         _status("running", cmd="concert", step=t("cli_concert_running"))
         try:
@@ -203,7 +259,7 @@ def main(argv=None):
             _log_exc(log)
             _status("error", cmd="concert", message=t("cli_error_log", e=e, log=log))
             return 1
-    titles = {"prepare": t("cli_prepared"), "publish": t("cli_published_title")}
+    titles = {"prepare": t("cli_prepared"), "publish": t("cli_published_title"), "timecode": t("tc_tracks_title")}
     _status("running", cmd=args.cmd, step=t("cli_running"))
     from . import structure
     structure.PROGRESS = lambda msg: _status("running", cmd=args.cmd, step=msg)

@@ -65,7 +65,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 ## Fonctionnalités
 
 Dans REAPER, à partir de l'audio déjà présent dans le projet — le tout depuis **une seule fenêtre, « ReaCue »**,
-en quatre onglets (Morceau, Concert, Scène, Réglages) :
+en cinq onglets (Morceau, Concert, Scène, Lumière, Réglages) :
 
 - **Carte de tempo** calée sur le morceau : tempo fixe quand l'enregistrement est quantisé, ou un marqueur
   de tempo par mesure quand il a été joué sans click (le click suit alors le groupe). L'audio est déplacé
@@ -346,7 +346,7 @@ portage PyTorch utilisé (ADTOF-pytorch) n'indique pas de licence. L'installateu
 
 ## La fenêtre ReaCue
 
-Action **ReaCue** (mets-la dans une barre d'outils). Une fenêtre, quatre onglets ; elle s'ouvre toute seule
+Action **ReaCue** (mets-la dans une barre d'outils). Une fenêtre, cinq onglets ; elle s'ouvre toute seule
 sur le bon (projet concert → **Scène**, projet d'un morceau → **Morceau**, sinon le dernier utilisé).
 Clic droit : ancrer / détacher — ancrée en bas, elle devient une barre de transport compacte. Tant qu'elle
 est ouverte, quel que soit l'onglet, elle assure aussi l'arrêt automatique du concert, la boucle de
@@ -371,8 +371,8 @@ pour chaque point manquant ; on le retrouve dans *Réglages → Vérifier l'inst
 | <img src="docs/images/window_check_fr.png" width="380"> | <img src="docs/images/window_qr_fr.png" width="380"> |
 | **Assistant (premier lancement)** | **Réglages** |
 | <img src="docs/images/window_assistant_fr.png" width="380"> | <img src="docs/images/window_settings_fr.png" width="380"> |
-| **Réglages avancés** |  |
-| <img src="docs/images/window_settings_advanced_fr.png" width="380"> |  |
+| **Réglages avancés** | **Lumière (grandMA3)** |
+| <img src="docs/images/window_settings_advanced_fr.png" width="380"> | <img src="docs/images/window_lighting_fr.png" width="380"> |
 
 *(Morceaux de démonstration inventés, adresse 192.168.1.20, PIN 1234.)*
 
@@ -405,6 +405,14 @@ pour chaque point manquant ; on le retrouve dans *Réglages → Vérifier l'inst
   *Vérifier* (avec *Corriger*, aussi pour le pont et l'interface web), *Répétition*, *Setlist*, *PIN*, *QR*.
   Avec un morceau seul ouvert (sans concert) : transport simple (Début, Lecture, Stop), sections,
   instruments et boucle de répétition.
+- **Lumière** — console grandMA3 : cues du morceau ou du concert ouvert (n°, timecode SMPTE, nom ; cue en
+  cours surligné) et timecode actuel ; réglages `gma3_*` sans éditer le fichier (export, images/s, départ,
+  TC Slot, sortie LTC parmi les sorties de la carte son, périphérique MTC parmi les sorties MIDI, blanc et
+  créneau du concert) ; **Créer / mettre à jour les pistes timecode**, **Exporter maintenant**, **Ouvrir le
+  dossier grandMA3** ; **test de communication** : pastilles (sortie LTC présente, périphérique MIDI trouvé et
+  activé, pistes `TIMECODE` avec générateur, générateur réglé) et **Envoyer 10 s de test** (seules les pistes
+  `TIMECODE` jouent, en solo, puis solo / mute / position / lecture sont rétablis). Le LTC / MTC va dans un
+  seul sens : c'est la console qui montre qu'elle reçoit (TC Slot au vert).
 - **Réglages** — vue **simple** (langue, décompte, annonces, voix, sorties click + voix, détection de
   structure, licences) et **Réglages avancés** (PIN, annonce avant la section, langue, voix et débit du
   décompte, volumes, tempo, modèle de séparation, dossiers). *Vérifier l'installation* rouvre l'assistant.
@@ -596,7 +604,9 @@ ReaCue ne les invente donc pas. Après la première préparation, double-clic su
 *Propriétés de la source* : images/s = `gma3_fps`, départ = `gma3_tc_start`, *Send MIDI (MTC)* coché sur
 `TIMECODE MTC` seulement, décoché sur `TIMECODE LTC` ; OK, puis relance la préparation. ReaCue le mémorise
 (par fps + départ) et le réapplique à tous les morceaux et concerts ; d'ici là, chaque préparation le
-rappelle. Active aussi la sortie MIDI dans *Préférences → Audio → MIDI Devices*.
+rappelle. Active aussi la sortie MIDI dans *Préférences → Audio → MIDI Devices*. Tout cela se règle aussi
+dans l'onglet **Lumière** de la fenêtre ReaCue (sorties, départ, TC Slot), qui crée les pistes sans refaire
+la préparation, vérifie la sortie et le périphérique MIDI et envoie 10 s de test.
 
 **Plugin grandMA3 « ReaCue ».** Le dossier d'export contient aussi `gma3_library/datapools/plugins/ReaCue.xml`
 (+ `ReaCue.lua`) et une copie des XML dans `gma3_library/datapools/sequences/` et `…/timecodes/`. Copie le
@@ -892,7 +902,7 @@ Organisation :
 |---|---|
 | `reacue_mcp/` | Paquet Python : analyse, planification, client du pont, prompteur, accords, paroles, batterie, voix, i18n, réglages, CLI, serveur MCP |
 | `reacue_mcp/web/prompteur.html` | La page du prompteur (un seul fichier) |
-| `reaper/` | Scripts REAPER : le pont et les actions (`ReaCue_stems.lua` : séparation de stems ; `ReaCue.lua` : la fenêtre principale, avec `ReaCue_ui.lua` (dessin, boutons) et un module par onglet `ReaCue_tab_song.lua`, `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_settings.lua` ; `ReaCue_Concert.lua` : la même fenêtre sur l'onglet Scène ; `ReaCue_concert_lib.lua` : concert, instruments, répétition, vérifications et Régie ; `ReaCue_qrcode.lua` : encodeur QR, luaqrcode, BSD) |
+| `reaper/` | Scripts REAPER : le pont et les actions (`ReaCue_stems.lua` : séparation de stems ; `ReaCue.lua` : la fenêtre principale, avec `ReaCue_ui.lua` (dessin, boutons) et un module par onglet `ReaCue_tab_song.lua`, `ReaCue_tab_concert.lua`, `ReaCue_tab_stage.lua`, `ReaCue_tab_lighting.lua`, `ReaCue_tab_settings.lua` ; `ReaCue_Concert.lua` : la même fenêtre sur l'onglet Scène ; `ReaCue_concert_lib.lua` : concert, instruments, répétition, vérifications et Régie ; `ReaCue_qrcode.lua` : encodeur QR, luaqrcode, BSD) |
 | `reacue_stems.py`, `requirements-stems.txt` | Lanceur de la séparation de stems (tourne dans `.venv-demucs`) et ses dépendances figées |
 | `install/` | Installateurs (macOS, Windows) et `reacue_setup.py` commun |
 | `tests/` | Tests pytest (faux pont REAPER, Lua exécuté via `lupa`, installateur, page du prompteur) |

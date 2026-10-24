@@ -7,7 +7,7 @@
 -- Pour l'arrêter : relancer l'action, REAPER propose "Terminate instances".
 -------------------------------------------------------------------------------
 
-local VERSION   = "1.4.0"
+local VERSION   = "1.5.0"
 local SEP       = package.config:sub(1, 1)
 local DIR       = reaper.GetResourcePath() .. SEP .. "ReaCueMCP"
 local REQ       = DIR .. SEP .. "request.lua"
@@ -40,6 +40,7 @@ local MSG = {
   undo_fail = { fr = "ReaCue : échec", en = "ReaCue: failed" },
   undo_ok = { fr = "ReaCue : régions, cues et click", en = "ReaCue: regions, cues and click" },
   tc_chunk = { fr = "réglages mémorisés du générateur non appliqués", en = "remembered generator settings not applied" },
+  undo_tc = { fr = "ReaCue : pistes timecode", en = "ReaCue: timecode tracks" },
 }
 local function T(k) return MSG[k][LANG] end
 
@@ -444,6 +445,17 @@ local function build_cues(c)
   return #(c.items or {})
 end
 
+-- toutes les pistes du bloc « timecode » du plan ; renvoie {tracks, warnings, length}
+local function build_timecode_all(tc, len, captured)
+  local tcw, tracks = {}, {}
+  for _, spec in ipairs(tc.tracks or {}) do
+    local ok_tc, info = pcall(build_timecode, spec, len, captured, tcw)
+    if ok_tc then tracks[#tracks + 1] = info
+    else tcw[#tcw + 1] = tostring(spec.name) .. " : " .. tostring(info) end
+  end
+  return { tracks = tracks, warnings = tcw, length = len }
+end
+
 function H.apply_plan(plan)
   local warnings = {}
   reaper.Undo_BeginBlock()
@@ -499,13 +511,7 @@ function H.apply_plan(plan)
   if plan.click and plan.click.enabled ~= false then result.click_items = build_click(plan.click, warnings) end
   if plan.timecode then
     local len = math.max(tonumber(plan.timecode.min_len) or 0, reaper.GetProjectLength(0))
-    local tcw, tracks = {}, {}
-    for _, spec in ipairs(plan.timecode.tracks or {}) do
-      local ok_tc, info = pcall(build_timecode, spec, len, captured, tcw)
-      if ok_tc then tracks[#tracks + 1] = info
-      else tcw[#tcw + 1] = tostring(spec.name) .. " : " .. tostring(info) end
-    end
-    result.timecode = { tracks = tracks, warnings = tcw, length = len }
+    result.timecode = build_timecode_all(plan.timecode, len, captured)
   end
 
   reaper.PreventUIRefresh(-1)
@@ -514,6 +520,28 @@ function H.apply_plan(plan)
   reaper.Undo_EndBlock(T("undo_ok"), -1)
   result.state = H.get_state()
   return result
+end
+
+-- pistes TIMECODE seules (pont ≥ 1.5, onglet Lumière de la fenêtre ReaCue) : même code que la préparation
+-- (réglage du générateur gardé ou réappliqué) ; le reste du projet n'est pas touché. tc = bloc « timecode »
+-- du plan + tail : le timecode couvre le projet (sans les anciennes pistes timecode) + tail secondes.
+function H.timecode_tracks(tc)
+  reaper.Undo_BeginBlock()
+  reaper.PreventUIRefresh(1)
+  local ok, res = pcall(function()
+    local captured = capture_timecode()
+    for i = reaper.CountTracks(0) - 1, 0, -1 do
+      local tr = reaper.GetTrack(0, i)
+      if TIMECODE[track_name(tr)] then reaper.DeleteTrack(tr) end
+    end
+    local len = math.max(tonumber(tc.min_len) or 0, reaper.GetProjectLength(0) + (tonumber(tc.tail) or 0))
+    return build_timecode_all(tc, len, captured)
+  end)
+  reaper.PreventUIRefresh(-1)
+  reaper.UpdateArrange()
+  reaper.Undo_EndBlock(ok and T("undo_tc") or T("undo_fail"), -1)
+  if not ok then error(res) end
+  return { timecode = res }
 end
 
 function H.goto_region(a)

@@ -17,6 +17,21 @@ return function(ctx)
       tab_concert = "Concert : composer une setlist avec les morceaux prêts, la construire, préparer des morceaux en lot.",
       tab_stage = "Scène : jouer (transport, sections, instruments, répétition) et vérifier avant le concert.",
       tab_settings = "Réglages : langue, décompte, annonces, sorties, analyse de structure, licences.",
+      tab_lighting = "Lumière : cues et timecode pour la console grandMA3, sorties LTC / MTC, export, test d'envoi.",
+      l_export = "Écrire les fichiers grandMA3 (Sequence, Timecode, conduite, plugin) à chaque préparation.",
+      l_fps = "Images par seconde du timecode (la même valeur que sur la console).",
+      l_tcstart = "Timecode du début du projet (ex. 01:00:00:00), ajouté à tous les temps.",
+      l_slot = "TC Slot de la console (1 à 8), réglé par le plugin ReaCue de grandMA3.",
+      l_ltc = "Sortie audio de la carte son reliée à l'entrée LTC de la console (piste TIMECODE LTC).",
+      l_mtc = "Sortie MIDI qui envoie le MTC à la console (piste TIMECODE MTC).",
+      l_gap = "Concert : blanc minimum entre deux morceaux (vide = celui de la setlist).",
+      l_songslot = "Concert : chaque morceau démarre au prochain multiple de ce créneau (0 = non).",
+      l_tracks = "Créer ou recréer les pistes TIMECODE LTC / MTC du projet ouvert (réglage du générateur gardé).",
+      l_export_now = "Écrire maintenant les fichiers grandMA3 du morceau ou du concert ouvert.",
+      l_folder = "Ouvrir le dossier grandMA3 (fichiers à copier sur la clé USB de la console).",
+      l_from = "Le test part de la position actuelle ou du début du morceau.",
+      l_test = "Jouer 10 s avec seulement les pistes TIMECODE (solo), puis tout rétablir. 2e appui : arrêter.",
+      lcue = "Cue lumière : numéro, timecode envoyé à la console, nom.",
       newsong = "Créer un morceau à partir d'un MP3 ou d'un dossier de stems (copiés dans le dossier des projets).",
       cnewsong = "Créer un morceau à partir d'un MP3 ou d'un dossier de stems (copiés dans le dossier des projets).",
       primary = "L'étape suivante pour ce morceau.",
@@ -101,6 +116,21 @@ return function(ctx)
       tab_concert = "Concert: build a setlist from ready songs, build it, prepare songs in batch.",
       tab_stage = "Stage: play (transport, sections, instruments, rehearsal) and check before the show.",
       tab_settings = "Settings: language, count-in, cues, outputs, structure analysis, licences.",
+      tab_lighting = "Lighting: cues and timecode for the grandMA3 console, LTC / MTC outputs, export, send test.",
+      l_export = "Write the grandMA3 files (Sequence, Timecode, cue sheet, plugin) at each preparation.",
+      l_fps = "Timecode frames per second (the same value as on the console).",
+      l_tcstart = "Timecode of the project start (e.g. 01:00:00:00), added to every time.",
+      l_slot = "Console TC Slot (1 to 8), set by the ReaCue grandMA3 plugin.",
+      l_ltc = "Audio interface output wired to the console's LTC input (TIMECODE LTC track).",
+      l_mtc = "MIDI output sending MTC to the console (TIMECODE MTC track).",
+      l_gap = "Concert: minimum gap between two songs (empty = the setlist's).",
+      l_songslot = "Concert: each song starts at the next multiple of this slot (0 = no).",
+      l_tracks = "Create or recreate the open project's TIMECODE LTC / MTC tracks (generator setting kept).",
+      l_export_now = "Write the grandMA3 files of the open song or concert now.",
+      l_folder = "Open the grandMA3 folder (files to copy to the console's USB stick).",
+      l_from = "The test starts from the current position or from the start of the song.",
+      l_test = "Play 10 s with only the TIMECODE tracks (solo), then restore everything. Press again: stop.",
+      lcue = "Lighting cue: number, timecode sent to the console, name.",
       newsong = "Create a song from an MP3 or a folder of stems (copied into the projects folder).",
       cnewsong = "Create a song from an MP3 or a folder of stems (copied into the projects folder).",
       primary = "The next step for this song.",
@@ -205,6 +235,7 @@ return function(ctx)
     fr = {
       bridge = { "Le pont ReaCue ne tourne pas dans REAPER.", "Démarre le pont (ou redémarre REAPER : il démarre tout seul).", "Démarrer le pont" },
       install = { "Le programme ReaCue est introuvable.", "Relance l'installation (« Install ReaCue », REAPER fermé).", "Ouvrir le dossier" },
+      old_bridge = { "Le pont ReaCue de REAPER est trop ancien pour cette fonction.", "Relance l'installation (« Install ReaCue », REAPER fermé), puis redémarre REAPER.", "Ouvrir le dossier" },
       stems = { "La séparation de stems n'est pas installée.", "Installe-la (environ 1 Go, 5 à 15 min).", "Installer" },
       structure = { "L'analyse de structure SongFormer n'est pas installée.", "Installe-la (environ 3 Go) ; en attendant, ReaCue utilise sa détection simple.", "Installer" },
       structure_failed = { "SongFormer n'a pas pu analyser le morceau : ReaCue a utilisé sa détection simple.", "Vérifie les sections (orange = à vérifier) ou réanalyse plus tard.", nil },
@@ -219,6 +250,7 @@ return function(ctx)
     en = {
       bridge = { "The ReaCue bridge is not running in REAPER.", "Start the bridge (or restart REAPER: it starts by itself).", "Start the bridge" },
       install = { "The ReaCue program cannot be found.", "Run the installer again (“Install ReaCue”, REAPER closed).", "Open the folder" },
+      old_bridge = { "REAPER's ReaCue bridge is too old for this feature.", "Run the installer again (“Install ReaCue”, REAPER closed), then restart REAPER.", "Open the folder" },
       stems = { "Stem separation is not installed.", "Install it (about 1 GB, 5 to 15 min).", "Install" },
       structure = { "SongFormer structure analysis is not installed.", "Install it (about 3 GB); meanwhile ReaCue uses its simple detection.", "Install" },
       structure_failed = { "SongFormer could not analyse the song: ReaCue used its simple detection.", "Check the sections (orange = to check) or re-analyse later.", nil },
@@ -235,6 +267,7 @@ return function(ctx)
   G.E = E
 
   local PATTERNS = {
+    { "old_bridge", { "pont REAPER trop ancien", "REAPER bridge too old" } },
     { "bridge", { "pont ReaCue ne tourne pas", "bridge is not running", "no_bridge" } },
     { "stems", { "séparation de stems n'est pas installée", "Stem separation is not installed", ".venv-demucs" } },
     { "structure", { "SongFormer introuvable", "SongFormer not found", "structure_missing" } },
@@ -298,6 +331,7 @@ return function(ctx)
   function G.do_action(kind)
     if kind == "bridge" then return G.start_bridge()
     elseif kind == "install" then return open_path(R.install_dir(ctx.dir))
+    elseif kind == "old_bridge" then return G.installer("main")
     elseif kind == "stems" or kind == "structure" then return G.installer(kind)
     elseif kind == "offline" then reaper.Main_OnCommand(40101, 0) return true      -- médias en ligne
     elseif kind == "unsaved" then return G.save_project()

@@ -56,6 +56,8 @@ return function(ctx)
     voice_cues = true, voice_count_in = true, voice_count_each = true, voice_volume = 0.8, click_volume = 0.5,
     click_to_master = true, click_hw_output = nil, tempo_mode = "auto", stems_model = "htdemucs_6s",
     structure_engine = "auto", projects_dir = nil, concert_dir = nil, count_rate = 240,
+    -- lumière grandMA3 (onglet Lumière)
+    gma3_export = true, gma3_fps = 25, gma3_tc_start = "00:00:00:00", gma3_tc_slot = 1, gma3_song_slot = 0,
   }
   local data = nil
   local voices = nil
@@ -82,12 +84,18 @@ return function(ctx)
     if v == nil then data[k] = nil end
     local order = { "language", "announce_voice", "count_voice", "count_lang", "count_in_bars", "cue_lead_bars",
       "voice_cues", "voice_count_in", "voice_count_each", "voice_volume", "click_volume", "click_to_master",
-      "click_hw_output", "tempo_mode", "count_rate", "stems_model", "structure_engine", "projects_dir", "concert_dir" }
+      "click_hw_output", "tempo_mode", "count_rate", "stems_model", "structure_engine", "projects_dir", "concert_dir",
+      "gma3_export", "gma3_fps", "gma3_tc_start", "gma3_song_gap", "gma3_song_slot", "gma3_ltc_output",
+      "gma3_mtc_output", "gma3_tc_slot" }
     reaper.RecursiveCreateDirectory(reaper.GetResourcePath() .. SEP .. "ReaCueMCP", 0)
     local ok = R.write_atomic(path(), R.json_encode(data, "  ", order) .. "\n")
     saved_t = reaper.time_precise()
     return ok
   end
+
+  -- lecture d'un réglage (défaut si absent) ; instant du dernier enregistrement (« enregistré »)
+  function M.get(k) return get(k) end
+  function M.saved_at() return saved_t end
 
   function M.enter() M.load() end
   function M.project_changed() end
@@ -193,6 +201,9 @@ return function(ctx)
     if U.ibutton(id .. "p", "right", x + w - 30, y, 30, 26) then val = math.min(hi, val + step); return val, true end
     return val, false
   end
+
+  -- contrôles partagés avec l'onglet Lumière (même mise en page)
+  M.ui = { label = label, seg = seg, stepper = stepper, LW = LW }
 
   function M.advanced() return reaper.GetExtState("ReaCue", "settings_adv") == "1" end
   function M.set_advanced(on) reaper.SetExtState("ReaCue", "settings_adv", on and "1" or "", true) end

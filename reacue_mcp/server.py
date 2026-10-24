@@ -222,6 +222,24 @@ async def _publish_only(analysis, item, opts, items) -> dict:
             "sections": [{"name": s.name, "bars": f"{s.start_bar + 1}-{s.end_bar}"} for s in analysis.sections]}
 
 
+async def update_timecode_tracks() -> dict:
+    """Pistes TIMECODE LTC / MTC seules (bouton de l'onglet Lumière de la fenêtre ReaCue, CLI « timecode ») :
+    même plan et même suivi que la préparation (timecode.plan_block / handle_result), sans toucher au reste
+    du projet. Réglages vides : les pistes timecode existantes sont retirées. Pont ≥ 1.5."""
+    use_settings_lang()
+    cfg = timecode.config()
+    info = await bridge.call("ping")
+    if _bridge_version(info) < (1, 5):
+        return {"error": t("tc_old_bridge")}
+    block = timecode.plan_block(cfg, 0.0)
+    block["tail"] = timecode.TAIL_S
+    res = await bridge.call("timecode_tracks", block, timeout=60)
+    tc = (res or {}).get("timecode") or {}
+    summ, warns = timecode.handle_result(tc, cfg)
+    return {"enabled": cfg["enabled"], "timecode": summ, "length_s": tc.get("length"),
+            "warnings": warns}
+
+
 def _project_of(info: dict | None) -> str | None:
     """Chemin du .RPP ouvert dans REAPER (réponse de « ping ») ; None si le projet n'est pas enregistré."""
     p = (info or {}).get("project") or ""
