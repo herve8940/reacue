@@ -1,6 +1,15 @@
 # Changelog
 
-## Non publié / Unreleased
+## 1.2.0 — 2026-10-24 — timecode automatique grandMA3, onglet Lumière, tutoriels complets
+
+### Docs
+- Tutorials FR / EN: new chapter 20 “Composants facultatifs / Optional components” (installers, what each brings,
+  download size and time, fallback, licences and “J'accepte”, removal) and chapter 21 appendix with every
+  `reacue_settings.json` key (default, role, where to set it); PDF chart (10), lyrics word by word, automatic
+  lyrics and `#` comments (12), prompter roles table with Stage control / Lighting, open hi-hat and highlighted
+  word (13), engine settings (14), troubleshooting rows. README / LISEZMOI: features, optional components
+  table, “PDF chart / Grille PDF” section, `drums_engine` setting, uninstall of every component.
+  grandMA3 menu fixed everywhere in the docs: *Menu → Output Configuration → Connector Configuration*.
 
 ### Onglet Lumière de la fenêtre ReaCue / Lighting tab of the ReaCue window
 - **New tab “Lumière / Lighting”** (`reaper/ReaCue_tab_lighting.lua`, between Stage and Settings, FR / EN,

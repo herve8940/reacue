@@ -42,7 +42,7 @@ local TXT = {
     slot_fail = "TC Slot : à régler à la main (Timecode > Settings > TC Slot = TCSlot %d)",
     drive = "Lecteur utilisé : %d",
     how = {
-      "Entrée timecode (une seule fois) : Menu > In & Out (Connector Configuration)",
+      "Entrée timecode (une seule fois) : Menu > Output Configuration > Connector Configuration",
       "  LTC (XLR) : SMPTE Mode = In, colonne SMPTE TC = slot %d",
       "  MTC (MIDI In / onPC) : MIDI TC Mode = In, colonne MIDI TC = slot %d",
     },
@@ -63,7 +63,7 @@ local TXT = {
     slot_fail = "TC Slot: set it by hand (Timecode > Settings > TC Slot = TCSlot %d)",
     drive = "Drive used: %d",
     how = {
-      "Timecode input (once): Menu > In & Out (Connector Configuration)",
+      "Timecode input (once): Menu > Output Configuration > Connector Configuration",
       "  LTC (XLR): SMPTE Mode = In, SMPTE TC column = slot %d",
       "  MTC (MIDI In / onPC): MIDI TC Mode = In, MIDI TC column = slot %d",
     },

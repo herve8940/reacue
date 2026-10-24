@@ -643,4 +643,4 @@ def test_docs_timecode_setup():
         txt = (ROOT / doc).read_text(encoding="utf-8")
         assert all(w in txt for w in words), (doc, [w for w in words if w not in txt])
     ch = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    assert re.search(r"Unreleased", ch) and "TIMECODE LTC" in ch
+    assert re.search(r"Unreleased|## 1\.2\.0", ch) and "TIMECODE LTC" in ch
