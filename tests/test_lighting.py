@@ -393,7 +393,8 @@ def test_prompter_page_has_light_role_fr_en():
     for k in ("lCurK", "lCues", "lFiles", "lNote", "lCfg", "lNone"):
         assert PAGE.count(f"{k}:") == 2, k                     # une traduction FR et une EN
     assert "MTC" in PAGE and "LTC" in PAGE
-    assert "cdn" not in PAGE.lower() and "jszip" not in PAGE.lower()       # aucune dépendance internet
+    low = PAGE.lower()                                                      # aucune dépendance internet
+    assert "://cdn" not in low and "jszip" not in low and 'src="http' not in low
     assert "song.lighting" in PAGE and "concert.lighting" in PAGE
 
 
