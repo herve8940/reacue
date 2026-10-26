@@ -13,6 +13,10 @@ le prompteur » de REAPER (ou à la main).
     <python du venv> -m reacue_mcp.cli export --request '{"stems": ["Basse"], "format": "mp3",
                                                           "range": {"kind": "section", "section": "Refrain 1"}}'
                                                     # même chose à la main (items lus par le pont)
+    <python du venv> -m reacue_mcp.cli library      # ReaCue Studio, BIBLIO : reacue_library.json
+    <python du venv> -m reacue_mcp.cli notes        # ReaCue Studio, GROUPE : notes de section republiées
+    <python du venv> -m reacue_mcp.cli open-song --project "<morceau>.RPP"
+                                                    # morceau ouvert depuis BIBLIO : prompteur publié
     (Windows : reacue_cli.py, à la racine, fait la même chose sans dépendre du dossier courant)
 
 Même code que le serveur MCP (mêmes réglages, même mémoire du dernier morceau) : on peut ensuite
@@ -244,7 +248,7 @@ def _export(args, log) -> int:
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="reacue")
     ap.add_argument("cmd", choices=["prepare", "publish", "concert", "concert-extras", "timecode",
-                                    "concert-lighting", "export"])
+                                    "concert-lighting", "export", "library", "notes", "open-song"])
     ap.add_argument("--bpm", type=float, help="tempo approximatif (corrige double/moitié)")
     ap.add_argument("--count-in", type=int, help="mesures de count-in (défaut : réglages, 2)")
     ap.add_argument("--reanalyse", action="store_true",
@@ -255,6 +259,7 @@ def main(argv=None):
     ap.add_argument("--songs", nargs="+", help="concert : morceaux dans l'ordre (noms de projets ou chemins .RPP)")
     ap.add_argument("--gap", type=float, help="concert : blanc minimum entre deux morceaux (s)")
     ap.add_argument("--job", help="export : tâche écrite par la fenêtre ReaCue (export_job.json)")
+    ap.add_argument("--project", help="open-song : projet .RPP ouvert depuis l'écran BIBLIO de ReaCue Studio")
     ap.add_argument("--request", help="export : demande JSON (stems, format, kbps, range, mode, click)")
     args = ap.parse_args(argv)
     if args.resource_dir:
@@ -273,6 +278,25 @@ def main(argv=None):
             return 1
     if args.cmd == "export":                   # ReaCue Studio : export audio (sans fenêtre de progression)
         return _export(args, log)
+    if args.cmd in ("library", "notes", "open-song"):   # ReaCue Studio (BIBLIO, GROUPE) : sans fenêtre de progression
+        from . import library
+        try:
+            if args.cmd == "notes":                    # notes de section enregistrées par la fenêtre ReaCue
+                res = library.apply_notes_published()
+                library.publish_library()
+            elif args.cmd == "open-song":
+                if not args.project:
+                    print("open-song : --project <morceau>.RPP", file=sys.stderr)
+                    return 2
+                res = library.publish_project(args.project)
+            else:
+                d = library.publish_library()
+                res = {"songs": len(d["songs"]), "concerts": len(d["concerts"])}
+            print(json.dumps(res, ensure_ascii=False))
+            return 0
+        except Exception:
+            _log_exc(log)
+            return 1
     if args.cmd == "concert-lighting":         # onglet Lumière : export d'un concert déjà construit
         _status("running", cmd="concert-lighting", step=t("gma3_running"))
         try:

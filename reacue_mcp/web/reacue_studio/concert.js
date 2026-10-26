@@ -409,10 +409,10 @@
   // ------------------------------------------------------------------ boucle
   function frame() {
     requestAnimationFrame(frame);
-    if (RC.mode === "travail") return;
+    if (RC.mode !== "concert" && RC.mode !== "lumiere") return;
     if (armed && performance.now() - armed.at > 2000) armed = null;
     const t = RC.pos();
-    if (RC.mode === "concert") frameConcert(t); else frameLight(t);
+    if (RC.mode === "concert") frameConcert(t); else if (RC.mode === "lumiere") frameLight(t);
   }
   RC.onLang.push(() => { setKey = ""; secKey = ""; filesKey = ""; $("csCues").dataset.key = ""; $("lmList").dataset.key = ""; });
   RC.onData.push(() => { setKey = ""; secKey = ""; filesKey = ""; });

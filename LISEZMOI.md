@@ -689,6 +689,46 @@ téléchargement** des fichiers grandMA3 (Sequences, Timecode, fiche de conduite
 suggestions par type de section, en lecture seule pour l'instant (leur édition viendra plus tard). Réglages
 (sorties, slot, images/s, départ) : onglet Lumière de la fenêtre ReaCue.
 
+### Écran Biblio
+
+![ReaCue Studio, écran Biblio](docs/images/studio_biblio_fr.png)
+
+Tous les morceaux connus : les projets du dossier des projets (et de ses sous-dossiers, comme l'onglet Concert
+de la fenêtre) et ceux des concerts. Pour chacun : **titre**, tempo, ton, durée, **mini-structure colorée**,
+**composants** (stems, accords, paroles, batterie, lumière) et **étape du parcours** : *Découvert → Travaillé
+seul → Répété en groupe → Prêt pour la scène*. Les quatre compteurs du haut (et les pastilles) filtrent la
+liste ; la recherche porte sur le titre, le dossier, le concert et le ton. **Clic sur un morceau** = il s'ouvre
+dans REAPER (nouvel onglet de projet, comme dans l'onglet Concert ; rien si c'est déjà le projet en cours), son
+prompteur est publié, puis l'écran passe sur TRAVAIL. Clic sur un concert construit = il s'ouvre.
+
+L'étape est **calculée** à partir du temps de lecture compté par la fenêtre ReaCue : *travaillé seul* = 5 min
+de lecture, *répété en groupe* = 3 min avec au moins 2 prompteurs de musiciens connectés, *prêt pour la scène*
+= morceau préparé et répété en groupe sur 2 jours différents (2 min minimum par jour). Les quatre cases de la
+colonne ÉTAPE la règlent **à la main** (MANUEL ; « auto » revient au calcul). Étape manuelle, notes et temps de
+lecture sont gardés dans `ReaCueMCP/reacue_state.json` (pas seulement dans le navigateur) ; la bibliothèque est
+publiée dans `reacue_library.json` à chaque publication du prompteur, construction de concert et ouverture de
+la fenêtre ReaCue.
+
+### Écran Groupe (répétition)
+
+![ReaCue Studio, écran Groupe](docs/images/studio_groupe_fr.png)
+
+- **Notes par section** du morceau en cours (concert : celui sous la tête de lecture) : tape une note courte,
+  Entrée (ou clic ailleurs) l'enregistre ; elle apparaît en 2 à 3 secondes dans le **cadre rose** de tous les
+  prompteurs. Elle est gardée dans l'état de ReaCue et reprise à chaque préparation / construction de concert.
+- **On reprend à…** : clic sur une section = la lecture repart **une mesure avant** (une boucle en cours
+  s'arrête) ; STOP et LECTURE / PAUSE à côté.
+- **Musiciens connectés** : chaque prompteur ouvert (rôle, prénom facultatif saisi sur le téléphone en
+  choisissant son rôle) apparaît tant qu'il donne signe de vie (10 s). Sur le prompteur, les musiciens
+  appuient sur **« Prêt ? »** (en haut, discret) : il devient vert « Prêt ✓ » quand ReaCue l'a reçu. Le compteur
+  **PRÊTS 3 / 4** et **REMISE À ZÉRO** sont dans cet écran. Le nombre de prompteurs s'affiche aussi en bas de
+  l'écran Travail (« PROMPTEUR · 5 »).
+
+Nouvelles commandes de la télécommande (fenêtre ReaCue, PIN) : `open`, `libstage`, `note`, `resume`,
+`readyreset`. Les prompteurs écrivent `ReaCue/hb0` … `hb7` (un emplacement par téléphone, tiré de son
+identifiant ; un signe perdu est repris au suivant) ; la fenêtre publie `ReaCue/band`. Fenêtre fermée : pas de
+musiciens, pas de notes ni d'étape manuelle (l'écran le dit).
+
 ## Lumière : export grandMA3
 
 Chaque préparation (et chaque construction de concert) écrit aussi un **show lumière grandMA3** : un cue par

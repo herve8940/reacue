@@ -226,7 +226,9 @@ def test_regie_end_to_end(TL_concert, lang):
                 assert not pg.is_visible("#regie")
                 n0 = len(fake.log)
                 pg.wait_for_timeout(400)
-                got = {x for x in fake.log[n0:] if x.startswith(("GET/EXTSTATE", "SET/EXTSTATE"))}
+                # présence (écran GROUPE de ReaCue Studio) : battement ReaCue/hb<n> et lecture de ReaCue/band, à part
+                got = {x for x in fake.log[n0:] if x.startswith(("GET/EXTSTATE", "SET/EXTSTATE"))
+                       and not x.startswith(("GET/EXTSTATE/ReaCue/band", "SET/EXTSTATE/ReaCue/hb"))}
                 if r == "all":
                     assert got == {"GET/EXTSTATE/ReaCue/studio"}, got
                     assert not pg.is_visible("#stemNote")

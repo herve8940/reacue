@@ -6,7 +6,8 @@
      une à la fois (file d'attente, accusé ReaCue/remote_ack), PIN mémorisé dans le navigateur ;
    - données publiées par ReaCue : reacue_song.json (grille, sections, accords ; concert : setlist ; bloc « lighting »
      des cues grandMA3), reacue_peaks.json (formes d'onde), reacue_export.json (état des exports) ;
-   - écrans (Travail, Concert, Lumière) : éléments [data-screen], navigation #nav, adresse studio.html#concert ;
+   - écrans (Biblio, Travail, Groupe, Concert, Lumière) : éléments [data-screen], navigation #nav, adresse studio.html#groupe ;
+   - prompteurs connectés et « Prêt » : ExtState ReaCue/band (RC.band) ;
    - calculs musicaux : mesure.temps.subdivision, SMPTE, transposition des accords.
    Aucune ressource externe. */
 (function () {
@@ -41,9 +42,9 @@
   };
 
   // ------------------------------------------------------------------ écrans (navigation)
-  // un seul document : chaque écran est un élément [data-screen="travail|concert|lumiere"] ; l'adresse garde
+  // un seul document : chaque écran est un élément [data-screen="biblio|travail|groupe|concert|lumiere"] ; l'adresse garde
   // l'écran (studio.html#concert), le bouton actif de #nav suit. RC.onMode : rappels des écrans.
-  RC.MODES = ["travail", "concert", "lumiere"];
+  RC.MODES = ["biblio", "travail", "groupe", "concert", "lumiere"];
   RC.mode = "travail";
   RC.onMode = [];
   RC.setMode = m => {
@@ -86,7 +87,7 @@
     const l = txt.split("\n").find(x => x.startsWith("EXTSTATE\tReaCue\t" + key + "\t") || x === "EXTSTATE\tReaCue\t" + key);
     return l == null ? null : (l.split("\t")[3] || "");
   };
-  const EXT_KEYS = ["remote_alive", "remote_ack", "rehearsal", "studio", "tctest"];
+  const EXT_KEYS = ["remote_alive", "remote_ack", "rehearsal", "studio", "tctest", "band"];
   RC.extra = [];                         // commandes ajoutées à chaque interrogation (écran)
   RC.onPoll = [];
   RC.poll = async () => {
@@ -110,6 +111,7 @@
       if (S.ext.remote_alive != null && S.ext.remote_alive !== S.alive) { S.alive = S.ext.remote_alive; S.aliveAt = now; }
       RC.parseStudio(S.ext.studio);
       RC.parseReh(S.ext.rehearsal);
+      RC.parseBand(S.ext.band);
       RC.ackReply(S.ext.remote_ack);
       RC.onPoll.forEach(fn => fn(txt));
     } catch (e) { RC.state.ok = false; }
@@ -134,6 +136,22 @@
     const [on, rate, a, b, names] = v.split("|");
     RC.reh = { on: on === "1", rate: parseFloat(rate) || 1, a: a ? parseFloat(a) : null, b: b ? parseFloat(b) : null, names: names || "" };
   };
+
+  // ReaCue/band = époque|id,rôle,nom,prêt,âge;…  (prompteurs connectés, publié par la fenêtre ReaCue, écran GROUPE)
+  RC.band = { epoch: "", list: [] };
+  RC.BAND_TTL = 10;
+  RC.parseBand = v => {
+    if (v == null) return;
+    const i = v.indexOf("|"), epoch = i < 0 ? v : v.slice(0, i), rest = i < 0 ? "" : v.slice(i + 1);
+    const list = rest.split(";").filter(Boolean).map(e => {
+      const [id, role, name, ready, age] = e.split(",");
+      let nm = ""; try { nm = decodeURIComponent(name || ""); } catch (x) { nm = name || ""; }
+      return { id, role: role || "", name: nm, ready: ready === "1", age: parseInt(age, 10) || 0 };
+    }).filter(x => x.id && x.age <= RC.BAND_TTL);
+    RC.band = { epoch, list };
+  };
+  // musiciens (rôles qui jouent : pas la Régie ni la Lumière)
+  RC.isMusician = r => r !== "regie" && r !== "light" && !!r;
 
   // actions du transport (identifiants d'actions REAPER)
   RC.ACT = { play: 1007, pause: 1008, stop: 1016, playpause: 40073 };

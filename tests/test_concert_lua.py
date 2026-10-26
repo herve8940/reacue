@@ -321,7 +321,7 @@ def test_window_detached(concert, lang):
     st.cursor = res.songs[1]["bar1"] + 1.0
     frame(L, g); frame(L, g)
     T = texts(g)
-    assert "Second Demo" in T and "2 / 3" in T, T
+    assert "Second Demo" in T and ("MORCEAU 2 / 3" if lang == "fr" else "SONG 2 / 3") in T, T   # espace avant le n°
     nxt = "Ensuite : 3 · Third Demo" if lang == "fr" else "Next: 3 · Third Demo"
     assert any(t.startswith(nxt) for t in T), T
     assert any(("mesure" if lang == "fr" else "bar") in t and "BPM" in t for t in T), T

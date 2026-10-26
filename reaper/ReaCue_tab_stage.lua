@@ -254,12 +254,11 @@ return function(ctx)
     -- rang + titre
     local tx = x + 14
     local ty = y + 38
-    local rank = ctx.is_concert and U.upper(L.tr("song_k")) or U.upper(t("song_only"))
+    -- « MORCEAU 2 / 3 » en un seul texte (l'espace ne dépend plus de la mesure de la police)
+    local rank = ctx.is_concert and (U.upper(L.tr("song_k")) .. " " .. string.format("%d / %d", S.i, #c.songs))
+                 or U.upper(t("song_only"))
     local stw = U.text_w(slab, 17, true, "cond")
     U.text(rank, x + 30 + stw + 16, y + 19, 10, U.MUTED)
-    if ctx.is_concert then
-      U.text(string.format("%d / %d", S.i, #c.songs), x + 30 + stw + 16 + U.text_w(rank, 10) + 8, y + 19, 10, U.MUTED)
-    end
     local avail = (wide and (w - tot - 30) or (w - 24))
     U.text(U.fit(U.upper(s.title or ""), avail, 30, true, "cond"), tx, ty, 30, U.INK, true, "cond")
     -- afficheurs

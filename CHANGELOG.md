@@ -1,6 +1,36 @@
 # Changelog
 
-## Non publié / Unreleased — ReaCue Studio, étapes 1 à 3 : écran Travail, exports, prompteur, Concert, Lumière, nouvelle apparence
+## Non publié / Unreleased — ReaCue Studio, étapes 1 à 4 : écran Travail, exports, prompteur, Concert, Lumière, Biblio, Groupe, nouvelle apparence
+
+### Library and Band screens (step 4)
+- **ReaCue Studio, LIBRARY screen** (`studio.html#biblio`): every known song (projects folder and its direct
+  subfolders, like the window's Concert tab, plus the songs of the shows) with title, tempo, key, length,
+  coloured mini-structure, components (stems, chords, lyrics, drums, lights), shows, and **stage of the
+  journey** (Discovered → Practised alone → Rehearsed as a band → Ready for the stage): computed from the
+  playback time counted by the ReaCue window (alone / with ≥ 2 musicians' prompters connected / band on 2 days
+  for a prepared song) or set by hand (`libstage`). Stage counters and chips filter, search. Click = open the
+  `.RPP` in REAPER (new project tab, as the Concert tab; remote command `open`), publish its prompter (CLI
+  `open-song`: structure at once, then chords / lyrics / drums), then PRACTICE. Built shows open the same way.
+- `reacue_mcp/library.py`: `reacue_library.json` published at every prompter publication, show build and
+  opening of the ReaCue window (CLI `library`); summaries of published songs cached in
+  `ReaCueMCP/library_cache.json`. Durable state written by the window: `ReaCueMCP/reacue_state.json` (manual
+  stage, section notes, playback time alone / as a band per day).
+- **ReaCue Studio, BAND screen** (`studio.html#groupe`): **notes per section** of the current song (remote
+  `note` → state file → CLI `notes` rewrites the `notes` field of `reacue_song.json`, and of
+  `<show>.prompteur.json` for a show: pink frame on every prompter within 2–3 s; notes kept at every
+  preparation / show build); **take it from…** (remote `resume`: playback one bar before the section, loop
+  stopped); **musicians connected** with role and optional name, **READY n / N**, **RESET** (remote
+  `readyreset`).
+- **Prompter**: discreet **“Ready?”** button for musicians' roles (green once ReaCue got it), optional first name
+  in the role picker; heartbeat every ~2 s in `ReaCue/hb0…hb7` (slot from the phone id: several phones at once,
+  a lost beat is taken up by the next), `Ready` only valid for the current epoch (reset = new epoch), phones
+  forgotten after 10 s. The window publishes `ReaCue/band`; PRACTICE footer shows “PROMPTER · n”.
+- Published songs carry their `project` path; section notes come from the durable state.
+- ReaCue window, Stage tab: “SONG 2 / 3” drawn as one text (the space was missing: “MORCEAU2 / 3”).
+- Tests: library JSON (projects, shows, components, stages, manual stage, language), notes republished (single
+  song and show), CLI `library` / `notes` / `open-song`, Lua (several phones, slots, expiry, epoch reset,
+  notes, manual stage, resume, playback time, open from the library), Library / Band screens FR / EN, prompter
+  Ready button with three phones; screenshots `studio_biblio_*`, `studio_groupe_*` (prompter ones regenerated).
 
 ### Show and Lights screens, “Studio pro” look for the ReaCue window (step 3)
 - **ReaCue Studio, SHOW screen** (`studio.html#concert`, same base CSS / JS and navigation as Practice):

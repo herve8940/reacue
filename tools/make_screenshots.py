@@ -198,6 +198,54 @@ def demo_concert(lang: str) -> dict:
     return data
 
 
+# bibliothèque fictive (écran BIBLIO) : même format que reacue_mcp/library.build_library
+LIB_SONGS = [  # titre, tempo, ton, étape, manuel ?, composants (stems, accords, paroles, batterie, lumière), préparé
+    ("Demo Song", 112, "Am", "stage", False, (5, True, 46, True, True), True),
+    ("Second Demo", 150, "Em", "band", False, (4, True, 46, True, True), True),
+    ("Third Demo", 100, "C", "band", True, (0, True, 0, False, True), True),
+    ("Night Drive Demo", 124, "F#m", "solo", False, (6, True, 32, True, False), True),
+    ("Morning Riff", 96, "D", "new", False, (4, False, 0, True, False), True),
+    ("Unfinished Idea", 0, "", "new", False, (0, False, 0, False, False), False),
+]
+
+
+def demo_library(lang: str) -> dict:
+    from reacue_mcp import library
+    secs = []
+    for name, a, b in STRUCT:
+        nm = localize_section(name, lang)
+        secs.append({"name": nm, "type": section_kind(nm), "color": "#%02x%02x%02x" % section_color(nm), "bars": b - a + 1})
+    songs, base = [], "/Users/demo/Documents/REAPER Media"
+    for k, (title, bpm, key, stage, manual, comp, prep) in enumerate(LIB_SONGS):
+        path = f"{base}/{title}/{title}.RPP"
+        cut = secs if k % 2 == 0 else secs[:9]
+        st = {"new": (0, 0, 0), "solo": (14, 0, 0), "band": (22, 9, 1), "stage": (40, 31, 3)}[stage]
+        songs.append({
+            "key": library.song_key(path), "path": path, "title": title, "folder": title, "bpm": bpm or None, "sig": "4/4",
+            "key_name": {"chord": key, "fr": key, "en": key} if key else None,
+            "duration_s": round(sum(x["bars"] for x in cut) * 240 / bpm, 1) if bpm else 0, "bars": sum(x["bars"] for x in cut),
+            "sections": cut if prep else [], "prepared": prep,
+            "components": {"stems": comp[0], "chords": comp[1], "lyrics": comp[2], "drums": comp[3], "lighting": comp[4]},
+            "concerts": (["Concert de démo" if lang == "fr" else "Demo concert"] if k < 3 else []),
+            "published": 1761480000 if prep else None, "stage": stage,
+            "stage_auto": "solo" if manual else stage, "stage_manual": stage if manual else None,
+            "practice": {"solo_min": st[0], "band_min": st[1], "band_days": st[2], "last": None}, "notes": 2 if k < 2 else 0,
+        })
+    name = "Concert de démo" if lang == "fr" else "Demo concert"
+    data = {"version": 1, "generated": 1761480000, "language": lang, "projects_dir": base, "concert_dir": base + "/Concerts",
+            "stages": list(library.STAGES), "rules": {"solo_min": 5, "band_min": 3, "stage_days": 2, "day_min": 2},
+            "songs": songs, "concerts": [{"name": name, "rpp": f"{base}/Concerts/{name}.RPP", "built": True,
+                                         "songs": [x["key"] for x in songs[:3]]},
+                                        {"name": "Festival 2027", "rpp": f"{base}/Concerts/Festival 2027.RPP", "built": False,
+                                         "songs": [x["key"] for x in songs[1:5]]}]}
+    data["id"] = hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()[:12]
+    return data
+
+
+# musiciens connectés (écran GROUPE) : ReaCue/band = époque|id,rôle,nom,prêt,âge;…
+DEMO_BAND = "1761480000|a1b2c3d4,vocals,Camille,1,1;b2c3d4e5,drums,Max,1,0;c3d4e5f6,bass,,0,2;d4e5f6a7,guitars,L%C3%A9a,1,1;e5f6a7b8,regie,,0,3"
+
+
 # --------------------------------------------------------------------------- faux REAPER
 # pistes du projet de démonstration (Studio) : nom, mute, solo, volume (1 = 0 dB), pan, crête (dB)
 DEMO_TRACKS = [("Chant", 0, 0, 0.69, -0.2, -9), ("Batterie", 0, 0, 0.89, 0.0, -3), ("Basse", 0, 0, 0.6, 0.0, -11),
@@ -241,6 +289,8 @@ class FakeReaper(SimpleHTTPRequestHandler):
     peaks: dict | None = None
     export: dict | None = None
     tctest: str = ""                # test timecode en cours : secondes restantes
+    band: str = ""                  # prompteurs connectés (écran GROUPE)
+    library: dict | None = None     # reacue_library.json (écran BIBLIO)
     tracks: list = []
     log: list = []                  # commandes SET/… et actions reçues (tests)
 
@@ -251,7 +301,7 @@ class FakeReaper(SimpleHTTPRequestHandler):
         """/_/cmd;cmd;… : TRANSPORT, TRACK, GET/EXTSTATE, SET/TRACK, SET/POS, SET/EXTSTATE (accusé immédiat)."""
         cls = FakeReaper
         ext = {"mix": cls.mix, "remote_alive": str(int(time.time() * 2)), "remote_ack": cls.__dict__.get("ack", ""),
-               "rehearsal": cls.rehearsal, "studio": cls.studio, "tctest": cls.tctest}
+               "rehearsal": cls.rehearsal, "studio": cls.studio, "tctest": cls.tctest, "band": cls.band}
         body = ""
         for c in path[3:].split(";"):
             c = unquote(c)
@@ -291,8 +341,9 @@ class FakeReaper(SimpleHTTPRequestHandler):
             body, ctype = self._api(path), "text/plain"
         elif path == "/reacue_song.json":
             body, ctype = json.dumps(self.song, ensure_ascii=False).encode("utf-8"), "application/json"
-        elif path in ("/reacue_peaks.json", "/reacue_export.json"):
-            d = FakeReaper.peaks if path == "/reacue_peaks.json" else FakeReaper.export
+        elif path in ("/reacue_peaks.json", "/reacue_export.json", "/reacue_library.json"):
+            d = {"/reacue_peaks.json": FakeReaper.peaks, "/reacue_export.json": FakeReaper.export,
+                 "/reacue_library.json": FakeReaper.library}[path]
             if d is None:
                 self.send_error(404)
                 return
@@ -456,6 +507,33 @@ def run(out: Path | None, check_only: bool) -> list[str]:
                         shots.append(f.name)
                     ctx.close()
             FakeReaper.play, FakeReaper.tracks, FakeReaper.peaks = 0, [], None
+            # ReaCue Studio, écrans Biblio (bibliothèque fictive) et Groupe (concert fictif, 2e morceau, musiciens)
+            for lang in ("fr", "en"):
+                data = demo_concert(lang)
+                s2 = data["songs"][1]
+                FakeReaper.song, FakeReaper.tracks, FakeReaper.library = data, demo_tracks(), demo_library(lang)
+                FakeReaper.peaks = demo_peaks(s2)
+                FakeReaper.band = DEMO_BAND
+                for mode, pos, sel in (("biblio", bar_time(31, 2.5, s2["bpm"], s2["start_t"]), "#bbRows .bb-row"),
+                                       ("groupe", bar_time(31, 2.5, s2["bpm"], s2["start_t"]), "#grNotes .gr-note.now")):
+                    FakeReaper.pos, FakeReaper.play = pos, 1
+                    ctx = browser.new_context(viewport={"width": 1440, "height": 900}, device_scale_factor=1,
+                                              locale="fr-FR" if lang == "fr" else "en-US")
+                    page = ctx.new_page()
+                    page.on("console", lambda m, lg=lang, md=mode: m.type == "error" and errors.append(f"{lg}/{md}: {m.text}"))
+                    page.on("pageerror", lambda e, lg=lang, md=mode: errors.append(f"{lg}/{md}: {e}"))
+                    page.goto(f"{base}/studio.html?lang={lang}#{mode}")
+                    page.wait_for_selector(sel, timeout=8000)
+                    if mode == "groupe":
+                        page.wait_for_selector("#grBand .gr-mus", timeout=8000)
+                    page.wait_for_timeout(600)
+                    if out and not check_only:
+                        f = out / f"studio_{mode}_{lang}.png"
+                        page.screenshot(path=str(f))
+                        shots.append(f.name)
+                    ctx.close()
+            FakeReaper.play, FakeReaper.tracks, FakeReaper.library, FakeReaper.band = 0, [], None, ""
+            FakeReaper.peaks = None
             # bouton de langue : FR -> EN sans erreur, mémorisé
             ctx = browser.new_context(viewport=PHONE)
             page = ctx.new_page()

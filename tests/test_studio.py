@@ -65,9 +65,17 @@ def test_page_strings_fr_en_complete():
     cen = cj[cj.index("Object.assign(RC.STR.en, {"):cj.index("const T = RC.t")]
     assert keys(cfr) == keys(cen) and len(keys(cfr)) > 50
     assert not (keys(cfr) & keys(fr)) - {"play", "pause", "next", "prev", "again", "none"}
+    # écrans Biblio et Groupe : idem
+    more = set()
+    for name in ("biblio.js", "groupe.js"):
+        bj = (WEB / "reacue_studio" / name).read_text(encoding="utf-8")
+        bfr = bj[bj.index("Object.assign(RC.STR.fr, {"):bj.index("Object.assign(RC.STR.en, {")]
+        ben = bj[bj.index("Object.assign(RC.STR.en, {"):bj.index("const T = RC.t")]
+        assert keys(bfr) == keys(ben) and len(keys(bfr)) > 25, name
+        more |= keys(bfr)
     html = (WEB / "studio.html").read_text(encoding="utf-8")
     for k in re.findall(r'data-tt?="(\w+)"', html):
-        assert k in keys(fr) | keys(cfr), k
+        assert k in keys(fr) | keys(cfr) | more, k
 
 
 def test_publish_copies_studio(tmp_path):

@@ -297,7 +297,10 @@ def _publish_prompter(analysis, item, timeline, items, project: str | None = Non
     except Exception as e:
         drum_warn = t("drums_failed", e=e)
     song = prompter.build_song(analysis, item, timeline, items, act, chords=grid, lyrics=words, drums=kit)
+    from . import library
+    library.attach(song, project)        # projet + notes de section (écran GROUPE de ReaCue Studio)
     light, light_warn = _export_lighting(song, project)     # lumière grandMA3 (onglet Lumière du prompteur)
+    library.record_song(song, project)   # résumé pour l'écran BIBLIO
     out = prompter.publish(song)
     peaks_warn = None
     try:                                # formes d'onde de ReaCue Studio (jamais bloquantes)

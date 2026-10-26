@@ -195,7 +195,7 @@ def test_window_tabs_auto_and_handoff(concert, tmp_path, lang):
     for n in names:
         assert n in T, T
     # projet concert : onglet Scène choisi tout seul
-    assert ("Précédent" if lang == "fr" else "Previous") in T and "1 / 3" in T
+    assert ("Précédent" if lang == "fr" else "Previous") in T and ("MORCEAU 1 / 3" if lang == "fr" else "SONG 1 / 3") in T
     assert ("Batterie" if lang == "fr" else "Drums") in T                 # rangée Instruments
     press_text(L, g, names[3], exact=True); frame(L, g)
     assert ("Langue" if lang == "fr" else "Language") in TL.texts(g)

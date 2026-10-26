@@ -209,7 +209,7 @@ def test_stage_live_check_qr(concert, lang):
         g.state.cursor = res.songs[1]["bar1"] + 1
         open_(L, g)
         T = snap(L, g, "stage", lang)
-        assert "2 / 3" in T, T
+        assert ("MORCEAU 2 / 3" if lang == "fr" else "SONG 2 / 3") in T, T
         W.press_text(L, g, LBL[lang]["live"], exact=True)
         T = snap(L, g, "live", lang)
         assert "2. Second Demo" in T, T

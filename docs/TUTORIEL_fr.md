@@ -1089,6 +1089,39 @@ SUIV. passent d'une section à l'autre) avec un message.
 > Les effets affichés sont les suggestions par type de section (lecture seule) ; leur modification viendra
 > dans une prochaine version.
 
+### 17.6 ReaCue Studio : écrans Biblio et Groupe
+
+**Biblio** (`studio.html#biblio`) : la liste de tous tes morceaux (dossier des projets + concerts).
+
+![ReaCue Studio, écran Biblio](images/studio_biblio_fr.png)
+
+1. Ouvre la fenêtre **ReaCue** dans REAPER (elle publie la bibliothèque et exécute les commandes).
+2. Dans ReaCue Studio, clique sur **BIBLIO**. Filtre par étape (compteurs du haut) ou cherche un titre.
+3. Clic sur un morceau : il s'ouvre dans REAPER (nouvel onglet) et l'écran passe sur **TRAVAIL**. Un morceau
+   « À PRÉPARER » s'ouvre aussi, mais prépare-le d'abord (onglet Morceau de la fenêtre).
+4. Colonne **ÉTAPE** : calculée toute seule (AUTO) à partir du temps joué seul ou en groupe ; clique une case
+   pour la régler à la main (MANUEL), « auto » pour revenir au calcul.
+
+| Étape | Calcul automatique |
+|---|---|
+| Découvert | rien de mesuré |
+| Travaillé seul | 5 min de lecture |
+| Répété en groupe | 3 min de lecture avec au moins 2 prompteurs de musiciens connectés |
+| Prêt pour la scène | préparé + répété en groupe sur 2 jours (2 min minimum chaque jour) |
+
+**Groupe** (`studio.html#groupe`) : l'écran de la répétition.
+
+![ReaCue Studio, écran Groupe](images/studio_groupe_fr.png)
+
+1. Chaque musicien ouvre le prompteur sur son téléphone, choisit son rôle et peut taper son prénom.
+2. **Notes** : écris « on coupe sur le 4 » à côté de la section, Entrée : la note apparaît en rose sur tous
+   les prompteurs (2 à 3 s).
+3. **Prêt** : chacun appuie sur « Prêt ? » en haut du prompteur ; l'écran Groupe affiche « PRÊTS 3 / 4 » et
+   qui manque. **REMISE À ZÉRO** avant le morceau suivant.
+4. **On reprend à…** : clic sur « Refrain 2 » : la lecture repart une mesure avant.
+
+> Les musiciens connectés, les notes et l'étape manuelle passent par la fenêtre ReaCue : garde-la ouverte.
+
 ---
 
 ## 18. Dépannage

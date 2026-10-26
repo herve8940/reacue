@@ -654,6 +654,43 @@ window's Lighting tab; the page shows the countdown) and **download links** for 
 (Sequences, Timecode, cue sheet). **Effects** are the suggestions per section type, read-only for now (editing
 comes later). Settings (outputs, slot, fps, start): Lighting tab of the ReaCue window.
 
+### Library screen
+
+![ReaCue Studio, Library screen](docs/images/studio_biblio_en.png)
+
+Every known song: the projects of the projects folder (and its subfolders, like the window's Concert tab) and
+those of the shows. For each: **title**, tempo, key, length, **coloured mini-structure**, **components** (stems,
+chords, lyrics, drums, lights) and **stage of the journey**: *Discovered → Practised alone → Rehearsed as a band
+→ Ready for the stage*. The four counters at the top (and the chips) filter the list; search covers title,
+folder, show and key. **Click a song** = it opens in REAPER (new project tab, as in the Concert tab; nothing if it
+is already the current project), its prompter is published, then the screen switches to PRACTICE. Click a built
+show = it opens.
+
+The stage is **computed** from the playback time counted by the ReaCue window: *practised alone* = 5 min of
+playback, *rehearsed as a band* = 3 min with at least 2 musicians' prompters connected, *ready for the stage* =
+prepared song rehearsed as a band on 2 different days (at least 2 min a day). The four boxes of the STAGE
+column set it **by hand** (MANUAL; “auto” goes back to the computation). Manual stage, notes and playback time
+are kept in `ReaCueMCP/reacue_state.json` (not only in the browser); the library is published as
+`reacue_library.json` at every prompter publication, show build and opening of the ReaCue window.
+
+### Band screen (rehearsal)
+
+![ReaCue Studio, Band screen](docs/images/studio_groupe_en.png)
+
+- **Notes per section** of the current song (show: the one under the play head): type a short note, Enter (or
+  click elsewhere) saves it; it shows within 2–3 seconds in the **pink frame** of every prompter. It is kept in
+  ReaCue's state and used again at every preparation / show build.
+- **Take it from…**: click a section = playback restarts **one bar before** (a running loop stops); STOP and
+  PLAY / PAUSE next to it.
+- **Musicians connected**: every open prompter (role, optional first name typed on the phone when picking the
+  role) shows while it gives a sign of life (10 s). On the prompter, musicians tap **“Ready?”** (at the top,
+  discreet): it turns green “Ready ✓” once ReaCue got it. The **READY 3 / 4** counter and **RESET** are on this
+  screen. The number of prompters also shows at the bottom of the Practice screen (“PROMPTER · 5”).
+
+New remote commands (ReaCue window, PIN): `open`, `libstage`, `note`, `resume`, `readyreset`. Prompters write
+`ReaCue/hb0` … `hb7` (one slot per phone, from its id; a lost sign is taken up by the next one); the window
+publishes `ReaCue/band`. With the window closed: no musicians, no notes nor manual stage (the screen says so).
+
 ## Lighting: grandMA3 export
 
 Every preparation (and every concert build) also writes a **grandMA3 lighting show**: one cue per section

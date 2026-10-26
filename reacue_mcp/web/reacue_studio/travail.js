@@ -24,7 +24,7 @@
     ramp: (a, b) => `RAMPE ${a}→${b} %`, clickOn: "CLICK ON", clickOff: "CLICK OFF", voiceOn: "VOIX ON", voiceOff: "VOIX OFF",
     ledPrompt: "PROMPTEUR", ledReaperOk: "REAPER et la fenêtre ReaCue répondent.",
     ledReaperWin: "REAPER répond, mais la fenêtre ReaCue est fermée : boucle, rampe, transposition et export indisponibles (ouvre « ReaCue » dans REAPER).",
-    ledReaperBad: "REAPER ne répond pas (interface web).", ledPromptOk: "Morceau publié (reacue_song.json).", ledPromptBad: "Aucun morceau publié.",
+    ledReaperBad: "REAPER ne répond pas (interface web).", ledPromptOk: "Morceau publié (reacue_song.json).", ledPromptN: n => n ? `${n} prompteur(s) connecté(s).` : "Aucun prompteur connecté.", ledPromptBad: "Aucun morceau publié.",
     ledLtc: "Timecode LTC envoyé par REAPER (piste TIMECODE LTC).", ledLtcNone: "Pas de sortie LTC configurée (onglet Lumière).",
     trTip: "Transposer le morceau d'un demi-ton (pitch des items par REAPER, mode de pitch par défaut du projet). Qualité correcte jusqu'à ±2 demi-tons ; au-delà, artefacts audibles (voix, batterie). Double-clic sur TON : revenir à 0.",
     trOff: "Transposition : ouvre la fenêtre ReaCue dans REAPER (et saisis le PIN).",
@@ -58,7 +58,7 @@
     ramp: (a, b) => `RAMP ${a}→${b} %`, clickOn: "CLICK ON", clickOff: "CLICK OFF", voiceOn: "VOICE ON", voiceOff: "VOICE OFF",
     ledPrompt: "PROMPTER", ledReaperOk: "REAPER and the ReaCue window answer.",
     ledReaperWin: "REAPER answers, but the ReaCue window is closed: loop, ramp, transpose and export unavailable (open “ReaCue” in REAPER).",
-    ledReaperBad: "REAPER does not answer (web interface).", ledPromptOk: "Song published (reacue_song.json).", ledPromptBad: "No song published.",
+    ledReaperBad: "REAPER does not answer (web interface).", ledPromptOk: "Song published (reacue_song.json).", ledPromptN: n => n ? `${n} prompter(s) connected.` : "No prompter connected.", ledPromptBad: "No song published.",
     ledLtc: "LTC timecode sent by REAPER (TIMECODE LTC track).", ledLtcNone: "No LTC output configured (Lighting tab).",
     trTip: "Transpose the song by one semitone (item pitch in REAPER, project default pitch mode). Fine up to ±2 semitones; beyond that, audible artefacts (vocals, drums). Double-click KEY: back to 0.",
     trOff: "Transpose: open the ReaCue window in REAPER (and enter the PIN).",
@@ -693,7 +693,10 @@
     if (vo) { $("cVoice").textContent = T(vo.mute ? "voiceOff" : "voiceOn"); $("cVoice").className = "rc-chip" + (vo.mute ? " off" : ""); }
     const web = RC.webOk(), win = RC.windowOk();
     led("ledReaper", web ? (win ? "ok" : "warn") : "bad", T(web ? (win ? "ledReaperOk" : "ledReaperWin") : "ledReaperBad"));
-    led("ledPrompt", song ? "ok" : "", T(song ? "ledPromptOk" : "ledPromptBad"));
+    // « PROMPTEUR · n » : prompteurs actifs dans les 10 dernières secondes (ReaCue/band, fenêtre ReaCue ouverte)
+    const nPr = win ? RC.band.list.length : 0;
+    $("ledPromptN").textContent = nPr ? " · " + nPr : "";
+    led("ledPrompt", song ? (nPr ? "ok" : "warn") : "", T(song ? "ledPromptOk" : "ledPromptBad") + (win ? " " + T("ledPromptN", nPr) : ""));
     const ltc = tc && (tc.ltc || (tc.timecode && tc.timecode.ltc));
     led("ledLtc", ltc ? (S.play ? "ok" : "warn") : "", T(ltc ? "ledLtc" : "ledLtcNone"));
     $("trDown").disabled = $("trUp").disabled = !win;

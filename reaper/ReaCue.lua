@@ -482,6 +482,15 @@ local last_alive, last_pos, loop_last = 0, nil, nil
 local last_tctest = nil
 -- ReaCue Studio (Lumière, Concert) : « TEST 10 S » = test d'envoi du timecode de l'onglet Lumière
 L.remote_ext.tctest = function(_, arg) return tabs.lighting.remote_test(arg) end
+-- ReaCue Studio, BIBLIO : ouvrir un morceau ou un concert de la bibliothèque (chemin urlencodé du .RPP) ;
+-- morceau seul : son prompteur est publié (CLI « open-song ») pour que Studio et téléphones le suivent
+L.remote_ext.open = function(_, arg)
+  local p = L.url_decode(arg)
+  if not L.open_project(p) then return false end
+  ctx.refresh(true)
+  if not ctx.is_concert then L.run_cli("open-song", p, "--project") end
+  return true
+end
 
 -- état du test timecode pour ReaCue Studio : secondes restantes, "" sans test
 local function publish_tctest(now)
@@ -527,6 +536,8 @@ local function background(now)
   for _, k in ipairs(TAB_ORDER) do if tabs[k].tick then tabs[k].tick(now) end end   -- test timecode : fin, Stop
   if c and not ctx.tc_test then L.mix_tick(c, now) end   -- pendant le test : mutes des instruments laissés tels quels
   publish_tctest(now)
+  L.band_poll(now)                                        -- prompteurs connectés, « Prêt » (écran GROUPE)
+  L.practice_tick(c, now, L.playing() and not ctx.tc_test, L.musicians(now))   -- temps de lecture (BIBLIO)
   L.studio_c = c
   L.studio_publish(false, c)                              -- ReaCue Studio : vitesse, transposition, rampe
   local g = reaper.GetExtState("ReaCue", "win_goto")
@@ -558,6 +569,7 @@ reaper.SetExtState("ReaCue", "win_script", SCRIPT, false)
 L.remote_pin()
 pcall(L.publish_page)
 L.publish_reh()
+pcall(L.run_cli, "library")                  -- ReaCue Studio, BIBLIO : reacue_library.json à jour
 
 local function loop()
   local ch = gfx.getchar()
@@ -611,6 +623,8 @@ reaper.atexit(function()
   reaper.SetExtState("ReaCue", "rehearsal", "", false)
   reaper.SetExtState("ReaCue", "studio", "", false)
   reaper.SetExtState("ReaCue", "tctest", "", false)
+  reaper.SetExtState("ReaCue", "band", "", false)
+  pcall(L.practice_flush)
   reaper.SetExtState("ReaCue", "win_alive", "", false)
   reaper.SetExtState("ReaCue", "win_script", "", false)
   L.remote_off()

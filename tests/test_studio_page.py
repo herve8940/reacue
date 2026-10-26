@@ -228,7 +228,7 @@ def test_studio_concert_and_lighting_screens(lang):
             "rows": page.locator("#lmList .cs-cue").count(), "heads": page.locator("#lmList .cs-song-h").count(),
             "now": page.text_content("#lmNowName"), "files": [(a.get_attribute("href"), a.get_attribute("download"))
                                                               for a in page.locator("#lmFiles a").all()],
-            "kv": page.text_content("#lmKv"), "ro": page.text_content(".cs-ro"),
+            "kv": page.text_content("#lmKv"), "ro": page.text_content("#lumiere .cs-ro"),
         }
         page.click("#nav button[data-mode=travail]")
         page.wait_for_timeout(200)
@@ -281,8 +281,11 @@ def test_studio_concert_commands_with_pin():
         stopped = _remote(M)
         # lecture en cours : PRÉC. demande deux appuis, le test aussi
         M.FakeReaper.log, M.FakeReaper.play = [], 1
+        page.wait_for_function("RC.state.play === 1", timeout=4000)
         page.wait_for_timeout(300)
+        M.FakeReaper.log = []
         page.click("#csPrev")
+        page.wait_for_timeout(120)                            # libellé mis à jour à l'image suivante
         armed = page.text_content("#csPrevL")
         page.wait_for_timeout(500)
         one = _remote(M)
@@ -355,3 +358,188 @@ def test_studio_concert_without_window_falls_back_to_native_api():
     assert "1007" in log and any(c.startswith("SET/POS/") for c in log)
     assert not any(c.startswith("SET/EXTSTATE/ReaCue/remote/") for c in log)
     assert toast.startswith("Ouvre la fenêtre")
+
+
+# --------------------------------------------------------------------------- écrans BIBLIO et GROUPE
+def _lib(M, lang="fr"):
+    data = _concert(M, lang)
+    M.FakeReaper.library, M.FakeReaper.band = M.demo_library(lang), M.DEMO_BAND
+    return data
+
+
+def _errs(page):
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("console", lambda m: m.type == "error" and errors.append(m.text))
+    return errors
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_studio_biblio_screen(lang):
+    def go(M, browser, base):
+        _lib(M, lang)
+        ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+        ctx.add_init_script("localStorage.setItem('reacue_pin', '1234')")
+        page = ctx.new_page()
+        errors, requests = _errs(page), []
+        page.on("request", lambda r: requests.append(r.url))
+        page.goto(f"{base}/studio.html?lang={lang}#biblio")
+        page.wait_for_selector("#bbRows .bb-row", timeout=8000)
+        out = {"nav": page.text_content("#nav button.on"), "rows": page.locator("#bbRows .bb-tt, #bbRows .tt").all_text_contents(),
+               "steps": page.locator("#bbPath .bb-step .v").all_text_contents(), "meta": page.text_content("#bbMeta"),
+               "stage0": page.text_content("#bbRows .bb-row[data-i='0'] .bb-sl"), "manual": page.text_content("#bbRows .bb-row[data-i='2'] .bb-sl"),
+               "comps0": page.locator("#bbRows .bb-row[data-i='0'] .bb-comp.on").count(),
+               "comps5": page.locator("#bbRows .bb-row[data-i='5'] .bb-comp.on").count(),
+               "struct": page.locator("#bbRows .bb-row[data-i='0'] .bb-struct i").count(),
+               "concerts": page.locator("#bbConcerts .bb-concert .t").all_text_contents()}
+        page.click("#bbPath .bb-step[data-f='band']")
+        page.wait_for_timeout(150)
+        out["band"] = page.locator("#bbRows .tt").all_text_contents()
+        page.click("#bbPath .bb-step[data-f='band']")
+        page.fill("#bbSearch", "night")
+        page.wait_for_timeout(100)
+        out["search"] = page.locator("#bbRows .tt").all_text_contents()
+        page.fill("#bbSearch", "")
+        page.wait_for_timeout(100)
+        # étape réglée à la main (point « scène » du 4e morceau), puis ouverture d'un morceau et d'un concert
+        page.click("#bbRows .bb-row[data-i='3'] .bb-dot[data-stage='stage']")
+        page.wait_for_timeout(700)
+        out["after"] = page.text_content("#bbRows .bb-row[data-i='3'] .bb-sl")
+        page.click("#bbRows .bb-row[data-i='1'] .tt")
+        page.wait_for_timeout(900)
+        out["mode"] = page.evaluate("RC.mode")
+        page.click("#nav button[data-mode=biblio]")
+        page.wait_for_timeout(200)
+        page.click("#bbConcerts .bb-concert[data-c='1']")                 # pas construit : rien
+        page.click("#bbConcerts .bb-concert[data-c='0']")
+        page.wait_for_timeout(800)
+        out["remote"] = [[unquote(x) for x in r] for r in _remote(M)]
+        ctx.close()
+        return errors, requests, out
+    errors, requests, o = _run(go)
+    fr = lang == "fr"
+    import make_screenshots as M
+    lib = M.demo_library(lang)
+    assert not errors, errors
+    assert all(u.startswith("http://127.0.0.1") for u in requests)
+    assert o["nav"] == "BIBLIO" if fr else o["nav"] == "LIBRARY"
+    assert o["rows"] == [s["title"] for s in lib["songs"]]
+    assert o["steps"] == ["2", "1", "2", "1"] and o["meta"].startswith("6 MORCEAUX" if fr else "6 SONGS")
+    assert o["stage0"].startswith("PRÊT POUR LA SCÈNE" if fr else "READY FOR THE STAGE") and "AUTO" in o["stage0"]
+    assert ("MANUEL" if fr else "MANUAL") in o["manual"]
+    assert o["comps0"] == 5 and o["comps5"] == 0 and o["struct"] == 11
+    assert o["concerts"] == [lib["concerts"][0]["name"], "Festival 2027"]
+    assert o["band"] == ["Second Demo", "Third Demo"] and o["search"] == ["Night Drive Demo"]
+    assert o["after"].startswith("PRÊT POUR LA SCÈNE" if fr else "READY FOR THE STAGE")
+    assert o["mode"] == "travail"
+    s3, s1 = lib["songs"][3], lib["songs"][1]
+    assert o["remote"] == [["libstage", f"{s3['key']}:stage", "1234"], ["open", s1["path"], "1234"],
+                           ["open", lib["concerts"][0]["rpp"], "1234"]]
+
+
+def test_studio_biblio_without_library():
+    def go(M, browser, base):
+        _concert(M, "en")
+        M.FakeReaper.library = None
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(f"{base}/studio.html?lang=en#biblio")
+        page.wait_for_selector("#bbMsg:not([hidden])", timeout=8000)
+        return page.text_content("#bbMsg")
+    assert _run(go).startswith("Library not published yet")
+
+
+@pytest.mark.parametrize("lang", ["fr", "en"])
+def test_studio_groupe_screen(lang):
+    def go(M, browser, base):
+        data = _lib(M, lang)
+        M.FakeReaper.play = 1
+        ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+        ctx.add_init_script("localStorage.setItem('reacue_pin', '1234')")
+        page = ctx.new_page()
+        errors = _errs(page)
+        page.goto(f"{base}/studio.html?lang={lang}#groupe")
+        page.wait_for_selector("#grBand .gr-mus", timeout=8000)
+        page.wait_for_selector("#grNotes .gr-note.now", timeout=8000)
+        out = {"title": page.text_content("#grTitle"), "ready": page.text_content("#grReady"),
+               "band": page.locator("#grBand .gr-mus .r").all_text_contents(),
+               "states": page.locator("#grBand .gr-mus .s").all_text_contents(),
+               "names": page.locator("#grBand .gr-mus .nm").all_text_contents(),
+               "head": page.text_content("#grBandH"), "now": page.text_content("#grNotes .gr-note.now .n"),
+               "notes": page.eval_on_selector_all("#grNotes input", "l => l.map(x => x.value)"),
+               "secs": page.locator("#grResume .gr-sec").count()}
+        inp = page.locator("#grNotes .gr-note[data-i='4'] input")
+        inp.fill("On reprend | doucement")
+        inp.press("Enter")
+        page.wait_for_timeout(700)
+        out["st"] = page.text_content("#grNotes .gr-note[data-i='4'] .st")
+        page.click("#grResume .gr-sec[data-i='6']")
+        page.click("#grReset")
+        page.wait_for_timeout(1200)
+        out["remote"] = [c.split("/", 4)[4].split("|")[:3] for c in M.FakeReaper.log if c.startswith("SET/EXTSTATE/ReaCue/remote/")]
+        page.click("#nav button[data-mode=travail]")
+        page.wait_for_timeout(400)
+        out["led"] = page.text_content("#ledPrompt")
+        ctx.close()
+        M.FakeReaper.play = 0
+        return errors, out, data
+    errors, o, data = _run(go)
+    fr = lang == "fr"
+    import make_screenshots as M
+    s2 = data["songs"][1]
+    assert not errors, errors
+    assert o["title"] == "Second Demo" and "".join(o["ready"].split()).endswith("3/4")
+    assert o["band"] == (["Chant", "Batterie", "Basse", "Guitare rythm.", "Régie"] if fr else
+                         ["Vocals", "Drums", "Bass", "Rhythm gtr", "Stage control"])
+    assert o["names"][:4] == ["Camille", "Max", "", "Léa"]
+    assert o["states"][2] == ("PAS PRÊT" if fr else "NOT READY") and o["states"][0] == ("PRÊT" if fr else "READY")
+    assert o["head"].endswith("· 5") and o["now"] == s2["sections"][3]["name"]
+    assert o["notes"][2] == s2["sections"][2]["notes"] and o["secs"] == 11
+    assert o["st"] in ("ENREGISTRÉ", "SAVED")
+    t_ch2 = M.bar_time(65, 0.0, s2["bpm"], s2["start_t"])
+    assert o["remote"] == [["note", "2:45:On%20reprend%20%7C%20doucement", "1234"], ["resume", f"{t_ch2:.3f}", "1234"],
+                           ["readyreset", "", "1234"]]
+    assert o["led"].endswith("· 5")
+
+
+def test_prompter_ready_button_and_heartbeat():
+    def go(M, browser, base):
+        song = _setup(M, "fr")
+        M.FakeReaper.band = "E1|"
+        out = {}
+        phones = []
+        for k, (role, name) in enumerate((("bass", "Zoé"), ("drums", ""), ("regie", ""))):
+            ctx = browser.new_context(viewport={"width": 390, "height": 844})
+            ctx.add_init_script(f"localStorage.setItem('reacue_name', '{name}'); localStorage.setItem('reacue_cid', 'phone{k}xx')")
+            page = ctx.new_page()
+            page.goto(f"{base}/prompteur.html?role={role}&lang=fr")
+            page.wait_for_function("document.getElementById('nowName').textContent !== '—'", timeout=8000)
+            phones.append((ctx, page, role))
+        page = phones[0][1]
+        page.wait_for_timeout(2600)
+        out["hidden"] = [p.is_hidden("#readyBtn") for _, p, _ in phones]
+        beats = [unquote(c) for c in M.FakeReaper.log if c.startswith("SET/EXTSTATE/ReaCue/hb")]
+        out["ids"] = sorted({b.split("/", 4)[4].split("|")[0] for b in beats})
+        out["slots"] = sorted({b.split("/")[3] for b in beats})
+        M.FakeReaper.log = []
+        page.click("#readyBtn")
+        page.wait_for_timeout(1000)
+        mine = [c.split("/", 4)[4] for c in M.FakeReaper.log if c.startswith("SET/EXTSTATE/ReaCue/hb")]
+        out["mine"] = [b for b in mine if b.startswith("phone0xx|")]
+        out["label"] = page.text_content("#readyBtn")
+        M.FakeReaper.band = "E1|phone0xx,bass,Zo%C3%A9,1,0"
+        page.wait_for_timeout(1300)
+        out["confirmed"] = page.evaluate("document.getElementById('readyBtn').classList.contains('on')")
+        M.FakeReaper.band = "E2|phone0xx,bass,Zo%C3%A9,0,0"                 # remise à zéro (nouvelle époque)
+        page.wait_for_timeout(1300)
+        out["reset"] = page.text_content("#readyBtn")
+        out["stored"] = page.evaluate("localStorage.getItem('reacue_ready')")
+        for ctx, _, _ in phones:
+            ctx.close()
+        M.FakeReaper.band = ""
+        return out
+    o = _run(go)
+    assert o["hidden"] == [False, False, True]                                    # pas de « Prêt » pour la Régie
+    assert o["ids"] == ["phone0xx", "phone1xx", "phone2xx"] and len(o["slots"]) >= 2
+    assert o["mine"] and o["mine"][0] == "phone0xx|bass|Zo%C3%A9|1|E1" and len(o["mine"]) >= 2   # envoi doublé
+    assert o["label"] == "Prêt ✓" and o["confirmed"]
+    assert o["reset"] == "Prêt ?" and o["stored"] == "0"

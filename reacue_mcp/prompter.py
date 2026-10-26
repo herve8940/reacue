@@ -215,7 +215,7 @@ def build_song(a: Analysis, item: dict, timeline: dict, items: list[dict] | None
             "name": s.name, "type": section_type(s.name), "group": s.label,
             "start_bar": s.start_bar + 1, "end_bar": s.end_bar,      # 1-based, fin incluse
             "color": "#%02x%02x%02x" % tuple(section_color(s.name)),
-            # note de section affichée par le prompteur (vide pour l'instant ; éditée plus tard dans ReaCue Studio)
+            # note de section affichée par le prompteur (écran GROUPE de ReaCue Studio ; library.attach)
             "notes": str(getattr(s, "notes", "") or ""),
         })
     song = {
@@ -262,4 +262,9 @@ def publish(song: dict, www: Path | None = None) -> dict:
         shutil.copyfile(PAGE_SRC, page)
     from .studio import publish_static           # ReaCue Studio : studio.html + reacue_studio/ (CSS, JS, polices)
     publish_static(www)
+    try:                                         # BIBLIO de ReaCue Studio : reacue_library.json (jamais bloquant)
+        from .library import publish_library
+        publish_library(www)
+    except Exception:
+        pass
     return {"page": str(page), "data": str(www / SONG_NAME), "studio": str(www / "studio.html")}

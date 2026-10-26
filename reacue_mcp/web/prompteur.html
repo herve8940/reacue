@@ -43,6 +43,13 @@
   .iconbtn { width: 44px; height: 44px; flex: none; border-radius: 4px; border: 1px solid var(--edge); background: var(--well);
     color: var(--ink2); font-size: 13px; font-weight: 600; letter-spacing: .06em; padding: 0; }
   .iconbtn.on { color: var(--led); border-color: var(--led); }
+  /* « Prêt » (répétition, écran GROUPE de ReaCue Studio) : discret, vert quand il est allumé */
+  .ready { min-height: 44px; padding: 0 10px; border-radius: 4px; background: var(--well); border: 1px solid var(--edge);
+    color: var(--mute2); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; flex: none; }
+  .ready.on { color: var(--edge); background: var(--led); border-color: var(--led); }
+  .ready.wait { color: var(--led); border-color: var(--led); }
+  .pname { font-size: 18px; min-height: 52px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--edge); background: var(--inset);
+    color: var(--ink); margin-bottom: 6px; }
   .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 8px var(--red); flex: none; margin: 0 2px; }
   .dot.on { background: var(--led); box-shadow: 0 0 8px var(--led); }
   .stem { flex: 0 1 auto; min-width: 0; font-size: 14px; font-weight: 700; border-radius: 4px; padding: 6px 10px; display: none;
@@ -445,6 +452,7 @@
   <div class="top">
     <div class="title" id="title">ReaCue</div>
     <span class="stem" id="stemNote"></span>
+    <button class="ready" id="readyBtn" hidden></button>
     <button class="role" id="roleBtn">…</button>
     <button class="iconbtn" id="langBtn" title="Langue / Language">EN</button>
     <button class="iconbtn" id="fsBtn" title="" aria-label="">⛶</button>
@@ -559,6 +567,7 @@
 
   <div class="picker" id="picker">
     <h1 id="pickT"></h1>
+    <input class="pname" id="pickName" type="text" maxlength="24" autocomplete="off" autocapitalize="words">
     <button data-role="drums"></button>
     <button data-role="bass"></button>
     <button data-role="guitars"></button>
@@ -585,7 +594,8 @@ const STR = {
   fr: {
     role: "Rôle", roles: { drums: "Batterie", bass: "Basse", guitars: "Guitare rythm.", lead_guitar: "Guitare solo", vocals: "Chant", all: "Général", regie: "Régie", light: "Lumière" },
     instr: { drums: "batterie", bass: "basse", guitars: "guitare", lead_guitar: "guitare solo", vocals: "chant" },
-    pick: "Je suis…",
+    pick: "Je suis…", namePh: "Ton prénom (facultatif)",
+    readyB: "Prêt ?", readyOn: "Prêt ✓", readyTip: "Répétition : appuie quand tu es prêt (visible dans ReaCue Studio, écran GROUPE). Réappuie pour annuler.",
     pickers: {
       drums: ["Batterie", "groove, fills, crashs, carrures"], bass: ["Basse", "notes de basse, grille, entrées et sorties"],
       guitars: ["Guitare rythmique", "accords, grille, entrées et sorties"], lead_guitar: ["Guitare solo", "solos, accords, entrées"],
@@ -666,7 +676,8 @@ const STR = {
   en: {
     role: "Role", roles: { drums: "Drums", bass: "Bass", guitars: "Rhythm gtr", lead_guitar: "Lead gtr", vocals: "Vocals", all: "Overview", regie: "Stage control", light: "Lighting" },
     instr: { drums: "drums", bass: "bass", guitars: "guitar", lead_guitar: "lead guitar", vocals: "vocals" },
-    pick: "I play…",
+    pick: "I play…", namePh: "Your first name (optional)",
+    readyB: "Ready?", readyOn: "Ready ✓", readyTip: "Rehearsal: tap when you are ready (shown in ReaCue Studio, BAND screen). Tap again to cancel.",
     pickers: {
       drums: ["Drums", "groove, fills, crashes, phrasing"], bass: ["Bass", "bass notes, chart, entries and exits"],
       guitars: ["Rhythm guitar", "chords, chart, entries and exits"], lead_guitar: ["Lead guitar", "solos, chords, entries"],
@@ -771,6 +782,8 @@ function applyStatic() {
   $("chGridK").textContent = S.chart; $("secNoteK").textContent = S.note.toUpperCase(); $("countIn").textContent = S.inK;
   lcdKey = "";
   $("nextK").textContent = S.next; $("footR").textContent = S.footR; $("pickT").textContent = S.pick;
+  $("pickName").placeholder = S.namePh; $("readyBtn").title = S.readyTip;
+  if (typeof paintReady === "function") paintReady();
   document.querySelectorAll("#picker button").forEach(b => { const p = S.pickers[b.dataset.role];
     b.innerHTML = `${esc(p[0])}<small>${esc(p[1])}</small>`; });
   $("roleBtn").textContent = S.roles[role] || S.role;
@@ -810,7 +823,60 @@ const tc = c => (SP.tr && window.RC && RC.transChord) ? RC.transChord(c, SP.tr) 
 role = params.get("role") || load("reacue_role");
 if (!STR.fr.roles[role]) { role = null; $("picker").classList.add("show"); }
 document.querySelectorAll("#picker button").forEach(b => b.onclick = () => {
-  role = b.dataset.role; store("reacue_role", role); $("picker").classList.remove("show"); layoutBeats(); });
+  role = b.dataset.role; store("reacue_role", role); $("picker").classList.remove("show"); layoutBeats(); beat(true); });
+$("pickName").value = load("reacue_name") || "";
+$("pickName").addEventListener("change", () => { store("reacue_name", $("pickName").value.trim().slice(0, 24)); beat(true); });
+
+// ---------------------------------------------------------------- présence et « Prêt » (écran GROUPE de ReaCue Studio)
+// Toutes les ~2 s, le prompteur écrit ReaCue/hb<0-7> = id|rôle|nom|prêt|époque (emplacement tiré de son identifiant :
+// plusieurs téléphones n'écrivent presque jamais au même endroit ; un battement perdu est repris au suivant). La
+// fenêtre ReaCue les lit, les oublie après 10 s et publie ReaCue/band = époque|… ; une remise à zéro change
+// d'époque : le « Prêt » de ce téléphone s'éteint.
+var BAND = { cid: load("reacue_cid"), ready: load("reacue_ready") === "1", epoch: load("reacue_ready_epoch") || "",
+  known: "", next: 0, confirmed: false };
+if (!/^[a-z0-9]{6,16}$/.test(BAND.cid || "")) { BAND.cid = Math.random().toString(36).slice(2, 10).padEnd(8, "0"); store("reacue_cid", BAND.cid); }
+BAND.slot = [...BAND.cid].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % 8;
+const isMusician = () => !!role && role !== "regie" && role !== "light";
+function paintReady() {
+  if (typeof BAND === "undefined" || !BAND) return;
+  const b = $("readyBtn"); b.hidden = DEMO || !isMusician();
+  b.textContent = BAND.ready ? S.readyOn : S.readyB;
+  b.classList.toggle("on", BAND.ready && BAND.confirmed); b.classList.toggle("wait", BAND.ready && !BAND.confirmed);
+}
+function beatValue() {
+  const name = encodeURIComponent((load("reacue_name") || "").slice(0, 24));
+  return `${BAND.cid}|${role || ""}|${name}|${BAND.ready && isMusician() ? 1 : 0}|${BAND.ready ? BAND.epoch : ""}`;
+}
+// à ajouter à la prochaine interrogation de REAPER ; now = tout de suite (appui sur « Prêt », changement de rôle)
+function beat(now) { BAND.next = now ? 0 : BAND.next; }
+function beatQuery(t) {
+  let q = "";
+  if (t >= BAND.next) {
+    q += ";SET/EXTSTATE/ReaCue/hb" + BAND.slot + "/" + encodeURIComponent(beatValue());
+    BAND.next = t + 1600 + Math.random() * 800;
+  }
+  if (!BAND.readAt || t - BAND.readAt > 900) { BAND.readAt = t; q += ";GET/EXTSTATE/ReaCue/band"; }
+  return q;
+}
+function bandReply(txt) {
+  const v = extVal(txt, "band");
+  if (v == null) return;
+  const epoch = v.split("|")[0] || "";
+  if (epoch && BAND.known && epoch !== BAND.known && BAND.ready) {     // remise à zéro depuis ReaCue Studio
+    BAND.ready = false; store("reacue_ready", "0");
+  }
+  if (epoch) BAND.known = epoch;
+  if (epoch && BAND.ready && BAND.epoch !== epoch) { BAND.epoch = epoch; store("reacue_ready_epoch", epoch); beat(true); }
+  const me = v.slice(epoch.length + 1).split(";").find(e => e.split(",")[0] === BAND.cid);
+  BAND.confirmed = !!me && me.split(",")[3] === "1";
+  paintReady();
+}
+$("readyBtn").onclick = () => {
+  BAND.ready = !BAND.ready; store("reacue_ready", BAND.ready ? "1" : "0");
+  if (BAND.ready) { BAND.epoch = BAND.known; store("reacue_ready_epoch", BAND.known); }
+  BAND.confirmed = false; paintReady(); beat(true);
+  setTimeout(() => beat(true), 300 + Math.random() * 400);         // second envoi (téléphones simultanés)
+};
 $("roleBtn").onclick = () => $("picker").classList.add("show");
 $("langBtn").onclick = () => setLang(LANG === "fr" ? "en" : "fr", true);
 $("strip").onclick = () => { const l = $("list"); l.classList.toggle("show"); store("reacue_list", l.classList.contains("show") ? "1" : "0"); };
@@ -929,6 +995,7 @@ function layoutBeats() {
   document.body.classList.toggle("regie", role === "regie");
   document.body.classList.toggle("light", role === "light");
   $("chCurK").textContent = role === "bass" ? S.bassNote : S.chord;
+  paintReady();
   if (role === "regie") { rKeySecs = ""; rKeyList = ""; }
   if (role === "light") lKey = "";
 }
@@ -948,6 +1015,7 @@ async function poll() {
     let q = "/_/TRANSPORT";
     if (role && role !== "all" && role !== "light") q += ";GET/EXTSTATE/ReaCue/mix";
     if (role && role !== "light" && role !== "regie") q += ";GET/EXTSTATE/ReaCue/studio";
+    if (!DEMO && role) q += beatQuery(t);
     if (role === "regie") {
       q += ";GET/EXTSTATE/ReaCue/remote_alive;GET/EXTSTATE/ReaCue/remote_ack;GET/EXTSTATE/ReaCue/rehearsal";
       if (t - rg.seenAt > 3000) { rg.seenAt = t; q += ";SET/EXTSTATE/ReaCue/remote_seen/" + rg.sid + "-" + (++rg.seenN); }
@@ -958,6 +1026,7 @@ async function poll() {
     if (role === "regie") regieReply(txt, now);
     mixReply(txt);
     studioReply(txt);
+    bandReply(txt);
     const f = txt.split("\n").find(l => l.startsWith("TRANSPORT"));
     if (!f) throw new Error("bad answer");
     const p = f.split("\t");

@@ -1058,6 +1058,38 @@ a message.
 
 > The effects shown are the suggestions per section type (read-only); editing them comes in a later version.
 
+### 17.6 ReaCue Studio: the Library and Band screens
+
+**Library** (`studio.html#biblio`): the list of all your songs (projects folder + shows).
+
+![ReaCue Studio, Library screen](images/studio_biblio_en.png)
+
+1. Open the **ReaCue** window in REAPER (it publishes the library and runs the commands).
+2. In ReaCue Studio, click **LIBRARY**. Filter by stage (counters at the top) or search a title.
+3. Click a song: it opens in REAPER (new tab) and the screen switches to **PRACTICE**. A song “TO PREPARE” also
+   opens, but prepare it first (Song tab of the window).
+4. **STAGE** column: computed by itself (AUTO) from the time played alone or as a band; click a box to set it by
+   hand (MANUAL), “auto” to go back to the computation.
+
+| Stage | Automatic computation |
+|---|---|
+| Discovered | nothing measured |
+| Practised alone | 5 min of playback |
+| Rehearsed as a band | 3 min of playback with at least 2 musicians' prompters connected |
+| Ready for the stage | prepared + rehearsed as a band on 2 days (at least 2 min each day) |
+
+**Band** (`studio.html#groupe`): the rehearsal screen.
+
+![ReaCue Studio, Band screen](images/studio_groupe_en.png)
+
+1. Each musician opens the prompter on their phone, picks their role and may type their first name.
+2. **Notes**: type “stop on 4” next to the section, Enter: the note shows in pink on every prompter (2–3 s).
+3. **Ready**: everyone taps “Ready?” at the top of the prompter; the Band screen shows “READY 3 / 4” and who is
+   missing. **RESET** before the next song.
+4. **Take it from…**: click “Chorus 2”: playback restarts one bar before.
+
+> Connected musicians, notes and manual stage go through the ReaCue window: keep it open.
+
 ---
 
 ## 18. Troubleshooting

@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="reacue_studio/base.css">
 <link rel="stylesheet" href="reacue_studio/travail.css">
 <link rel="stylesheet" href="reacue_studio/concert.css">
+<link rel="stylesheet" href="reacue_studio/biblio.css">
 </head>
 <body class="rc">
 <div class="rc-app">
@@ -17,9 +18,9 @@
       <span class="rc-word">REACUE</span>
     </div>
     <nav class="rc-nav" id="nav" aria-label="Modes">
-      <button data-mode="biblio" class="soon" data-t="navBiblio">BIBLIO</button>
+      <button data-mode="biblio" data-t="navBiblio">BIBLIO</button>
       <button data-mode="travail" class="on" data-t="navTravail">TRAVAIL</button>
-      <button data-mode="groupe" class="soon" data-t="navGroupe">GROUPE</button>
+      <button data-mode="groupe" data-t="navGroupe">GROUPE</button>
       <button data-mode="concert" data-t="navConcert">CONCERT</button>
       <button data-mode="lumiere" data-t="navLumiere">LUMIÈRE</button>
     </nav>
@@ -66,6 +67,67 @@
     </div>
   </main>
 
+
+  <!-- écran BIBLIO : morceaux connus (projets, concerts), composants, étape du parcours ; clic = ouvrir dans REAPER -->
+  <main id="biblio" class="bb" data-screen="biblio" hidden>
+    <section class="bb-head">
+      <div class="lm-title">
+        <h1 class="rc-h1" data-t="bbTitle">BIBLIOTHÈQUE</h1>
+        <span class="rc-meta" id="bbMeta"></span>
+      </div>
+      <div class="bb-path rc-inset" id="bbPath" aria-label="Parcours"></div>
+    </section>
+    <section class="bb-tools">
+      <input class="rc-input bb-search" id="bbSearch" type="search" autocomplete="off" data-ph="bbSearch">
+      <div class="bb-filters" id="bbFilters" role="group"></div>
+    </section>
+    <p class="cs-msg" id="bbMsg" hidden></p>
+    <section class="cs-panel bb-list">
+      <div class="bb-row th"><span data-t="bbColTitle">MORCEAU</span><span data-t="bbColTempo">TEMPO</span><span data-t="bbColKey">TON</span>
+        <span data-t="bbColDur">DURÉE</span><span data-t="bbColStruct">STRUCTURE</span><span data-t="bbColComp">COMPOSANTS</span><span data-t="bbColStage">ÉTAPE</span></div>
+      <div class="bb-rows" id="bbRows"></div>
+    </section>
+    <section class="cs-panel bb-concerts">
+      <div class="cs-ph"><span data-t="bbConcerts">CONCERTS</span></div>
+      <div class="bb-clist" id="bbConcerts"></div>
+    </section>
+  </main>
+
+  <!-- écran GROUPE (répétition) : notes par section, « On reprend à… », musiciens connectés et « Prêt » -->
+  <main id="groupe" class="gr" data-screen="groupe" hidden>
+    <section class="gr-head">
+      <div class="lm-title">
+        <h1 class="rc-h1" id="grTitle">—</h1>
+        <span class="rc-meta" id="grMeta"></span>
+      </div>
+      <div class="gr-ready rc-inset" id="grReady">
+        <div class="k" data-t="grReadyK">PRÊTS</div>
+        <div class="v"><span id="grReadyN">0</span><small id="grReadyOf">/ 0</small></div>
+      </div>
+    </section>
+    <p class="cs-msg" id="grMsg" hidden></p>
+    <div class="gr-body">
+      <section class="cs-panel">
+        <div class="cs-ph"><span data-t="grNotesH">NOTES PAR SECTION</span><span class="cs-ro" data-t="grNotesHint">VISIBLES SUR TOUS LES PROMPTEURS</span></div>
+        <div class="gr-notes" id="grNotes"></div>
+      </section>
+      <aside class="gr-side">
+        <section class="cs-panel">
+          <div class="cs-ph"><span data-t="grResumeH">ON REPREND À…</span><span class="cs-ro" data-t="grResumeHint">1 MESURE AVANT</span></div>
+          <div class="gr-resume" id="grResume"></div>
+          <div class="cs-trans">
+            <button class="cs-big" id="grStop" data-t="grStop">■ STOP</button>
+            <button class="cs-big play" id="grPlay"><span id="grPlayL">LECTURE</span></button>
+          </div>
+        </section>
+        <section class="cs-panel">
+          <div class="cs-ph"><span id="grBandH">MUSICIENS CONNECTÉS</span><button class="rc-btn sm" id="grReset" data-t="grReset">REMISE À ZÉRO</button></div>
+          <div class="gr-band" id="grBand"></div>
+          <p class="rc-note gr-help" data-t="grBandHelp"></p>
+        </section>
+      </aside>
+    </div>
+  </main>
 
   <!-- écran CONCERT : bandeau lecture, setlist, sections du morceau, transport, lumière -->
   <main id="concert" class="cs" data-screen="concert" hidden>
@@ -164,7 +226,7 @@
     </div>
     <div class="rc-leds" style="margin-left:auto">
       <span class="rc-led" id="ledReaper"><i></i>REAPER</span>
-      <span class="rc-led" id="ledPrompt"><i></i><span data-t="ledPrompt">PROMPTEUR</span></span>
+      <span class="rc-led" id="ledPrompt"><i></i><span data-t="ledPrompt">PROMPTEUR</span><span id="ledPromptN"></span></span>
       <span class="rc-led" id="ledLtc"><i></i>LTC</span>
     </div>
   </footer>
@@ -254,6 +316,8 @@
 <div class="rc-toast" id="toast"></div>
 <script src="reacue_studio/core.js"></script>
 <script src="reacue_studio/travail.js"></script>
+<script src="reacue_studio/biblio.js"></script>
+<script src="reacue_studio/groupe.js"></script>
 <script src="reacue_studio/concert.js"></script>
 </body>
 </html>
