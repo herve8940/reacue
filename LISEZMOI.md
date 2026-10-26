@@ -107,10 +107,14 @@ en cinq onglets (Morceau, Concert, Scène, Lumière, Réglages) :
   coupé, transposition, et **exports** WAV / MP3 de chaque stem, d'une section ou de mesures choisies,
   séparés ou mixés.
 
-Sur les téléphones et tablettes des musiciens (prompteur web) :
+Sur les téléphones et tablettes des musiciens (prompteur web, même style « Studio pro » que ReaCue Studio,
+très gros caractères pour la scène) :
 
-- section en cours, mesure et temps, mesures restantes, section suivante, décompte sur la dernière mesure ;
-- **Basse / guitares** : accord en cours et suivant avec décompte, grille de la section, tonalité ;
+- trois afficheurs **mesure · tempo · ton**, section en cours avec voyants de temps et mesure dans la section,
+  bloc **ENSUITE / DANS n mes**, décompte sur la dernière mesure, mini-structure en couleur ;
+- **Basse / guitares** : accord en cours (carte claire) et suivant avec décompte, grille de la section
+  (mesure en cours en orange), tonalité ; accords et ton **transposés** quand les stems le sont (ReaCue Studio) ;
+- **note de section** affichée sous la grille quand elle existe ;
 - **Chant** : paroles défilantes calées sur le morceau, ligne suivante et décompte avant chaque entrée
   (mot en cours surligné avec les paroles mot par mot) ;
 - **Batterie** : groove de la section, grille 16 pas (ou triolets) de la mesure en cours, charley ouvert,
@@ -227,7 +231,7 @@ Conseils :
 - Ajoute la page à l'écran d'accueil (iOS : *Partager → Sur l'écran d'accueil* ; Android : *⋮ → Ajouter à
   l'écran d'accueil*) pour un affichage plein écran comme une application. Le bouton ⛶ passe aussi en plein écran.
 - Le bouton **FR/EN** change la langue du prompteur sur ce téléphone (mémorisé).
-- Le point vert indique que la liaison avec REAPER est active.
+- Le voyant vert (en haut à droite) indique que la liaison avec REAPER est active ; rouge = liaison perdue.
 
 ## Séparation de stems (facultatif)
 

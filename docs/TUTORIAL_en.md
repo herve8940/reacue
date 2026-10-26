@@ -549,7 +549,9 @@ comments (ignored).
    control** or **Lighting** (the choice is remembered on this phone; the **Role** button changes it).
 5. Start playback in REAPER: the prompter follows the position (section, bar, beat).
 
-**You should see** a green dot (link with REAPER alive), the current section and the next one.
+**You should see** the green LED at the top right (link with REAPER alive; red = link lost), the three displays
+**BAR · TEMPO · KEY**, the current section (green LEDs = beats of the bar, “3/16” = bar within the section) and,
+at the bottom, **NEXT / IN n bars** above the song's structure strip (tap it to show or hide the section list).
 
 <img src="images/prompter_drums_en.png" width="200"> <img src="images/prompter_vocals_en.png" width="200">
 
@@ -558,12 +560,15 @@ comments (ignored).
 | Role | What it shows |
 |---|---|
 | **Drums** | groove of the section, grid of the current bar (16 steps, or triplets for a shuffle song), fills, crashes, stops and re-entries; one lane per piece: Crash, Ride, Hi-hat, **Open hi-hat**, Snare, Tom 1, Tom 2, Floor tom, Kick |
-| **Bass**, **Rhythm gtr** | current and next chord with a count-down, chord chart of the section, key, entries and exits |
+| **Bass**, **Rhythm gtr** | current chord (light card; Bass: bass note) and next chord with a count-down, chord chart of the section (current bar in orange), key, entries and exits; transposed when the stems are in ReaCue Studio |
 | **Lead gtr** | solos, chords, entries |
 | **Vocals** | scrolling lyrics, next line and count-down before each entry; with word-by-word lyrics, the **current word highlighted** |
 | **Overview** | structure and chords |
 | **Stage control** | concert remote, protected by a PIN code ([16.5](#165-drive-the-concert-from-a-phone-stage-control)) |
 | **Lighting** | grandMA3 cues, current cue, timecode, files to import ([16.9](#169-lighting-grandma3)) |
+
+When a section has a **note** (`notes` field of the published data, editable later in ReaCue Studio), it is
+shown in a pink frame under the chart, for every role.
 
 On a tablet in landscape, the Drums view puts the position (section, bar, coming fill) and the grid of the bar
 side by side; only the lanes of the pieces played are shown:

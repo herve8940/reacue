@@ -571,7 +571,10 @@ commentaires (ignorés).
    **Régie** ou **Lumière** (le choix est mémorisé sur ce téléphone ; le bouton **Rôle** permet d'en changer).
 5. Lance la lecture dans REAPER : le prompteur suit la position (section, mesure, temps).
 
-**Tu dois voir** un point vert (liaison avec REAPER active), la section en cours et la suivante.
+**Tu dois voir** le voyant vert en haut à droite (liaison avec REAPER active ; rouge = liaison perdue), les trois
+afficheurs **MESURE · TEMPO · TON**, la section en cours (voyants verts = temps de la mesure, « 3/16 » = mesure
+dans la section) et, en bas, **ENSUITE / DANS n mes** au-dessus de la mini-structure du morceau (touche-la pour
+afficher ou masquer la liste des sections).
 
 <img src="images/prompter_drums_fr.png" width="200"> <img src="images/prompter_vocals_fr.png" width="200">
 
@@ -580,12 +583,15 @@ commentaires (ignorés).
 | Rôle | Ce qu'il montre |
 |---|---|
 | **Batterie** | groove de la section, grille de la mesure en cours (16 pas, ou triolets pour un morceau shuffle), fills, crashs, arrêts et reprises ; une ligne par élément : Crash, Ride, Charley, **Charley ouv.**, Caisse cl., Tom 1, Tom 2, Tom bas, Gr. caisse |
-| **Basse**, **Guitare rythm.** | accord en cours et suivant avec décompte, grille de la section, tonalité, entrées et sorties |
+| **Basse**, **Guitare rythm.** | accord en cours (carte claire ; Basse : note de basse) et suivant avec décompte, grille de la section (mesure en cours en orange), tonalité, entrées et sorties ; transposés si les stems le sont dans ReaCue Studio |
 | **Guitare solo** | solos, accords, entrées |
 | **Chant** | paroles défilantes, ligne suivante et décompte avant chaque entrée ; avec les paroles mot par mot, le **mot en cours surligné** |
 | **Général** | structure et accords |
 | **Régie** | télécommande du concert, protégée par un code PIN ([16.5](#165-piloter-depuis-un-téléphone-régie)) |
 | **Lumière** | cues grandMA3, cue en cours, timecode, fichiers à importer ([16.9](#169-lumière--grandma3)) |
+
+Quand une section a une **note** (champ `notes` des données publiées, modifiable plus tard dans ReaCue Studio),
+elle s'affiche dans un cadre rose sous la grille, pour tous les rôles.
 
 Sur une tablette à l'horizontale, la vue Batterie met la position (section, mesure, fill à venir) et la grille de la mesure côte à côte ; seules les lignes des éléments joués s'affichent :
 

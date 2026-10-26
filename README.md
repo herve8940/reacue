@@ -104,10 +104,14 @@ In REAPER, from the audio already in your project — everything from **one wind
   REAPER's real tracks, section loop with a **speed ramp**, “my instrument” muted, transpose, and **WAV / MP3
   exports** of each stem, a section or chosen bars, separate or mixed.
 
-On the musicians' phones and tablets (web prompter):
+On the musicians' phones and tablets (web prompter, same “Studio pro” style as ReaCue Studio, very large type
+for the stage):
 
-- current section, bar and beat, bars left, next section, count-down on the last bar;
-- **Bass / guitars**: current and next chord with a count-down, chord chart of the section, key;
+- three displays **bar · tempo · key**, current section with beat LEDs and bar within the section,
+  **NEXT / IN n bars** block, count-down on the last bar, colour structure strip;
+- **Bass / guitars**: current chord (light card) and next chord with a count-down, chord chart of the section
+  (current bar in orange), key; chords and key **transposed** when the stems are (ReaCue Studio);
+- **section note** shown under the chart when there is one;
 - **Vocals**: scrolling lyrics in time with the song, next line and count-down before each entry (current
   word highlighted with word-by-word lyrics);
 - **Drums**: groove of the section, 16-step (or triplet) grid of the current bar, open hi-hat, fills,
@@ -221,7 +225,7 @@ Tips:
 - Add the page to the home screen (iOS: *Share → Add to Home Screen*; Android: *⋮ → Add to Home screen*)
   for a full-screen app-like view. The ⛶ button also switches to full screen.
 - The **FR/EN** button switches the prompter language on that phone (remembered).
-- The green dot means the link with REAPER is alive.
+- The green LED (top right) means the link with REAPER is alive; red = link lost.
 
 ## Stem separation (optional)
 

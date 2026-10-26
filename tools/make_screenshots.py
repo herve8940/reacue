@@ -46,6 +46,12 @@ CHORDS = {"intro": ["Am", "F", "C", "G"], "verse": ["Am", "F", "C", "G"], "prech
           "chorus": ["C", "G", "Am", "F"], "bridge": ["F", "G", "Em", "Am"], "solo": ["Am", "F", "C", "G"],
           "outro": ["Am", "F", "C", "G"]}
 
+# notes de section (champ « notes » des données publiées), inventées pour la démonstration
+NOTES = {"Pré-refrain 1": {"fr": "On coupe tout sur le dernier temps de la mes. 28.",
+                           "en": "Everybody stops on the last beat of bar 28."},
+         "Refrain 1": {"fr": "Crash sur le 1, on double le tempo à la caisse claire.",
+                       "en": "Crash on 1, snare in double time."}}
+
 # paroles 100 % inventées pour cette démonstration
 LYRICS = {
     "fr": {
@@ -124,7 +130,7 @@ def demo_song(lang: str, title: str = "Demo Song", bpm: float = BPM, t0: float =
     for name, a, b in STRUCT:
         nm = localize_section(name, lang)
         secs.append({"name": nm, "type": section_kind(nm), "group": "", "start_bar": a, "end_bar": b,
-                     "color": "#%02x%02x%02x" % section_color(nm)})
+                     "color": "#%02x%02x%02x" % section_color(nm), "notes": NOTES.get(name, {}).get(lang, "")})
     chords = []
     for name, a, b in STRUCT:
         prog = CHORDS[section_kind(name)]

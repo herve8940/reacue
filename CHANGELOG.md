@@ -1,6 +1,26 @@
 # Changelog
 
-## Non publié / Unreleased — ReaCue Studio, étape 1 : écran Travail et exports
+## Non publié / Unreleased — ReaCue Studio, étapes 1 et 2 : écran Travail, exports, prompteur « Studio pro »
+
+### Prompter in the “Studio pro” style (step 2)
+- `prompteur.html` (same address: QR codes and phones already set up keep working) now uses the ReaCue Studio
+  base (`reacue_studio/base.css` + `core.js`, bundled fonts, no internet), large stage type, contrast ≥ 4.5:1,
+  touch targets ≥ 44 px. Header: title + song number in concert (x/N), role button, FR/EN, full screen, REAPER
+  link LED. Three LCD displays **bar.beat · tempo · key**; section card with green beat LEDs, bar within the
+  section (7/16) and progress; current chord on a light card + next chord (bass: bass note), section chart
+  with the current bar in orange (2-row window on phones for long sections); **section note**; entries / exits
+  as coloured alerts; **NEXT / IN n bars** block; slim colour structure strip (tap = section list).
+- **Transposition and speed**: the musician roles read ExtState `ReaCue/studio` (read-only, set by the ReaCue
+  window / ReaCue Studio): chords, chart and key follow the stem transposition, tempo shows × speed.
+- **Section notes**: new `notes` field on each published section (empty for now, editing comes with ReaCue
+  Studio); shown under the chart when present (also for drums).
+- Drums, Vocals (word highlight, count-down), Overview, Stage control (PIN, same remote protocol) and Lighting
+  (cues, timecode) keep every function, restyled; landscape / tablet two-column layouts and a compact layout for
+  phones held sideways; Stage control section buttons pick black or white text for contrast.
+- Tests: page linked to the Studio base and nothing external, FR / EN strings, LCDs / note / transposition,
+  touch targets and contrast per role, Stage control end-to-end (fake server now serves `reacue_studio/`);
+  prompter screenshots regenerated.
+
 
 ### ReaCue Studio
 - **New web page `studio.html`** (served by REAPER next to the prompter, FR / EN, “Studio pro” style, no

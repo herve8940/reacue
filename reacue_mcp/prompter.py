@@ -215,6 +215,8 @@ def build_song(a: Analysis, item: dict, timeline: dict, items: list[dict] | None
             "name": s.name, "type": section_type(s.name), "group": s.label,
             "start_bar": s.start_bar + 1, "end_bar": s.end_bar,      # 1-based, fin incluse
             "color": "#%02x%02x%02x" % tuple(section_color(s.name)),
+            # note de section affichée par le prompteur (vide pour l'instant ; éditée plus tard dans ReaCue Studio)
+            "notes": str(getattr(s, "notes", "") or ""),
         })
     song = {
         "version": 1,
