@@ -296,7 +296,7 @@ def test_pinned_revisions_consistent():
 def test_requirements_structure_pins():
     req = (ROOT / "requirements-structure.txt").read_text(encoding="utf-8")
     assert 'torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"' in req
-    assert re.search(r"numpy<2", req) and "torch==2.4.0" in req
+    assert re.search(r"numpy<2", req) and "torch==2.4.1" in req
     assert not any(p.suffix in (".safetensors", ".ckpt", ".pt", ".bin") for p in ROOT.rglob("*")
                    if ".venv" not in p.parts and "structure" not in p.parts[:len(ROOT.parts) + 1])
 
