@@ -392,6 +392,13 @@ Clic droit : ancrer / détacher — ancrée en bas, elle devient une barre de tr
 est ouverte, quel que soit l'onglet, elle assure aussi l'arrêt automatique du concert, la boucle de
 répétition, la télécommande Régie et le profil « joué en live ».
 
+**Apparence « Studio pro »** (la même que ReaCue Studio) : fond sombre, panneaux nets, afficheurs LCD en police
+monospace (Menlo / Monaco sur Mac, Consolas sur Windows), titres en capitales condensées (Avenir Next
+Condensed ou Helvetica Neue Condensed sur Mac, Arial Narrow ou Bahnschrift SemiCondensed sur Windows, sinon
+Arial gras), voyants verts / jaunes. Onglet **Scène** : bandeau lecture avec voyant, titre, afficheurs RESTE /
+CONCERT / SMPTE, gros boutons de transport (lecture en vert), sections et setlist en **blocs à bord supérieur
+coloré** (joué / en cours / à venir). Les fonctions et leur place n'ont pas changé.
+
 En bas, une **ligne d'aide** explique l'élément survolé. Une erreur affiche sa **cause**, **que faire** et
 un bouton qui le fait (*Démarrer le pont*, *Corriger* pour un fichier hors ligne, *Installer*,
 *Enregistrer*, *Ouvrir le journal*…). Au **premier lancement**, un assistant vérifie l'installation
@@ -613,8 +620,9 @@ Pas à pas : [tutoriel, chapitre concert](docs/TUTORIEL_fr.md#16-mode-concert--p
 
 Page web servie par REAPER, comme le prompteur, pour travailler un morceau sur l'ordinateur ou une tablette :
 **`http://<IP de l'ordinateur>:8080/studio.html`** (sur l'ordinateur lui-même : `http://localhost:8080/studio.html`).
-L'adresse figure aussi sous le QR code de la fenêtre ReaCue. Écran **Travail** (les onglets Biblio, Groupe,
-Concert et Lumière arrivent dans les prochaines versions) :
+L'adresse figure aussi sous le QR code de la fenêtre ReaCue. Écrans **Travail**, **Concert** et **Lumière**
+(Biblio et Groupe arrivent dans les prochaines versions ; `studio.html#concert` et `studio.html#lumiere`
+ouvrent directement l'écran voulu) :
 
 ![ReaCue Studio, écran Travail](docs/images/studio_fr.png)
 
@@ -650,6 +658,36 @@ ligne de commande (`reacue_cli.py export --request '{"stems": ["Basse"], "format
 (`set_sections` avec un élément `{"export": {…}}`).
 
 Pas à pas : [tutoriel, ReaCue Studio](docs/TUTORIEL_fr.md#173-reacue-studio--lécran-travail).
+
+### Écran Concert
+
+![ReaCue Studio, écran Concert](docs/images/studio_concert_fr.png)
+
+Pour piloter le concert depuis l'ordinateur ou une tablette : bandeau **LECTURE / PAUSE / ARRÊT** (voyant),
+« MORCEAU n / N », titre, afficheurs **RESTE** (fin du morceau), **CONCERT** (temps écoulé depuis le premier
+morceau) et **SMPTE · LTC** ; **setlist en blocs** (joué grisé, en cours en orange, à venir ; clic = aller au
+morceau) ; **sections du morceau** (mesure de départ, nom, JOUÉ / EN COURS 3/16 / À VENIR ; clic = y aller) ;
+gros boutons **◀ PRÉC.**, **LECTURE / PAUSE** (vert, barre d'espace), **SUIV. ▶** ; à droite, la **lumière** du
+morceau (cues grandMA3 : n°, timecode, section, effet ; cue en cours surligné), les voyants **REAPER → LTC**,
+**MTC → console**, **EXPORT À JOUR** et le bouton **TEST 10 S**. Pendant la lecture, PRÉC., SUIV., un morceau
+de la setlist et TEST demandent **deux appuis** (comme dans la fenêtre ReaCue).
+
+Les commandes passent par la télécommande de la fenêtre ReaCue (même protocole et même **PIN** que la Régie :
+`song`, `prev`, `next`, `toggle`, `seek`, `tctest`). Fenêtre fermée : lecture / pause et sauts se font par
+l'API web de REAPER, le test timecode demande d'ouvrir la fenêtre. **Sans concert ouvert**, l'écran montre le
+morceau seul avec ses sections (PRÉC. / SUIV. = section précédente / suivante) et un message l'explique.
+
+### Écran Lumière
+
+![ReaCue Studio, écran Lumière](docs/images/studio_lumiere_fr.png)
+
+**Cue en cours** (n°, timecode, morceau · section, effet), **liste complète des cues** (par morceau en
+concert ; clic = aller au cue), **sorties timecode** telles qu'exportées (sortie LTC, périphérique MTC, TC Slot,
+images/s, départ), voyants, **TEST 10 S** (seules les pistes TIMECODE jouent 10 s, puis tout est rétabli — la
+même fonction que l'onglet Lumière de la fenêtre ; la page affiche le compte à rebours) et **liens de
+téléchargement** des fichiers grandMA3 (Sequences, Timecode, fiche de conduite). Les **effets** sont les
+suggestions par type de section, en lecture seule pour l'instant (leur édition viendra plus tard). Réglages
+(sorties, slot, images/s, départ) : onglet Lumière de la fenêtre ReaCue.
 
 ## Lumière : export grandMA3
 

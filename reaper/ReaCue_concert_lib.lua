@@ -17,6 +17,7 @@ local TXT = {
     state = { play = "Lecture", pause = "Pause", stop = "Arrêt" },
     prev = "Précédent", home = "Début", play = "Lecture", pause = "Pause", stop = "Stop", next = "Suivant",
     again = "encore ?", count_in = "décompte", bar = "mesure %d / %d", rest = "reste %s",
+    rest_k = "Reste", concert_k = "Concert", song_k = "Morceau",
     sections = "Sections", no_regions = "(pas de régions pour ce morceau)",
     next_song = "Ensuite : %d · %s · %s BPM · %s", last_song = "Dernier morceau du concert",
     rebuilding = "reconstruction… %d s", auto_stop = "arrêt auto actif",
@@ -36,7 +37,8 @@ local TXT = {
     cmd = { toggle = "Lecture/Pause", play = "Lecture", pause = "Pause", stop = "Stop", prev = "Précédent",
       next = "Suivant", home = "Début", song = "Morceau", seek = "Section", reh = "Répétition", loop = "Boucle",
       loopoff = "Boucle off", rate = "Vitesse", mute = "Mute", solo = "Solo", hearall = "Tout entendre",
-      loopsec = "Boucle section", ramp = "Rampe de vitesse", pitch = "Transposition", export = "Export audio" },
+      loopsec = "Boucle section", ramp = "Rampe de vitesse", pitch = "Transposition", export = "Export audio",
+      tctest = "Test timecode 10 s" },
     studio_line = "Studio (ordinateur, tablette) : %s",
     concert_n = "Concert %s / %s",
     none = "Aucun concert dans ce projet", building = "Construction du concert… %d s",
@@ -85,6 +87,7 @@ local TXT = {
     state = { play = "Playing", pause = "Paused", stop = "Stopped" },
     prev = "Previous", home = "Start", play = "Play", pause = "Pause", stop = "Stop", next = "Next",
     again = "again?", count_in = "count-in", bar = "bar %d / %d", rest = "%s left",
+    rest_k = "Left", concert_k = "Show", song_k = "Song",
     sections = "Sections", no_regions = "(no regions for this song)",
     next_song = "Next: %d · %s · %s BPM · %s", last_song = "Last song of the concert",
     rebuilding = "rebuilding… %d s", auto_stop = "auto stop on",
@@ -104,7 +107,8 @@ local TXT = {
     cmd = { toggle = "Play/Pause", play = "Play", pause = "Pause", stop = "Stop", prev = "Previous",
       next = "Next", home = "Start", song = "Song", seek = "Section", reh = "Rehearsal", loop = "Loop",
       loopoff = "Loop off", rate = "Speed", mute = "Mute", solo = "Solo", hearall = "Hear all",
-      loopsec = "Section loop", ramp = "Speed ramp", pitch = "Transpose", export = "Audio export" },
+      loopsec = "Section loop", ramp = "Speed ramp", pitch = "Transpose", export = "Audio export",
+      tctest = "Timecode test 10 s" },
     studio_line = "Studio (computer, tablet): %s",
     concert_n = "Concert %s / %s",
     none = "No concert in this project", building = "Building the concert… %d s",
@@ -313,6 +317,7 @@ end
 L.STUDIO_FILES = {
   "studio.html",
   "reacue_studio/base.css", "reacue_studio/core.js", "reacue_studio/travail.css", "reacue_studio/travail.js",
+  "reacue_studio/concert.css", "reacue_studio/concert.js",
   "reacue_studio/fonts/OFL-Barlow-Condensed.txt", "reacue_studio/fonts/OFL-IBM-Plex-Mono.txt",
   "reacue_studio/fonts/OFL-IBM-Plex-Sans.txt",
   "reacue_studio/fonts/barlow-condensed-latin-600-normal.woff2", "reacue_studio/fonts/barlow-condensed-latin-700-normal.woff2",
@@ -980,7 +985,13 @@ function L.remote_off()
   reaper.SetExtState(REMOTE, "remote_alive", "", false)
 end
 
+-- commandes ajoutées par la fenêtre ReaCue (besoin de ses onglets) : L.remote_ext[cmd] = function(c, arg) -> bool
+-- (tctest : test d'envoi du timecode de l'onglet Lumière)
+L.remote_ext = L.remote_ext or {}
+
 function L.remote_exec(c, cmd, arg)
+  local ext = L.remote_ext[cmd]
+  if ext then return ext(c, arg) and true or false end
   if cmd == "toggle" then L.toggle_play()
   elseif cmd == "play" then if L.play_state() ~= "play" then L.toggle_play() end
   elseif cmd == "pause" then if L.play_state() == "play" then reaper.OnPauseButton() end
@@ -1024,7 +1035,7 @@ function L.remote_exec(c, cmd, arg)
 end
 
 -- commandes possibles sans morceau ni concert reconnu (projet quelconque)
-local NO_CONCERT_OK = { pitch = true, export = true }
+local NO_CONCERT_OK = { pitch = true, export = true, tctest = true }
 
 -- traite au plus une commande en attente ; renvoie cmd, résultat ("ok", "badpin", "bad", "dup") ou nil
 local seen, seen_list = {}, {}

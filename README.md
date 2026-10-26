@@ -375,6 +375,13 @@ Action **ReaCue** (put it on a toolbar). One window, five tabs; it opens on the 
 undock — docked low, it becomes a compact transport bar. While it is open, on any tab, it also runs the
 concert's automatic stop, the rehearsal loop, the Stage control remote and the “played live” profile.
 
+**“Studio pro” look** (the same as ReaCue Studio): dark background, sharp panels, LCD readouts in a monospace
+font (Menlo / Monaco on Mac, Consolas on Windows), titles in condensed capitals (Avenir Next Condensed or
+Helvetica Neue Condensed on Mac, Arial Narrow or Bahnschrift SemiCondensed on Windows, otherwise Arial Bold),
+green / yellow LEDs. **Stage** tab: playback banner with LED, title, LEFT / SHOW / SMPTE readouts, big transport
+buttons (play in green), sections and setlist as **blocks with a coloured top edge** (played / current / next).
+Functions and their place are unchanged.
+
 At the bottom, a **help line** explains the element under the mouse. An error shows its **cause**, **what to
 do** and a button that does it (*Start the bridge*, *Fix* for an offline file, *Install*, *Save*, *Open the
 log*…). On **first launch**, an assistant checks the installation (bridge, web interface and port, IP
@@ -580,8 +587,9 @@ Step by step: [tutorial, concert chapter](docs/TUTORIAL_en.md#16-concert-mode-se
 
 A web page served by REAPER, like the prompter, to work on a song on the computer or a tablet:
 **`http://<computer's IP>:8080/studio.html`** (on the computer itself: `http://localhost:8080/studio.html`).
-The address is also shown under the QR code of the ReaCue window. **Practice** screen (the Library, Band, Show
-and Lights tabs come in the next versions):
+The address is also shown under the QR code of the ReaCue window. **Practice**, **Show** and **Lights**
+screens (Library and Band come in the next versions; `studio.html#concert` and `studio.html#lumiere` open a
+screen directly):
 
 ![ReaCue Studio, Practice screen](docs/images/studio_en.png)
 
@@ -616,6 +624,35 @@ click is synthesised on ReaCue's grid (REAPER's click is not a file). Also from 
 with an `{"export": {…}}` element).
 
 Step by step: [tutorial, ReaCue Studio](docs/TUTORIAL_en.md#173-reacue-studio-the-practice-screen).
+
+### Show screen
+
+![ReaCue Studio, Show screen](docs/images/studio_concert_en.png)
+
+To run the show from the computer or a tablet: **PLAYING / PAUSED / STOPPED** banner (LED), “SONG n / N”,
+title, **LEFT** (end of the song), **SHOW** (time since the first song) and **SMPTE · LTC** readouts; **setlist
+blocks** (played greyed, current in orange, next; click = go to the song); **sections of the song** (start bar,
+name, PLAYED / NOW 3/16 / NEXT; click = go there); big **◀ PREV**, **PLAY / PAUSE** (green, space bar),
+**NEXT ▶** buttons; on the right, the song's **lighting** (grandMA3 cues: number, timecode, section, effect;
+current cue highlighted), the **REAPER → LTC**, **MTC → console**, **EXPORT UP TO DATE** LEDs and the
+**TEST 10 S** button. While playing, PREV, NEXT, a setlist song and TEST need **two taps** (like the ReaCue
+window).
+
+Commands go through the ReaCue window's remote control (same protocol and **PIN** as Stage control: `song`,
+`prev`, `next`, `toggle`, `seek`, `tctest`). With the window closed, play / pause and jumps use REAPER's web
+API; the timecode test asks you to open the window. **With no concert open**, the screen shows the single song
+with its sections (PREV / NEXT = previous / next section) and a message says so.
+
+### Lights screen
+
+![ReaCue Studio, Lights screen](docs/images/studio_lumiere_en.png)
+
+**Current cue** (number, timecode, song · section, effect), **full cue list** (per song in a concert; click =
+go to the cue), **timecode outputs** as exported (LTC output, MTC device, TC Slot, fps, start), LEDs, **TEST
+10 S** (only the TIMECODE tracks play for 10 s, then everything is restored — the same function as the ReaCue
+window's Lighting tab; the page shows the countdown) and **download links** for the grandMA3 files
+(Sequences, Timecode, cue sheet). **Effects** are the suggestions per section type, read-only for now (editing
+comes later). Settings (outputs, slot, fps, start): Lighting tab of the ReaCue window.
 
 ## Lighting: grandMA3 export
 

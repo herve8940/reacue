@@ -1022,6 +1022,42 @@ In ReaCue Studio, **EXPORT** button:
 Examples: the bass alone in the chorus as an MP3 to revise on the bus; “everything but the guitar” mixed with
 the click, bars 33 to 48, to practise your part; every stem as WAV for another program.
 
+
+### 17.5 ReaCue Studio: the Show and Lights screens
+
+On show night, `studio.html` also works as a **control desk** on the computer or a tablet.
+
+1. Open the concert in REAPER (chapter 16) and the **ReaCue** window (it runs the commands).
+2. In ReaCue Studio, click **SHOW** (or open `studio.html#concert` directly). The first time you press a
+   command, enter the **PIN** (ReaCue window, Stage tab).
+
+![ReaCue Studio, Show screen](images/studio_concert_en.png)
+
+| Area | What it does |
+|---|---|
+| Banner | LED + PLAYING / PAUSED / STOPPED, “SONG n / N”, title; LEFT (end of the song), SHOW (elapsed time), SMPTE · LTC |
+| Setlist | one block per song (width = length): played greyed, current in orange; click = go to the song |
+| Sections | start bar, name, PLAYED / NOW 3/16 / NEXT; click = go to the section |
+| ◀ PREV · PLAY · NEXT ▶ | previous song (or start of the song), play / pause (space bar), next song |
+| Lighting | the song's cues (number, timecode, section, effect), current cue highlighted, LTC / MTC / export LEDs, TEST 10 S |
+
+While playing, **PREV**, **NEXT**, a setlist block and **TEST 10 S** need **two taps** (“AGAIN?”), like the
+ReaCue window. With no concert open, the screen shows the single song (PREV / NEXT move between sections) with
+a message.
+
+3. Click **LIGHTS** (`studio.html#lumiere`) for the grandMA3 console:
+
+![ReaCue Studio, Lights screen](images/studio_lumiere_en.png)
+
+- **Current cue** in large type, then every cue (per song): click = go to the cue.
+- **Timecode outputs**: LTC output, MTC device, TC Slot, fps and start (Lighting tab settings at export time);
+  **EXPORT UP TO DATE** LED (otherwise: *Export now* in the Lighting tab).
+- **TEST 10 S**: only the TIMECODE tracks play for 10 s (the audience hears nothing), then everything is
+  restored; the button shows the countdown, a 2nd tap stops. Check on the console that the TC Slot turns green.
+- **grandMA3 files**: download the Sequences, the Timecode and the cue sheet.
+
+> The effects shown are the suggestions per section type (read-only); editing them comes in a later version.
+
 ---
 
 ## 18. Troubleshooting

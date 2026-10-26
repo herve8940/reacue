@@ -5,7 +5,8 @@ Fabrique un morceau de démonstration entièrement fictif (« Demo Song » : str
 paroles et batterie inventés) et un concert fictif de trois morceaux, les sert avec la page du prompteur
 sur un faux serveur REAPER (/_/TRANSPORT renvoie une position fixe ; instruments, Régie et répétition
 simulés), puis photographie chaque vue avec Playwright (Chromium) : rôles, tablette, concert, Régie (PIN 1234),
-Lumière (cues grandMA3), ReaCue Studio (écran Travail : pistes /_/TRACK et formes d'onde fictives).
+Lumière (cues grandMA3), ReaCue Studio (écran Travail : pistes /_/TRACK et formes d'onde fictives ; écrans
+Concert et Lumière sur le concert fictif).
 
     pip install playwright && playwright install chromium
     python3 tools/make_screenshots.py [--out docs/images] [--check]
@@ -121,7 +122,7 @@ def _lighting(songs: list[dict], concert: str | None = None) -> dict:
     """Bloc « lighting » (onglet Lumière), calculé par le vrai module d'export grandMA3."""
     from reacue_mcp import lighting
     cfg = lighting.config({"gma3_fps": 25, "gma3_tc_start": "01:00:00:00",
-                           "gma3_song_slot": 0})
+                           "gma3_song_slot": 0, "gma3_ltc_output": 7, "gma3_mtc_output": "IAC Bus 1", "gma3_tc_slot": 1})
     return lighting.web_data(lighting.show_from_songs(songs, concert), cfg)
 
 
@@ -239,6 +240,7 @@ class FakeReaper(SimpleHTTPRequestHandler):
     studio: str = ""
     peaks: dict | None = None
     export: dict | None = None
+    tctest: str = ""                # test timecode en cours : secondes restantes
     tracks: list = []
     log: list = []                  # commandes SET/… et actions reçues (tests)
 
@@ -249,7 +251,7 @@ class FakeReaper(SimpleHTTPRequestHandler):
         """/_/cmd;cmd;… : TRANSPORT, TRACK, GET/EXTSTATE, SET/TRACK, SET/POS, SET/EXTSTATE (accusé immédiat)."""
         cls = FakeReaper
         ext = {"mix": cls.mix, "remote_alive": str(int(time.time() * 2)), "remote_ack": cls.__dict__.get("ack", ""),
-               "rehearsal": cls.rehearsal, "studio": cls.studio}
+               "rehearsal": cls.rehearsal, "studio": cls.studio, "tctest": cls.tctest}
         body = ""
         for c in path[3:].split(";"):
             c = unquote(c)
@@ -430,6 +432,30 @@ def run(out: Path | None, check_only: bool) -> list[str]:
                 ctx.close()
             FakeReaper.play, FakeReaper.rehearsal, FakeReaper.studio, FakeReaper.peaks = 0, "", "", None
             FakeReaper.tracks = []
+            # ReaCue Studio, écrans Concert et Lumière (concert fictif, 2e morceau, refrain 1 en lecture)
+            for lang in ("fr", "en"):
+                data = demo_concert(lang)
+                s2 = data["songs"][1]
+                FakeReaper.song, FakeReaper.tracks, FakeReaper.peaks = data, demo_tracks(), demo_peaks(s2)
+                FakeReaper.pos, FakeReaper.play = bar_time(31, 2.5, s2["bpm"], s2["start_t"]), 1
+                for mode in ("concert", "lumiere"):
+                    ctx = browser.new_context(viewport={"width": 1440, "height": 900}, device_scale_factor=1,
+                                              locale="fr-FR" if lang == "fr" else "en-US")
+                    page = ctx.new_page()
+                    page.on("console", lambda m, lg=lang, md=mode: m.type == "error" and errors.append(f"{lg}/{md}: {m.text}"))
+                    page.on("pageerror", lambda e, lg=lang, md=mode: errors.append(f"{lg}/{md}: {e}"))
+                    page.goto(f"{base}/studio.html?lang={lang}#{mode}")
+                    sel = "#csSecs .cs-sec.now" if mode == "concert" else "#lmList .cs-cue.now"
+                    page.wait_for_selector(sel, timeout=8000)
+                    page.wait_for_timeout(600)
+                    if mode == "concert" and "Second Demo".upper() not in (page.text_content("#csTitle") or "").upper():
+                        errors.append(f"{lang}/concert: title missing")
+                    if out and not check_only:
+                        f = out / f"studio_{mode}_{lang}.png"
+                        page.screenshot(path=str(f))
+                        shots.append(f.name)
+                    ctx.close()
+            FakeReaper.play, FakeReaper.tracks, FakeReaper.peaks = 0, [], None
             # bouton de langue : FR -> EN sans erreur, mémorisé
             ctx = browser.new_context(viewport=PHONE)
             page = ctx.new_page()

@@ -221,14 +221,14 @@ function ctx.draw_job(x, y, w)
   local j = ctx.job
   if not j then return 0 end
   local el = math.floor(reaper.time_precise() - j.t0)
-  U.set(U.BLUE, 0.18); gfx.rect(x, y, w, 30, 1)
-  U.set(U.BLUE); gfx.rect(x, y, 4, 30, 1)
+  U.panel(x, y, w, 30, U.INSET)
+  U.set(U.BLUE); gfx.rect(x, y, 3, 30, 1)
   local spin = ({ "|", "/", "-", "\\" })[(math.floor(reaper.time_precise() * 4) % 4) + 1]
   U.text(U.fit(string.format(T("running"), j.label or T("working"), el) .. "  " .. spin, w - 20, 13, true),
     x + 12, y + 8, 13, U.INK, true)
   if j.pct and j.pct > 0 then
-    U.set(U.PANEL); gfx.rect(x + 4, y + 26, w - 4, 4, 1)
-    U.set(U.ACCENT); gfx.rect(x + 4, y + 26, math.floor((w - 4) * j.pct / 100), 4, 1)
+    U.set(U.PANEL); gfx.rect(x + 3, y + 26, w - 3, 4, 1)
+    U.set(U.SIG); gfx.rect(x + 3, y + 26, math.floor((w - 3) * j.pct / 100), 4, 1)
   end
   return 38
 end
@@ -248,8 +248,8 @@ function ctx.draw_solution(why, x, y, w, id)
   local tw = w - 24 - (bw > 0 and bw + 8 or 0)
   local h1 = U.para(E("solution") .. ctx.colon() .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
   local h = math.max(h1 + 14, bw > 0 and 44 or 0)
-  U.set(U.WARN, 0.16); gfx.rect(x, y, w, h, 1)
-  U.set(U.WARN); gfx.rect(x, y, 4, h, 1)
+  U.panel(x, y, w, h, U.INSET)
+  U.set(U.WARN); gfx.rect(x, y, 3, h, 1)
   U.para(E("solution") .. ctx.colon() .. why.solution, x + 12, y + 8, tw, 13, U.INK, 3)
   if bw > 0 and U.button(id or "err_action", why.action_label, x + w - bw - 6, y + (h - 30) / 2, bw, 30, "primary", 13) then
     ctx.do_action(why.action)
@@ -380,9 +380,9 @@ local function draw_check(x, y, w)
   if bad > 0 then sum, col = string.format(L.tr("n_problems"), bad), CK_COL.bad
   elseif warn > 0 then sum, col = string.format(L.tr("n_warnings"), warn), CK_COL.warn
   else sum, col = L.tr("all_ready") .. "  ✓", CK_COL.ok end
-  U.set(col, 0.22); gfx.rect(x, y, w, 34, 1)
-  U.set(col); gfx.roundrect(x, y, w - 1, 33, 6, 1)
-  U.text(sum, x + 12, y + 8, 16, U.INK, true)
+  U.panel(x, y, w, 34, U.INSET)
+  U.set(col); gfx.rect(x, y, 3, 34, 1); gfx.circle(x + 16, y + 17, 5, 1, 1)
+  U.text(sum, x + 28, y + 8, 16, U.INK, true)
   y = y + 46
   for k, it in ipairs(chk.list) do
     local c = CK_COL[it.status] or U.GREY
@@ -401,13 +401,26 @@ local function draw_check(x, y, w)
   return y + 6
 end
 
--- en-tête : titre, onglets, état -------------------------------------------------------------
+-- en-tête : marque, onglets (barre encastrée, onglet actif clair), voyants pont / web --------------------
+local function draw_brand(x, y)
+  U.set(U.SIG); gfx.rect(x, y, 22, 22, 1)
+  U.set(U.DARK)                                   -- tracé « pouls » du logo
+  local px = { 3, 7, 9, 13, 15, 19 }
+  local py = { 11, 11, 5, 17, 11, 11 }
+  for i = 1, #px - 1 do
+    for d = 0, 1 do gfx.line(x + px[i], y + py[i] + d, x + px[i + 1], y + py[i + 1] + d) end
+  end
+  local lab = U.upper(T("title"))
+  U.text(lab, x + 30, y + 2, 19, U.INK, true, "cond")
+  return 30 + U.text_w(lab, 19, true, "cond")
+end
+
 local function draw_header(w)
   U.set(U.PANEL2); gfx.rect(0, 0, w, 44, 1)
-  U.text(T("title"), 14, 12, 17, U.INK, true)
-  local x = 14 + U.text_w(T("title"), 17, true) + 14
+  U.set(U.EDGE); gfx.rect(0, 44, w, 1, 1)
+  local x = 14 + draw_brand(14, 11) + 12
   local names = T("tabs")
-  -- état : pont, interface web (à droite)
+  -- état : pont, interface web (à droite) : voyants
   local bridge = R.bridge_alive and R.bridge_alive()
   local _, web = L.web_port()
   local st = {}
@@ -419,29 +432,42 @@ local function draw_header(w)
     local lw = U.text_w(lab, 11)
     sx = sx - lw
     U.text(lab, sx, 16, 11, U.MUTED)
-    U.set(st[k][2] and U.ACCENT or U.RED); gfx.circle(sx - 8, 22, 3.5, 1, 1)
+    U.set(st[k][2] and U.LED or U.RED); gfx.circle(sx - 8, 22, 3.5, 1, 1)
     sx = sx - 20
   end
   local avail = sx - x - 6
   -- onglets de même largeur s'il y a la place, sinon à la largeur de leur nom (réduits si besoin)
-  local n, gap = #TAB_ORDER, 4
-  local tw = math.min(104, math.floor((avail - (n - 1) * gap) / n))
+  local n, gap = #TAB_ORDER, 2
+  local tw = math.min(104, math.floor((avail - 6 - (n - 1) * gap) / n))
   local ws, tot, widest = {}, 0, 0
   for i, k in ipairs(TAB_ORDER) do
-    ws[i] = U.text_w(names[k], 13) + 18
+    ws[i] = U.text_w(names[k], 12, true) + 18
     tot = tot + ws[i]
     widest = math.max(widest, ws[i])
   end
-  local room = avail - (n - 1) * gap
+  local room = avail - 6 - (n - 1) * gap
   for i = 1, n do
     if tw >= widest then ws[i] = tw
     elseif tot > room then ws[i] = math.max(36, math.floor(ws[i] * room / tot)) end
   end
+  local full = 6 + (n - 1) * gap
+  for i = 1, n do full = full + ws[i] end
+  U.set(U.WELL); gfx.rect(x, 7, full, 30, 1)
+  U.frame(x, 7, full, 30)
+  x = x + 3
   for i, k in ipairs(TAB_ORDER) do
-    if U.button("tab_" .. k, names[k], x, 9, ws[i], 26, ctx.tab == k and "on" or nil, 13) then ctx.goto_tab(k) end
+    local on = ctx.tab == k
+    local over = U.over(x, 10, ws[i], 24)
+    if over then U.hover = "tab_" .. k end
+    if on then U.set(U.INK); gfx.rect(x, 10, ws[i], 24, 1)
+    elseif over then U.set(U.INK, 0.08); gfx.rect(x, 10, ws[i], 24, 1) end
+    local lab = U.fit(names[k], ws[i] - 8, 12, true)
+    local lw = U.text_w(lab, 12, true)
+    U.text(lab, x + (ws[i] - lw) / 2, 16, 12, on and U.DARK or (over and U.INK or U.MUTED), true)
+    if over and U.clicked then ctx.goto_tab(k) end
     x = x + ws[i] + gap
   end
-  return 44
+  return 45
 end
 
 -- fenêtre ancrée basse : barre compacte ------------------------------------------------------
@@ -453,6 +479,16 @@ end
 -- tâches de fond (tous onglets) ----------------------------------------------------------------
 local CMD_TXT = L.tr("cmd")
 local last_alive, last_pos, loop_last = 0, nil, nil
+local last_tctest = nil
+-- ReaCue Studio (Lumière, Concert) : « TEST 10 S » = test d'envoi du timecode de l'onglet Lumière
+L.remote_ext.tctest = function(_, arg) return tabs.lighting.remote_test(arg) end
+
+-- état du test timecode pour ReaCue Studio : secondes restantes, "" sans test
+local function publish_tctest(now)
+  local left = tabs.lighting.test_left and tabs.lighting.test_left(now)
+  local v = left and tostring(left) or ""
+  if v ~= last_tctest then reaper.SetExtState("ReaCue", "tctest", v, false); last_tctest = v end
+end
 ctx.flash = nil
 
 local function poll_remote(now)
@@ -490,6 +526,7 @@ local function background(now)
   end
   for _, k in ipairs(TAB_ORDER) do if tabs[k].tick then tabs[k].tick(now) end end   -- test timecode : fin, Stop
   if c and not ctx.tc_test then L.mix_tick(c, now) end   -- pendant le test : mutes des instruments laissés tels quels
+  publish_tctest(now)
   L.studio_c = c
   L.studio_publish(false, c)                              -- ReaCue Studio : vitesse, transposition, rampe
   local g = reaper.GetExtState("ReaCue", "win_goto")
@@ -508,7 +545,7 @@ local function draw_help(y, w)
   local txt = ctx.help_text(U.hover) or ctx.guide.default_help()
   local h = U.text_w(txt, 12) > w - 28 and HELP_H + 16 or HELP_H     -- texte long : 2 lignes
   U.set(U.PANEL2); gfx.rect(0, y, w, h, 1)
-  U.set(U.INK, 0.08); gfx.line(0, y, w, y)
+  U.set(U.EDGE); gfx.rect(0, y, w, 1, 1)
   local hov = U.hover ~= nil or U.hover_tip ~= nil
   U.para(txt, 14, y + 6, w - 28, 12, hov and U.INK or U.MUTED, 2)
   return y + h
@@ -573,6 +610,7 @@ reaper.atexit(function()
   if L.reh.on then pcall(L.set_rehearsal, false) end
   reaper.SetExtState("ReaCue", "rehearsal", "", false)
   reaper.SetExtState("ReaCue", "studio", "", false)
+  reaper.SetExtState("ReaCue", "tctest", "", false)
   reaper.SetExtState("ReaCue", "win_alive", "", false)
   reaper.SetExtState("ReaCue", "win_script", "", false)
   L.remote_off()

@@ -4,8 +4,9 @@
      /_/SET/TRACK/<n>/MUTE|SOLO|VOL|PAN/<v> ; /_/SET/POS/<s> ; actions numériques (1007 lecture…) ;
    - commandes ReaCue (fenêtre ReaCue ouverte sur l'ordinateur) : /_/SET/EXTSTATE/ReaCue/remote/<cmd>|<arg>|<pin>|<nonce>,
      une à la fois (file d'attente, accusé ReaCue/remote_ack), PIN mémorisé dans le navigateur ;
-   - données publiées par ReaCue : reacue_song.json (grille, sections, accords), reacue_peaks.json (formes d'onde),
-     reacue_export.json (état des exports) ;
+   - données publiées par ReaCue : reacue_song.json (grille, sections, accords ; concert : setlist ; bloc « lighting »
+     des cues grandMA3), reacue_peaks.json (formes d'onde), reacue_export.json (état des exports) ;
+   - écrans (Travail, Concert, Lumière) : éléments [data-screen], navigation #nav, adresse studio.html#concert ;
    - calculs musicaux : mesure.temps.subdivision, SMPTE, transposition des accords.
    Aucune ressource externe. */
 (function () {
@@ -39,6 +40,29 @@
     RC.onLang.forEach(f => f(l));
   };
 
+  // ------------------------------------------------------------------ écrans (navigation)
+  // un seul document : chaque écran est un élément [data-screen="travail|concert|lumiere"] ; l'adresse garde
+  // l'écran (studio.html#concert), le bouton actif de #nav suit. RC.onMode : rappels des écrans.
+  RC.MODES = ["travail", "concert", "lumiere"];
+  RC.mode = "travail";
+  RC.onMode = [];
+  RC.setMode = m => {
+    if (RC.MODES.indexOf(m) < 0) m = "travail";
+    RC.mode = m;
+    document.querySelectorAll("[data-screen]").forEach(el => { el.hidden = el.dataset.screen.split(" ").indexOf(m) < 0; });
+    document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+    document.body.dataset.mode = m;
+    const h = m === "travail" ? "" : "#" + m;
+    if (location.hash !== h) try { history.replaceState(null, "", location.pathname + location.search + h); } catch (e) { /* fichier local */ }
+    RC.onMode.forEach(f => f(m));
+  };
+  RC.startMode = () => (location.hash || "").slice(1) || RC.params.get("mode") || "travail";
+  window.addEventListener("hashchange", () => RC.setMode((location.hash || "").slice(1)));
+
+  // données publiées (reacue_song.json) : chargées par l'écran Travail, partagées (RC.data, RC.onData)
+  RC.data = null;
+  RC.onData = [];
+
   // ------------------------------------------------------------------ interface web de REAPER
   RC.state = { ok: false, lastOk: -1e9, play: 0, ps: 0, pos: 0, at: 0, rtt: 60, tracks: [], ext: {}, aliveAt: -1e9, alive: "" };
   RC.api = async (cmds) => {
@@ -62,7 +86,7 @@
     const l = txt.split("\n").find(x => x.startsWith("EXTSTATE\tReaCue\t" + key + "\t") || x === "EXTSTATE\tReaCue\t" + key);
     return l == null ? null : (l.split("\t")[3] || "");
   };
-  const EXT_KEYS = ["remote_alive", "remote_ack", "rehearsal", "studio"];
+  const EXT_KEYS = ["remote_alive", "remote_ack", "rehearsal", "studio", "tctest"];
   RC.extra = [];                         // commandes ajoutées à chaque interrogation (écran)
   RC.onPoll = [];
   RC.poll = async () => {

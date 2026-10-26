@@ -102,6 +102,7 @@
       const d = await RC.getJSON("reacue_song.json");
       if (!data || d.id !== data.id) {
         data = d; cIdx = -1;
+        RC.data = d; RC.onData.forEach(f => f(d));
         if (!RC.LANG_FIXED && !RC.load("reacue_studio_lang") && RC.STR[d.language || (d.songs && d.songs[0].language)])
           RC.setLang(d.language || d.songs[0].language, false);
         pickSong(RC.pos(), true);
@@ -507,8 +508,11 @@
 
   // ------------------------------------------------------------------ navigation, langue, PIN
   document.querySelectorAll("#nav button").forEach(b => b.onclick = () => {
-    if (b.dataset.mode !== "travail") toast(T("soon", b.textContent.trim()));
+    if (RC.MODES.indexOf(b.dataset.mode) >= 0) RC.setMode(b.dataset.mode);
+    else toast(T("soon", b.textContent.trim()));
   });
+  RC.toast = toast;
+  RC.onMode.push(m => { if (m === "travail") { trackSig = ""; rulerKey = ""; } });
   $("langBtn").onclick = () => RC.setLang(RC.LANG === "fr" ? "en" : "fr");
   RC.onLang.push(l => {
     $("langBtn").textContent = l === "fr" ? "EN" : "FR";
@@ -625,6 +629,7 @@
     $("lcdTr").textContent = RC.studio.tr ? (RC.studio.tr > 0 ? "+" : "") + RC.studio.tr : "±0";
     const tc = (peaks && peaks.tc) || (song && song.lighting) || (data && data.lighting) || { fps: 25, offset_s: 0 };
     $("lcdTc").textContent = RC.smpte((tc.offset_s || 0) + Math.max(0, t), tc.fps || 25);
+    if (RC.mode !== "travail") return;                   // autre écran : afficheurs seulement
     // règle
     buildRuler();
     if (V) {

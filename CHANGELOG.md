@@ -1,6 +1,36 @@
 # Changelog
 
-## Non publié / Unreleased — ReaCue Studio, étapes 1 et 2 : écran Travail, exports, prompteur « Studio pro »
+## Non publié / Unreleased — ReaCue Studio, étapes 1 à 3 : écran Travail, exports, prompteur, Concert, Lumière, nouvelle apparence
+
+### Show and Lights screens, “Studio pro” look for the ReaCue window (step 3)
+- **ReaCue Studio, SHOW screen** (`studio.html#concert`, same base CSS / JS and navigation as Practice):
+  playback banner with LED (PLAYING / PAUSED / STOPPED), “SONG n / N”, title, LEFT / SHOW / SMPTE · LTC
+  readouts; setlist as blocks (played / current / next, width = length); sections of the current song (start
+  bar, name, PLAYED / NOW n/16 / NEXT); big ◀ PREV / PLAY-PAUSE / NEXT ▶ buttons (two taps while playing);
+  lighting panel (cues of the song with timecode, section and effect, current cue, REAPER → LTC, MTC → console,
+  EXPORT UP TO DATE LEDs, TEST 10 S). Uses the published data (`reacue_song.json`, concert or single song) and
+  the existing remote protocol with PIN (`song`, `prev`, `next`, `toggle`, `seek`); window closed: play / pause
+  and jumps through REAPER's web API. No concert open: single song with its sections and a clear message.
+- **ReaCue Studio, LIGHTS screen** (`studio.html#lumiere`): current cue, every cue (number, SMPTE timecode,
+  section, type, effect; per song in a concert; click = go to the cue), timecode outputs as exported
+  (gma3_* settings: LTC output, MTC device, TC Slot, fps, start), LEDs, download links for the grandMA3 files,
+  TEST 10 S with countdown. Effects are read-only for now (editing comes later).
+- New remote command **`tctest`** (ReaCue window, PIN): starts / stops the Lighting tab's 10 s timecode test
+  (TIMECODE tracks only, state restored); seconds left published in ExtState `ReaCue/tctest`. The window
+  library accepts commands added by the window (`L.remote_ext`).
+- **ReaCue window, “Studio pro” look** (all tabs and views; functions and layout unchanged): palette of ReaCue
+  Studio centralised in `ReaCue_ui.lua` (`U.THEME`; tabs only use `U.<NAME>`), LCD readouts in a monospace
+  system font (Menlo / Monaco, Consolas, fallback Courier New) and titles in condensed capitals (Avenir Next
+  Condensed / Helvetica Neue Condensed Bold, Arial Narrow / Bahnschrift SemiCondensed, fallback Arial Bold),
+  picked by measuring which font is installed; header with brand and tab bar; sharp panels and buttons (no
+  rounded corners); Stage tab: playback banner with LED, LEFT / SHOW / SMPTE readouts (second row when the
+  window is narrow), big transport buttons with play in green, sections and setlist as blocks with a coloured
+  top edge (played / current / next); Lighting tab: SMPTE readout and cue list in monospace. Docked compact bar,
+  hover help, pills and narrow windows keep working (the window has no light mode).
+- Tests: Show / Lights screens FR / EN, nothing external, remote commands with PIN, two taps while playing,
+  fallback without the window, single song; theme colours centralised and identical to the web palette, font
+  fallbacks (Mac / Windows), accented capitals, `tctest` end-to-end; window screenshots regenerated (renderer
+  uses DejaVu Sans Mono / Condensed for the mono / condensed faces) and Studio Show / Lights screenshots added.
 
 ### Prompter in the “Studio pro” style (step 2)
 - `prompteur.html` (same address: QR codes and phones already set up keep working) now uses the ReaCue Studio

@@ -592,6 +592,7 @@ return function(ctx)
 
   -- envoi de 10 s de test : pistes TIMECODE seules (solo), état rétabli à l'identique -----------------
   local test = nil
+  local from_start = reaper.GetExtState("ReaCue", "light_from") == "start"
   function M.test_active() return test ~= nil end
   function M.test_state() return test end
 
@@ -681,6 +682,23 @@ return function(ctx)
     return true
   end
 
+  -- secondes restantes du test en cours (nil : pas de test) ; publié pour ReaCue Studio (ExtState ReaCue/tctest)
+  function M.test_left(now)
+    if not test then return nil end
+    return math.max(0, math.ceil(M.TEST_S - ((now or reaper.time_precise()) - test.t0)))
+  end
+
+  -- télécommande (ReaCue Studio, écran Lumière / Concert : « TEST 10 S ») : lance ou arrête le test ;
+  -- arg "start" (début du morceau), "cursor" (position actuelle) ou "" (choix de l'onglet Lumière)
+  function M.remote_test(arg)
+    if test then return M.test_stop("user") end
+    local fs = from_start
+    if arg == "start" then fs = true elseif arg == "cursor" then fs = false end
+    local ok, why = M.test_start(fs)
+    if not ok and why then ctx.flash = { txt = why, t = reaper.time_precise(), bad = true } end
+    return ok and true or false
+  end
+
   -- appelé à chaque image, quel que soit l'onglet
   function M.tick(now)
     if not test then return end
@@ -699,7 +717,6 @@ return function(ctx)
 
   -- dessin -------------------------------------------------------------------------------------
   local scroll = 0
-  local from_start = reaper.GetExtState("ReaCue", "light_from") == "start"
   local function ui() return ST() and ST().ui end
 
   local function draw_infos(x, y, w)
@@ -714,12 +731,12 @@ return function(ctx)
     local pos = L.pos()
     local playing = L.playing()
     local now_tc = M.smpte(off + pos, fps)
-    U.set(U.PANEL2); gfx.rect(x, y, w, 40, 1)
-    U.set(playing and U.ACCENT or U.GREY); gfx.rect(x, y, 4, 40, 1)
-    U.text(t("tc_now"), x + 12, y + 4, 11, U.MUTED)
-    U.text(now_tc, x + 12, y + 16, 20, playing and U.INK or { 205, 205, 210 }, true)
+    U.panel(x, y, w, 40, U.INSET)
+    U.set(playing and U.LED or U.GREY); gfx.circle(x + 10, y + 9, 3, 1, 1)
+    U.text(U.upper(t("tc_now")), x + 18, y + 4, 9, U.MUTED)
+    U.text(now_tc, x + 12, y + 15, 20, playing and U.SMPTE or U.INK2, false, "mono")
     local sub = string.format(t("tc_sub"), L.fmt_time(pos), tc, M.fps_label(fps))
-    local tw = U.text_w(now_tc, 20, true) + 30
+    local tw = U.text_w(now_tc, 20, false, "mono") + 30
     local sw = w - tw - 18
     if sw > 120 then
       local sub_f = U.fit(sub, sw, 11)
@@ -752,11 +769,11 @@ return function(ctx)
     if playing and cur and (cur <= scroll or cur > scroll + vis) then scroll = cur - 1 end
     if U.over(x, y, w, vis * ROWH + 18) and U.wheel ~= 0 then scroll = scroll + (U.wheel > 0 and -1 or 1) end
     scroll = math.max(0, math.min(math.max(0, n - vis), scroll))
-    local cn = U.text_w("000", 12) + 10
-    local ctc = U.text_w("00:00:00:00", 12, true) + 16
-    U.text(t("col_n"), x + 6, y, 11, U.MUTED)
-    U.text(t("col_tc"), x + 6 + cn, y, 11, U.MUTED)
-    U.text(t("col_name"), x + 6 + cn + ctc, y, 11, U.MUTED)
+    local cn = U.text_w("000", 12, false, "mono") + 10
+    local ctc = U.text_w("00:00:00:00", 12, false, "mono") + 16
+    U.text(U.upper(t("col_n")), x + 6, y, 10, U.MUTED)
+    U.text(U.upper(t("col_tc")), x + 6 + cn, y, 10, U.MUTED)
+    U.text(U.upper(t("col_name")), x + 6 + cn + ctc, y, 10, U.MUTED)
     y = y + 16
     local last_song = nil
     for k = 1, vis do
@@ -764,16 +781,17 @@ return function(ctx)
       local q = cues[i]
       local yy = y + (k - 1) * ROWH
       local here = i == cur
-      if here then U.set(playing and U.ACCENT or U.PANEL, playing and 0.35 or 1)
+      local past = cur and i < cur
+      if here then U.set(playing and U.NOW or U.PANEL)
       else U.set(U.PANEL2) end
       gfx.rect(x, yy, w, ROWH - 3, 1)
-      if here then U.set(playing and U.ACCENT or U.BLUE); gfx.rect(x, yy, 3, ROWH - 3, 1) end
-      U.text(tostring(q.n), x + 6, yy + 3, 12, here and U.INK or U.MUTED)
-      U.text(M.smpte(off + q.t, fps), x + 6 + cn, yy + 3, 12, U.INK, true)
+      if here then U.set(playing and U.SIG or U.BLUE); gfx.rect(x, yy, 3, ROWH - 3, 1) end
+      U.text(tostring(q.n), x + 6, yy + 3, 12, here and U.SIG or U.MUTED, false, "mono")
+      U.text(M.smpte(off + q.t, fps), x + 6 + cn, yy + 3, 12, here and U.LCD or (past and U.GREY or U.INK2), false, "mono")
       local nm = q.name
       if info.concert and q.song and q.song ~= last_song then nm = q.song .. "  ·  " .. nm end
       last_song = q.song
-      U.text(U.fit(nm, w - cn - ctc - 12, 12, here), x + 6 + cn + ctc, yy + 3, 12, here and U.INK or { 220, 220, 224 }, here)
+      U.text(U.fit(nm, w - cn - ctc - 12, 12, here), x + 6 + cn + ctc, yy + 3, 12, here and U.INK or U.INK2, here)
       U.tip(x, yy, w, ROWH - 3, string.format("Cue %d · %s · %s", q.n, M.smpte(off + q.t, fps), q.name), "lcue" .. i)
     end
     y = y + vis * ROWH

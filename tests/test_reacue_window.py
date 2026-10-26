@@ -91,11 +91,14 @@ def frame(L, g, click=None, hold=None):
 
 
 def press_text(L, g, label, dy=3, exact=False):
-    for o in g.state.ops.values():
-        o = list(o.values())
-        if o[0] == "text" and ((o[3] == label) if exact else (label in o[3])):
-            TL.frame(L, g, (o[1] + 3, o[2] + dy))
-            return True
+    for up in (False, True):                   # 2e passage : libellé en capitales (thème Studio pro)
+        want = label.upper() if up else label
+        for o in g.state.ops.values():
+            o = list(o.values())
+            got = o[3].upper() if up and o[0] == "text" else o[3]
+            if o[0] == "text" and ((got == want) if exact else (want in got)):
+                TL.frame(L, g, (o[1] + 3, o[2] + dy))
+                return True
     raise AssertionError((label, TL.texts(g)))
 
 
@@ -635,7 +638,7 @@ def test_concert_tab_compose_build_open(concert, tmp_path):
     gx = open_window(L, g)
     frame(L, g); frame(L, g)
     T = TL.texts(g)
-    assert "Concert" in T and any(t.startswith("Morceaux (") for t in T), T
+    assert "Concert" in T and any(t.upper().startswith("MORCEAUX (") for t in T), T
     assert "Demo Song" in T and "Second Demo" in T and any("✓" in t for t in T), T
     plus = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "rect"]
 
@@ -855,10 +858,12 @@ def test_lyrics_pill_auto_draft(concert, tmp_path, lang):
     T = TL.texts(g)
     assert lab in T, T
     x, y = text_xy(g, lab)
-    # pastille orange (U.WARN) : contour arrondi de la couleur d'avertissement autour du texte
-    rr = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "rrect"]
-    near = [o for o in rr if o[1] <= x <= o[1] + o[3] and o[2] <= y <= o[2] + o[4]]
-    assert near and all(round(o[5] * 255) == 239 and round(o[6] * 255) == 159 for o in near), near
+    # pastille d'avertissement : texte et voyant de la couleur U.WARN du thème (jaune LCD)
+    warn = [int(v) for v in L.eval("REACUE_CTX.U.WARN").values()]
+    txt = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "text" and list(o.values())[3] == lab]
+    assert txt and [round(c * 255) for c in txt[0][6:9]] == warn, txt
+    dots = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "circle"]
+    assert any(abs(o[2] - (y + 6)) < 8 and o[1] < x and [round(c * 255) for c in o[4:7]] == warn for o in dots), dots
     gx = L.globals().gfx
     gx.mouse_x, gx.mouse_y = x + 2, y + 2
     frame(L, g)

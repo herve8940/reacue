@@ -29,11 +29,19 @@ LBL = {
 
 
 # ------------------------------------------------------------------------------------- rendu PNG ×2
-def _font(cache, size, bold):
+MONO = {"Menlo", "Monaco", "Consolas", "Lucida Console", "Courier New"}
+COND = {"Avenir Next Condensed", "Helvetica Neue Condensed Bold", "Arial Narrow", "Bahnschrift SemiCondensed"}
+
+
+def _font(cache, size, bold, face=None):
+    """police du rendu : DejaVu Sans (texte), Sans Mono (afficheurs), Sans Condensed Bold (titres condensés)"""
     from PIL import ImageFont
-    k = (size, bold)
+    kind = "mono" if face in MONO else ("cond" if face in COND else "sans")
+    k = (size, bold, kind)
     if k not in cache:
-        name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
+        name = {"sans": "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+                "mono": "DejaVuSansMono-Bold.ttf" if bold else "DejaVuSansMono.ttf",
+                "cond": "DejaVuSansCondensed-Bold.ttf"}[kind]
         try:
             cache[k] = ImageFont.truetype(FONT_DIR + name, int(round(size * 0.9 * SCALE)))
         except OSError:
@@ -44,7 +52,7 @@ def _font(cache, size, bold):
 def render(g, w, h):
     from PIL import Image, ImageDraw
     S = SCALE
-    img = Image.new("RGB", (int(w * S), int(h * S)), (29, 29, 31))
+    img = Image.new("RGB", (int(w * S), int(h * S)), (0x16, 0x18, 0x1B))
     d = ImageDraw.Draw(img, "RGBA")
     fonts = {}
     col = lambda r, gg, b, a: (int(r * 255), int(gg * 255), int(b * 255), int(255 * (a if a is not None else 1)))
@@ -71,7 +79,8 @@ def render(g, w, h):
             d.line([(x1 * S, y1 * S), (x2 * S, y2 * S)], fill=col(r, gg, b, a), width=2 * S)
         elif k == "text":
             x, y, s, size, flags, r, gg, b, a = o[1:10]
-            d.text((x * S, y * S), s, font=_font(fonts, size, flags == ord("b")), fill=col(r, gg, b, a))
+            face = o[10] if len(o) > 10 else None
+            d.text((x * S, y * S), s, font=_font(fonts, size, flags == ord("b"), face), fill=col(r, gg, b, a))
     return img
 
 
@@ -93,7 +102,8 @@ def check_text(g, w):
         o = list(o.values())
         if o[0] == "text" and o[3].strip():
             x, s, size, flags = o[1], o[3], o[4], o[5]
-            tw = _font(fonts, size, flags == ord("b")).getlength(s) / SCALE
+            face = o[10] if len(o) > 10 else None
+            tw = _font(fonts, size, flags == ord("b"), face).getlength(s) / SCALE
             if x + tw > w + 1:
                 over.append((s, round(x + tw - w)))
     assert not over, f"textes qui débordent : {over}"

@@ -1051,6 +1051,44 @@ Dans ReaCue Studio, bouton **EXPORTER** :
 Exemples : la basse seule du refrain en MP3 pour la réviser dans le métro ; « tout sauf la guitare » mixé avec
 le click, mesures 33 à 48, pour travailler ta partie ; chaque stem en WAV pour un autre logiciel.
 
+### 17.5 ReaCue Studio : écrans Concert et Lumière
+
+Le soir du concert, la page `studio.html` sert aussi de **poste de régie** sur l'ordinateur ou une tablette.
+
+1. Ouvre le concert dans REAPER (chapitre 16) et la fenêtre **ReaCue** (elle exécute les commandes).
+2. Dans ReaCue Studio, clique sur **CONCERT** (ou ouvre directement `studio.html#concert`). Au premier
+   appui sur une commande, saisis le **PIN** (fenêtre ReaCue, onglet Scène).
+
+![ReaCue Studio, écran Concert](images/studio_concert_fr.png)
+
+| Zone | Ce qu'elle fait |
+|---|---|
+| Bandeau | voyant + LECTURE / PAUSE / ARRÊT, « MORCEAU n / N », titre ; RESTE (fin du morceau), CONCERT (temps écoulé), SMPTE · LTC |
+| Setlist | un bloc par morceau (largeur = durée) : joué grisé, en cours en orange ; clic = aller au morceau |
+| Sections | mesure de départ, nom, JOUÉ / EN COURS 3/16 / À VENIR ; clic = aller à la section |
+| ◀ PRÉC. · LECTURE · SUIV. ▶ | morceau précédent (ou début du morceau), lecture / pause (barre d'espace), morceau suivant |
+| Lumière | cues du morceau (n°, timecode, section, effet), cue en cours surligné, voyants LTC / MTC / export, TEST 10 S |
+
+Pendant la lecture, **PRÉC.**, **SUIV.**, un bloc de la setlist et **TEST 10 S** demandent **deux appuis**
+(« ENCORE ? »), comme dans la fenêtre ReaCue. Sans concert ouvert, l'écran montre le morceau seul (PRÉC. /
+SUIV. passent d'une section à l'autre) avec un message.
+
+3. Clique sur **LUMIÈRE** (`studio.html#lumiere`) pour la console grandMA3 :
+
+![ReaCue Studio, écran Lumière](images/studio_lumiere_fr.png)
+
+- **Cue en cours** en grand, puis tous les cues (par morceau) : clic = aller au cue.
+- **Sorties timecode** : sortie LTC, périphérique MTC, TC Slot, images/s et départ (réglages de l'onglet
+  Lumière au moment de l'export) ; voyant **EXPORT À JOUR** (sinon : *Exporter maintenant* dans l'onglet
+  Lumière).
+- **TEST 10 S** : seules les pistes TIMECODE jouent pendant 10 s (le public n'entend rien), puis tout est
+  rétabli ; le bouton affiche le compte à rebours, un 2e appui arrête. Regarde sur la console que le TC Slot
+  passe au vert.
+- **Fichiers grandMA3** : téléchargement des Sequences, du Timecode et de la fiche de conduite.
+
+> Les effets affichés sont les suggestions par type de section (lecture seule) ; leur modification viendra
+> dans une prochaine version.
+
 ---
 
 ## 18. Dépannage

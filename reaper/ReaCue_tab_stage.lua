@@ -23,7 +23,7 @@ return function(ctx)
   local secs_cache = { i = nil, t = 0, list = {} }
   local songs_open = reaper.GetExtState("ReaCue", "concert_list") ~= "0"
   local available = nil
-  local STATE_COL = { play = U.ACCENT, pause = U.WARN, stop = U.GREY }
+  local STATE_COL = { play = U.LED, pause = U.LCD, stop = U.MUTED }
 
   function M.project_changed()
     keys = (ctx.is_concert and ctx.c) and L.song_keys(ctx.c) or {}
@@ -136,7 +136,7 @@ return function(ctx)
       elseif r == "long" then
         if U.confirm("solo_" .. g.role, false) then L.mix_solo(c, g.role) end
       end
-      if L.mix.solo == g.role then U.set(U.INK); gfx.roundrect(bx - 2, by - 2, bw + 3, bh + 3, 6, 1) end
+      if L.mix.solo == g.role then U.frame(bx - 2, by - 2, bw + 4, bh + 4, U.INK); U.frame(bx - 1, by - 1, bw + 2, bh + 2, U.INK) end
       col = col + 1
       if col >= per then col = 0; row = row + 1 end
     end
@@ -221,26 +221,81 @@ return function(ctx)
   end
 
   -- vue détachée -----------------------------------------------------------------------------
+  -- bandeau lecture (style « Studio pro ») : voyant + état, « MORCEAU n / N », titre en capitales condensées,
+  -- afficheurs RESTE / CONCERT (jaunes) et SMPTE (bleu) ; étroit : afficheurs sur une 2e ligne
+  local function smpte_now(t)
+    local LT = ctx.tabs and ctx.tabs.lighting
+    if not (LT and LT.smpte and LT.tc_start) then return nil end
+    local _, off = LT.tc_start()
+    return LT.smpte((off or 0) + math.max(0, t), LT.fps and LT.fps() or 25)
+  end
+
+  local function draw_banner(c, S, x, y, w)
+    local s = S.s
+    local scol = s.color and { s.color[1], s.color[2], s.color[3] } or U.SLATE
+    local lcds = { { L.tr("rest_k"), L.fmt_time(S.rest), U.LCD } }
+    if ctx.is_concert then lcds[#lcds + 1] = { L.tr("concert_k"), L.fmt_time(math.min(S.t, S.total)), U.LCD } end
+    local tc = smpte_now(S.t)
+    if tc then lcds[#lcds + 1] = { "SMPTE", tc, U.SMPTE } end
+    local VS = 20
+    local lw = {}
+    local tot = 0
+    for k, l in ipairs(lcds) do lw[k] = U.text_w(l[2], VS, false, "mono") + 22; tot = tot + lw[k] end
+    local wide = w >= 600 and w - tot - 24 >= 300
+    local hb = wide and 92 or 136
+    U.panel(x, y, w, hb, U.INSET)
+    U.set(scol); gfx.rect(x, y, w, 3, 1)                              -- couleur du morceau
+    -- état
+    local st = S.st
+    local scol2 = STATE_COL[st]
+    local slab = U.upper(L.tr("state")[st])
+    U.set(scol2); gfx.circle(x + 18, y + 24, 6, 1, 1)
+    U.text(slab, x + 30, y + 15, 17, scol2, true, "cond")
+    -- rang + titre
+    local tx = x + 14
+    local ty = y + 38
+    local rank = ctx.is_concert and U.upper(L.tr("song_k")) or U.upper(t("song_only"))
+    local stw = U.text_w(slab, 17, true, "cond")
+    U.text(rank, x + 30 + stw + 16, y + 19, 10, U.MUTED)
+    if ctx.is_concert then
+      U.text(string.format("%d / %d", S.i, #c.songs), x + 30 + stw + 16 + U.text_w(rank, 10) + 8, y + 19, 10, U.MUTED)
+    end
+    local avail = (wide and (w - tot - 30) or (w - 24))
+    U.text(U.fit(U.upper(s.title or ""), avail, 30, true, "cond"), tx, ty, 30, U.INK, true, "cond")
+    -- afficheurs
+    local lx, ly, lh
+    if wide then
+      lx, ly, lh = x + w - tot - 12, y + 14, 64
+    else
+      lx, ly, lh = x + 12, y + 78, 50
+      local per = math.floor((w - 24) / #lcds)
+      for k = 1, #lcds do lw[k] = per end
+      lw[#lcds] = w - 24 - per * (#lcds - 1)
+    end
+    for k, l in ipairs(lcds) do
+      U.lcd(l[1], l[2], lx, ly, lw[k], lh, l[3], VS)
+      lx = lx + lw[k]
+    end
+    return y + hb
+  end
+
   local function draw_main(x, y0, w)
     local c = ctx.c
     local S = song_state(c)
     local s = S.s
     local y = y0
     local scol = s.color and { s.color[1], s.color[2], s.color[3] } or U.ACCENT
-    U.set(scol); gfx.rect(0, y, 6, 58, 1)
-    U.text(ctx.is_concert and string.format("%d / %d", S.i, #c.songs) or t("song_only"), x + 4, y, 13, U.MUTED)
-    local pw = U.pill(L.tr("state")[S.st], STATE_COL[S.st], x + w, y)
-    U.text(U.fit(s.title or "", w - 26 - pw, 22, true), x + 4, y + 16, 22, U.INK, true)
-    U.text(U.fit(info_line(S), w - 8, 13), x + 4, y + 42, 13, U.MUTED)
+    y = draw_banner(c, S, x, y, w)
+    U.text(U.fit(info_line(S), w - 8, 13), x + 2, y + 8, 13, U.INK2)
 
-    y = y + 66
-    U.set(U.PANEL); gfx.rect(x, y, w, 8, 1)
+    y = y + 30
+    U.set(U.INSET); gfx.rect(x, y, w, 6, 1)
     local frac = S.dur > 0 and math.min(1, S.el / S.dur) or 0
-    U.set(scol); gfx.rect(x, y, math.floor(w * frac), 8, 1)
-    U.text(string.format("%s / %s · ", L.fmt_time(S.el), L.fmt_time(S.dur)) .. string.format(L.tr("rest"), L.fmt_time(S.rest)), x, y + 13, 12, U.MUTED)
+    U.set(scol); gfx.rect(x, y, math.floor(w * frac), 6, 1)
+    U.text(string.format("%s / %s · ", L.fmt_time(S.el), L.fmt_time(S.dur)) .. string.format(L.tr("rest"), L.fmt_time(S.rest)), x, y + 11, 11, U.MUTED, false, "mono")
     if ctx.is_concert then
       local ct = string.format(L.tr("concert_n"), L.fmt_time(math.min(S.t, S.total)), L.fmt_time(S.total))
-      U.text(ct, x + w - U.text_w(ct, 12), y + 13, 12, U.MUTED)
+      U.text(ct, x + w - U.text_w(ct, 11, false, "mono"), y + 11, 11, U.MUTED, false, "mono")
     end
 
     -- transport
@@ -289,29 +344,33 @@ return function(ctx)
       y = y + 36
     end
 
-    -- sections (clic = y aller ; en répétition : boucle)
+    -- sections (clic = y aller ; en répétition : boucle) : blocs à bord supérieur coloré
     U.heading(L.tr("sections"), x, y)
     y = y + 18
     local sx = x
-    local ph = 24
+    local ph = 28
     for k, sec in ipairs(S.secs) do
       local lab = sec.name
-      local pw2 = U.text_w(lab, 12) + 16
-      if sx + pw2 > x + w and sx > x then sx = x; y = y + ph + 6 end
-      local col = sec.color or U.GREY
+      local cur = k == S.si
+      local pw2 = U.text_w(lab, 12, cur) + 18
+      if sx + pw2 > x + w and sx > x then sx = x; y = y + ph + 4 end
+      local col = sec.color or U.SLATE
       local over = U.over(sx, y, pw2, ph)
-      U.set(col, (k == S.si) and 1 or (over and 0.9 or 0.72)); gfx.rect(sx, y, pw2, ph, 1)
-      if k == S.si then U.set(U.INK); gfx.roundrect(sx - 2, y - 2, pw2 + 3, ph + 3, 5, 1); gfx.roundrect(sx - 1, y - 1, pw2 + 1, ph + 1, 5, 1) end
+      local done = S.si and k < S.si
+      U.set(cur and U.NOW or (done and U.DONE or U.ROW)); gfx.rect(sx, y, pw2, ph, 1)
+      if over then U.set(U.INK, 0.07); gfx.rect(sx, y, pw2, ph, 1) end
+      U.set(col); gfx.rect(sx, y, pw2, 3, 1)
+      if cur then U.frame(sx, y, pw2, ph, U.SIG) end
       local lp = RH.loop
       if lp and sec.start >= lp.start - 0.01 and sec.stop <= lp.stop + 0.01 then
-        U.set(U.WARN); gfx.rect(sx, y + ph - 4, pw2, 4, 1)
+        U.set(U.WARN); gfx.rect(sx, y + ph - 3, pw2, 3, 1)
       end
-      U.text(lab, sx + 8, y + 5, 12, U.DARK, k == S.si)
+      U.text(lab, sx + 9, y + 9, 12, cur and U.INK or (done and U.MUTED or U.INK2), cur)
       if over then U.hover = "sec" .. k end
       if over and U.clicked then
         if RH.on then L.loop_tap(c, sec.start); ctx.reset_loop() else L.seek(c, sec.start) end
       end
-      sx = sx + pw2 + 6
+      sx = sx + pw2 + 4
     end
     if #S.secs == 0 then U.text(L.tr("no_regions"), x, y + 4, 12, U.MUTED) end
     y = y + ph + 12
@@ -362,23 +421,33 @@ return function(ctx)
     if U.button("check", L.tr("check"), bx, y, cw, tb) then ctx.open_check() return y end
     y = y + tb + 10
 
-    -- setlist
+    -- setlist : blocs à bord supérieur coloré (joué / en cours / à venir), clic = aller au morceau
     if ctx.is_concert and songs_open then
+      local n = #c.songs
+      local gap, bh = 3, 46
+      local per = math.max(1, math.min(n, math.floor((w + gap) / (120 + gap))))
+      local bw = math.floor((w - (per - 1) * gap) / per)
+      local rows = math.ceil(n / per)
+      U.panel(x - 4, y - 4, w + 8, rows * (bh + gap) - gap + 8, U.INSET)
       for k, so in ipairs(c.songs) do
-        local yy = y + (k - 1) * ROW
-        local over = U.over(x - 4, yy, w + 8, ROW)
-        if k == S.i then U.set(U.PANEL); gfx.rect(x - 4, yy, w + 8, ROW - 2, 1) end
-        if over then U.set(U.INK, 0.06); gfx.rect(x - 4, yy, w + 8, ROW - 2, 1) end
-        if so.color then U.set({ so.color[1], so.color[2], so.color[3] }); gfx.rect(x - 4, yy + 4, 4, ROW - 10, 1) end
-        U.text(string.format("%d", k), x + 8, yy + 5, 14, U.MUTED)
-        U.text(U.fit(so.title, w - 170, 15, k == S.i), x + 30, yy + 4, 15, k == S.i and U.INK or { 210, 210, 214 }, k == S.i)
-        local right = string.format("%.0f BPM   %s", so.bpm, L.fmt_time(so.stop - so.start))
-        local rw2 = U.text_w(right, 13)
-        U.text(right, x + w - rw2 - 4, yy + 6, 13, U.MUTED)
+        local col, row = (k - 1) % per, math.floor((k - 1) / per)
+        local bx, by = x + col * (bw + gap), y + row * (bh + gap)
+        local ww = (col == per - 1 or k == n) and (x + w - bx) or bw
+        if k == n and col < per - 1 then ww = bw end
+        local over = U.over(bx, by, ww, bh)
+        local now, done = k == S.i, k < S.i
+        U.set(now and U.NOW or (done and U.DONE or U.ROW)); gfx.rect(bx, by, ww, bh, 1)
+        if over then U.set(U.INK, 0.07); gfx.rect(bx, by, ww, bh, 1) end
+        local top = now and U.SIG or (done and U.PANEL or (so.color and { so.color[1], so.color[2], so.color[3] } or U.SLATE))
+        U.set(top); gfx.rect(bx, by, ww, 3, 1)
+        U.text(U.fit(U.upper(so.title), ww - 16, 14, true, "cond"), bx + 8, by + 8, 14, done and U.GREY or U.INK, true, "cond")
+        local meta = string.format("%d · %.0f BPM · %s", k, so.bpm, L.fmt_time(so.stop - so.start))
+        if U.is_armed("song" .. k) then U.text(T("again"), bx + 8, by + 28, 11, U.WARN, true)
+        else U.text(U.fit(meta, ww - 16, 10, false, "mono"), bx + 8, by + 29, 10, U.MUTED, false, "mono") end
+        if over then U.hover = "song" .. k end
         if over and U.clicked and U.confirm("song" .. k, playing()) then L.goto_song(c, k) end
-        if U.is_armed("song" .. k) then U.text(T("again"), x + w - rw2 - 76, yy + 6, 12, U.WARN, true) end
       end
-      local yb = y + #c.songs * ROW + 6
+      local yb = y + rows * (bh + gap) + 8
       if U.button("rebuild", L.tr("rebuild"), x + w - 200, yb, 200, 24) and not ctx.job then M.rebuild(false) end
       y = yb + 34
     end

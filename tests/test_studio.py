@@ -59,9 +59,15 @@ def test_page_strings_fr_en_complete():
     en = js[js.index("RC.STR.en = {"):js.index("const T = RC.t")]
     keys = lambda s: set(re.findall(r"(?:^\s+|,\s+)(\w+):\s", s, re.M))
     assert keys(fr) == keys(en) and len(keys(fr)) > 60
+    # écrans Concert et Lumière : textes ajoutés (Object.assign) dans les deux langues
+    cj = (WEB / "reacue_studio" / "concert.js").read_text(encoding="utf-8")
+    cfr = cj[cj.index("Object.assign(RC.STR.fr, {"):cj.index("Object.assign(RC.STR.en, {")]
+    cen = cj[cj.index("Object.assign(RC.STR.en, {"):cj.index("const T = RC.t")]
+    assert keys(cfr) == keys(cen) and len(keys(cfr)) > 50
+    assert not (keys(cfr) & keys(fr)) - {"play", "pause", "next", "prev", "again", "none"}
     html = (WEB / "studio.html").read_text(encoding="utf-8")
     for k in re.findall(r'data-tt?="(\w+)"', html):
-        assert k in keys(fr), k
+        assert k in keys(fr) | keys(cfr), k
 
 
 def test_publish_copies_studio(tmp_path):

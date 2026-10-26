@@ -7,6 +7,7 @@
 <title>ReaCue Studio</title>
 <link rel="stylesheet" href="reacue_studio/base.css">
 <link rel="stylesheet" href="reacue_studio/travail.css">
+<link rel="stylesheet" href="reacue_studio/concert.css">
 </head>
 <body class="rc">
 <div class="rc-app">
@@ -19,8 +20,8 @@
       <button data-mode="biblio" class="soon" data-t="navBiblio">BIBLIO</button>
       <button data-mode="travail" class="on" data-t="navTravail">TRAVAIL</button>
       <button data-mode="groupe" class="soon" data-t="navGroupe">GROUPE</button>
-      <button data-mode="concert" class="soon" data-t="navConcert">CONCERT</button>
-      <button data-mode="lumiere" class="soon" data-t="navLumiere">LUMIÈRE</button>
+      <button data-mode="concert" data-t="navConcert">CONCERT</button>
+      <button data-mode="lumiere" data-t="navLumiere">LUMIÈRE</button>
     </nav>
     <button class="rc-lang" id="langBtn" aria-label="Langue / Language">EN</button>
     <div class="rc-lcds" aria-live="off">
@@ -32,7 +33,7 @@
     </div>
   </header>
 
-  <main id="travail" class="tv">
+  <main id="travail" class="tv" data-screen="travail">
     <section class="tv-head">
       <div class="tv-title">
         <h1 class="rc-h1" id="title">—</h1>
@@ -65,7 +66,89 @@
     </div>
   </main>
 
-  <footer class="rc-foot">
+
+  <!-- écran CONCERT : bandeau lecture, setlist, sections du morceau, transport, lumière -->
+  <main id="concert" class="cs" data-screen="concert" hidden>
+    <section class="cs-banner rc-inset">
+      <div class="cs-state" id="csState"><i></i><span id="csStateTxt">—</span></div>
+      <div class="cs-title">
+        <div class="cs-rank" id="csRank"></div>
+        <h1 class="cs-h" id="csTitle">—</h1>
+      </div>
+      <div class="cs-lcds">
+        <div class="cs-lcd"><div class="k" data-t="cRest">RESTE</div><div class="v" id="csRest">0:00</div></div>
+        <div class="cs-lcd"><div class="k" id="csElK">CONCERT</div><div class="v" id="csEl">0:00</div></div>
+        <div class="cs-lcd tc"><div class="k" id="csTcK">SMPTE</div><div class="v" id="csTc">00:00:00:00</div></div>
+      </div>
+    </section>
+    <p class="cs-msg" id="csMsg" hidden></p>
+    <section class="cs-setlist rc-inset" id="csSetlist" aria-label="Setlist"></section>
+    <div class="cs-body">
+      <section class="cs-panel">
+        <div class="cs-ph"><span id="csSecH">SECTIONS</span></div>
+        <div class="cs-secs" id="csSecs"></div>
+        <div class="cs-trans">
+          <button class="cs-big" id="csPrev" data-tt="cPrevTip"><span id="csPrevL">◀ PRÉC.</span></button>
+          <button class="cs-big play" id="csPlay" data-tt="cPlayTip"><span id="csPlayL">LECTURE</span></button>
+          <button class="cs-big" id="csNext" data-tt="cNextTip"><span id="csNextL">SUIV. ▶</span></button>
+        </div>
+      </section>
+      <section class="cs-panel" id="csLight">
+        <div class="cs-ph"><span id="csLightH">LUMIÈRE · GRANDMA3</span><span class="cs-out" id="csOut"></span></div>
+        <div class="cs-cues">
+          <div class="cs-cue th"><span data-t="colCue">CUE</span><span data-t="colTc">TIMECODE</span><span data-t="colSec">SECTION</span><span data-t="colFx">EFFET</span></div>
+          <div id="csCues"></div>
+        </div>
+        <div class="cs-foot">
+          <span class="cs-pill" id="csLtc"></span>
+          <span class="cs-pill" id="csMtc"></span>
+          <span class="cs-pill" id="csExp"></span>
+          <button class="cs-test" id="csTest">TEST 10 S</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- écran LUMIÈRE : cues grandMA3, cue en cours, sorties timecode, fichiers, test d'envoi -->
+  <main id="lumiere" class="lm" data-screen="lumiere" hidden>
+    <section class="lm-head">
+      <div class="lm-title">
+        <h1 class="rc-h1" data-t="lmTitle">LUMIÈRE · GRANDMA3</h1>
+        <span class="rc-meta" id="lmMeta"></span>
+      </div>
+      <div class="lm-now rc-inset" id="lmNow">
+        <div class="k" data-t="lmNow">CUE EN COURS</div>
+        <div class="lm-now-row"><span class="n" id="lmNowN">—</span><span class="tc" id="lmNowTc"></span><span class="nm" id="lmNowName"></span></div>
+        <div class="fx" id="lmNowFx"></div>
+      </div>
+    </section>
+    <p class="cs-msg" id="lmMsg" hidden></p>
+    <div class="lm-body">
+      <section class="cs-panel lm-cues">
+        <div class="cs-ph"><span data-t="lmCues">CUES</span><span class="cs-ro" data-t="lmFxRo">EFFETS SUGGÉRÉS · LECTURE SEULE</span></div>
+        <div class="cs-cue wide th"><span data-t="colCue">CUE</span><span data-t="colTc">TIMECODE</span><span data-t="colSec">SECTION</span><span data-t="colType">TYPE</span><span data-t="colFx">EFFET</span></div>
+        <div class="lm-list" id="lmList"></div>
+      </section>
+      <aside class="lm-side">
+        <section class="cs-panel">
+          <div class="cs-ph"><span data-t="lmOut">SORTIES TIMECODE</span></div>
+          <div class="lm-kv" id="lmKv"></div>
+          <div class="lm-pills"><span class="cs-pill" id="lmLtc"></span><span class="cs-pill" id="lmMtc"></span><span class="cs-pill" id="lmExp"></span></div>
+          <div class="lm-test">
+            <button class="cs-test" id="lmTest">TEST 10 S</button>
+            <p class="rc-note" data-t="lmOneway"></p>
+          </div>
+        </section>
+        <section class="cs-panel">
+          <div class="cs-ph"><span data-t="lmFiles">FICHIERS GRANDMA3</span></div>
+          <div class="rc-files lm-files" id="lmFiles"></div>
+          <p class="rc-note" data-t="lmUsb"></p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="rc-foot" data-screen="travail">
     <div class="rc-group">
       <button class="rc-btn" id="bHome" data-tt="tHome" aria-label="Début"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-8 6 8 6M6 6v12"/></svg></button>
       <button class="rc-btn" id="bStop" data-tt="tStop" aria-label="Stop"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
@@ -171,5 +254,6 @@
 <div class="rc-toast" id="toast"></div>
 <script src="reacue_studio/core.js"></script>
 <script src="reacue_studio/travail.js"></script>
+<script src="reacue_studio/concert.js"></script>
 </body>
 </html>
