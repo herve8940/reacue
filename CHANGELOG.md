@@ -1,6 +1,6 @@
 # Changelog
 
-## Non publié / Unreleased
+## 1.2.1 — 2026-10-26 — correction Windows (analyse de structure)
 
 ### Corrections
 - Windows : analyse de structure (SongFormer) — PyTorch 2.4.1 au lieu de 2.4.0, dont `fbgemm.dll` ne se charge pas sous Windows (`OSError` WinError 126 « Le module spécifié est introuvable »). / Windows: structure analysis uses PyTorch 2.4.1 instead of 2.4.0 (fbgemm.dll WinError 126).
