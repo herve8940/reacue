@@ -3,7 +3,8 @@
 Après chaque construction (prepare_song, set_sections…), le serveur écrit dans
 <ressources REAPER>/reaper_www_root/ :
   - prompteur.html       : la page (une seule, chaque musicien choisit son rôle) ;
-  - reacue_song.json     : le morceau (mesures sur la timeline, sections, présence des instruments).
+  - reacue_song.json     : le morceau (mesures sur la timeline, sections, présence des instruments) ;
+  - studio.html + reacue_studio/ : ReaCue Studio (écran Travail, studio.py), même données.
 La page lit la position de lecture via l'interface web de REAPER (/_/TRANSPORT) : pendant le
 live, seul REAPER doit tourner.
 """
@@ -257,4 +258,6 @@ def publish(song: dict, www: Path | None = None) -> dict:
     page = www / PAGE_NAME
     if PAGE_SRC.exists() and (not page.exists() or page.read_bytes() != PAGE_SRC.read_bytes()):
         shutil.copyfile(PAGE_SRC, page)
-    return {"page": str(page), "data": str(www / SONG_NAME)}
+    from .studio import publish_static           # ReaCue Studio : studio.html + reacue_studio/ (CSS, JS, polices)
+    publish_static(www)
+    return {"page": str(page), "data": str(www / SONG_NAME), "studio": str(www / "studio.html")}

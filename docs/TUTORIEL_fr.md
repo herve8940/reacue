@@ -993,6 +993,58 @@ Ouvre le projet du morceau ; dans la fenêtre ReaCue, onglet **Scène** (« Morc
 Il n'y a pas d'arrêt automatique ni de setlist (un seul morceau). Seul REAPER (et la fenêtre ReaCue pour la
 boucle) doit tourner pendant la répétition : Claude n'est pas nécessaire.
 
+### 17.3 ReaCue Studio : l'écran Travail
+
+ReaCue Studio est une page web servie par REAPER (comme le prompteur), faite pour travailler un morceau sur
+l'ordinateur ou une tablette.
+
+1. Prépare le morceau (chapitre 10) : la publication crée aussi les **formes d'onde** des stems.
+2. Ouvre la fenêtre **ReaCue** dans REAPER (elle exécute la boucle, la rampe, la transposition et l'export).
+3. Dans le navigateur : **`http://localhost:8080/studio.html`** sur l'ordinateur, ou
+   `http://<IP de l'ordinateur>:8080/studio.html` sur une tablette (l'adresse est affichée sous le QR code).
+4. Au premier usage d'une boucle, d'une rampe, de la transposition ou d'un export, la page demande le **PIN**
+   (fenêtre ReaCue, onglet **Scène**) : il est mémorisé sur l'appareil.
+
+![ReaCue Studio, écran Travail](images/studio_fr.png)
+
+| Zone | Ce qu'elle fait |
+|---|---|
+| Afficheurs (en haut) | POSITION mesure.temps.double-croche · TEMPS · TEMPO et vitesse en % · TON (± transposition) · SMPTE |
+| Structure | clic = aller à la section ; double-clic = la boucler (avec la mesure de décompte, comme en 17.1) |
+| Accords | défilent sous la tête de lecture ; clic = aller à l'accord |
+| Lignes des stems | forme d'onde (partie jouée en couleur), **M** (muet), **S** (solo), volume ; clic = aller à cet endroit |
+| Console (à droite) | pan (glisser ; double-clic = centre), vumètre, fader (double-clic = 0 dB), CLICK et VOIX compris |
+| Pied de page | Début, Stop, Lecture/Pause (barre d'espace), Boucle, Section suivante ; BOUCLE · RAMPE · CLICK · VOIX ; voyants |
+| Mon instrument | la piste choisie est coupée automatiquement (tu joues ta partie par-dessus) |
+| TON − / + | transpose les stems d'un demi-ton ; double-clic sur l'afficheur TON = revenir à 0 |
+
+**Rampe de vitesse** : place la lecture dans la section à travailler, clique sur **RAMPE**, règle par exemple
+**de 85 % à 100 % en 8 passages**, puis **LANCER**. La section tourne en boucle ; à chaque reprise la vitesse
+monte d'un palier (hauteur conservée) ; le compteur affiche « BOUCLE REFRAIN 1 · 4/8 ». Après le dernier
+passage, la boucle continue à la vitesse finale. **ARRÊTER** (ou le bouton Boucle) remet 100 %.
+
+> Le voyant **REAPER** est vert quand REAPER et la fenêtre ReaCue répondent, orange quand la fenêtre est
+> fermée (mute, volume, transport marchent encore ; pas la boucle, la rampe, la transposition ni l'export).
+> La transposition reste propre jusqu'à ±2 demi-tons environ ; au-delà, la voix et la batterie sonnent
+> artificiellement. Elle modifie les items des stems : Ctrl/Cmd+Z dans REAPER l'annule.
+
+### 17.4 Exporter des stems et des régions (WAV / MP3)
+
+Dans ReaCue Studio, bouton **EXPORTER** :
+
+1. **Instruments** : coche ceux à exporter (TOUS / AUCUN), et **avec le click** si tu veux un click synthétisé
+   sur la grille du morceau.
+2. **Région** : morceau entier, une **section** (liste), des **mesures** « de → à », ou la **sélection
+   REAPER** (sélection temporelle du projet).
+3. **Fichiers** : un fichier par instrument, ou tout **mixé** en un seul fichier (ramené à -1 dBFS s'il
+   dépasse : jamais d'écrêtage ; volume et pan des pistes appliqués au mix).
+4. **Format** : **MP3** (128, 192, 256 ou 320 kbit/s ; 320 par défaut) ou **WAV** 24 bits.
+5. **EXPORTER** : la progression s'affiche, puis les liens de téléchargement. Les fichiers sont aussi dans le
+   dossier **`exports/`** à côté du projet, nommés `<Titre> - <Instrument> - <Section>.mp3`.
+
+Exemples : la basse seule du refrain en MP3 pour la réviser dans le métro ; « tout sauf la guitare » mixé avec
+le click, mesures 33 à 48, pour travailler ta partie ; chaque stem en WAV pour un autre logiciel.
+
 ---
 
 ## 18. Dépannage

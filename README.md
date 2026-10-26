@@ -53,6 +53,7 @@ language with Claude (MCP server).
 - [The ReaCue window](#the-reacue-window)
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
+- [ReaCue Studio: practise and export](#reacue-studio-practise-and-export)
 - [Lyrics](#lyrics)
 - [PDF chart](#pdf-chart)
 - [Lighting: grandMA3 export](#lighting-grandma3-export)
@@ -97,6 +98,11 @@ In REAPER, from the audio already in your project — everything from **one wind
 - **Instruments**: mute / solo each stem of the concert (Vocals, Drums, Bass…), *Hear everything*, and a
   **“Played live”** profile saved with the concert (the band plays drums and bass for real → those stems are
   muted on every song, with per-song exceptions). From the window, the Stage control phone or Claude.
+
+- **ReaCue Studio** (web page, computer or tablet): **Practice** screen with position, tempo and speed, key,
+  SMPTE, clickable structure and chords, stem waveforms, a console (mute, solo, volume, pan, meters) acting on
+  REAPER's real tracks, section loop with a **speed ramp**, “my instrument” muted, transpose, and **WAV / MP3
+  exports** of each stem, a section or chosen bars, separate or mixed.
 
 On the musicians' phones and tablets (web prompter):
 
@@ -198,6 +204,7 @@ This is done once, by hand (REAPER does not offer a safe way to do it from a scr
 3. OK, OK.
 
 On each phone or tablet, open: **`http://<computer IP>:8080/prompteur.html`**, then pick your role.
+ReaCue Studio (practice and exports, see below): **`http://<computer IP>:8080/studio.html`**.
 
 Finding the computer's IP address:
 
@@ -565,6 +572,47 @@ REAPER's repeat and time selection as they were.
 
 Step by step: [tutorial, concert chapter](docs/TUTORIAL_en.md#16-concert-mode-several-songs-in-one-project).
 
+## ReaCue Studio: practise and export
+
+A web page served by REAPER, like the prompter, to work on a song on the computer or a tablet:
+**`http://<computer's IP>:8080/studio.html`** (on the computer itself: `http://localhost:8080/studio.html`).
+The address is also shown under the QR code of the ReaCue window. **Practice** screen (the Library, Band, Show
+and Lights tabs come in the next versions):
+
+![ReaCue Studio, Practice screen](docs/images/studio_en.png)
+
+- **Displays**: position bar.beat.sixteenth, time, tempo (× playback speed, in %), key (with transposition),
+  SMPTE (`gma3_tc_start` + `gma3_fps`).
+- **Structure and chords**: click = go to the section or chord; **double-click** = loop the section. Chords
+  scroll under the play head (16 bars visible).
+- **One row per stem**: waveform (computed when publishing: `reacue_peaks.json`), played part in colour,
+  **M** / **S**, volume. Click in the waveform = go there.
+- **Console**: pan (drag up / down, double-click = centre), meter (track's real peak), fader (double-click =
+  0 dB), for each stem, the **CLICK** and the **VOICE** track.
+- **Transport**: start, stop, play / pause (space bar), loop the current section, next section; LEDs for
+  REAPER (green: the ReaCue window answers too), prompter, LTC.
+- **Speed ramp**: the current section loops and speeds up at each pass (e.g. 85 → 100 % over 8 passes, pitch
+  kept); counter “LOOP CHORUS 1 · 4/8”.
+- **CLICK ON/OFF**, **VOICE ON/OFF**; **My instrument**: your track is muted automatically (remembered in the
+  browser).
+- **KEY − / +**: transpose the stems by a semitone (double-click the KEY display = back to 0).
+
+Mute, solo, volume, pan, position and transport use **REAPER's native web API** (nothing to set up); loop,
+ramp, transpose and export are run by the **ReaCue window** (it must be open) and need the Stage control
+**PIN** (Stage tab), entered once on the device.
+
+**Export** (top-right button): tick one or more instruments (and the click if needed), choose the range (whole
+song, a section, bars “from → to”, or REAPER's time selection), one file per instrument or everything mixed
+into one file, **MP3** (128 to 320 kbit/s, 320 by default) or 24-bit **WAV**. Files are written to the
+**`exports/`** folder next to the project, named `<Title> - <Instrument> - <Section>.mp3`, and offered for
+download right in the page (the last 5 exports stay on REAPER's web server). The mix is brought down to
+-1 dBFS when it would clip; track volume and pan apply to the mix, not to stems exported alone. The exported
+click is synthesised on ReaCue's grid (REAPER's click is not a file). Also from the command line
+(`reacue_cli.py export --request '{"stems": ["Bass"], "format": "mp3"}'`) and with Claude (`set_sections`
+with an `{"export": {…}}` element).
+
+Step by step: [tutorial, ReaCue Studio](docs/TUTORIAL_en.md#173-reacue-studio-the-practice-screen).
+
 ## Lighting: grandMA3 export
 
 Every preparation (and every concert build) also writes a **grandMA3 lighting show**: one cue per section
@@ -814,6 +862,11 @@ tools are loaded when a conversation starts: after updating ReaCue, start a new 
   REAPER's usual seek latency (a few milliseconds); the instrument tracks are muted during the count-in bar
   by the window (if REAPER quits during that bar, unmute them by hand). Speeds below 100 % use REAPER's
   playrate with pitch preservation (quality depends on the stretch mode of the project).
+- **ReaCue Studio**: waveforms only for a prepared song (not yet for a concert project); transpose uses
+  REAPER's pitch engine (project default mode): fine up to ±2 semitones, audible artefacts beyond (vocals,
+  drums); it changes the stem items (undo with Ctrl/Cmd+Z). Export: item fades ignored, item rate ≠ 1
+  resampled simply (fine for practice, not for a master), bundled fonts limited to the Latin alphabet. In a
+  concert, a mute made from the page may be replaced by the “played live” profile when the song changes.
 - **Check**: “concert up to date” compares each song project with the fingerprint taken when the concert
   was built — saving a song project without musical changes can still mark it as changed; offline media are
   detected from the file and its sample rate (REAPER does not expose the OFFLINE flag directly).

@@ -5,7 +5,7 @@ Fabrique un morceau de démonstration entièrement fictif (« Demo Song » : str
 paroles et batterie inventés) et un concert fictif de trois morceaux, les sert avec la page du prompteur
 sur un faux serveur REAPER (/_/TRANSPORT renvoie une position fixe ; instruments, Régie et répétition
 simulés), puis photographie chaque vue avec Playwright (Chromium) : rôles, tablette, concert, Régie (PIN 1234),
-Lumière (cues grandMA3).
+Lumière (cues grandMA3), ReaCue Studio (écran Travail : pistes /_/TRACK et formes d'onde fictives).
 
     pip install playwright && playwright install chromium
     python3 tools/make_screenshots.py [--out docs/images] [--check]
@@ -23,12 +23,16 @@ import time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from reacue_mcp.i18n import localize_section, section_color, section_kind  # noqa: E402
 
 PAGE = ROOT / "reacue_mcp" / "web" / "prompteur.html"
+WEB = ROOT / "reacue_mcp" / "web"
+CTYPES = {".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "application/javascript",
+          ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8", ".json": "application/json"}
 
 BPM = 112.0
 BPB = 4
@@ -188,29 +192,111 @@ def demo_concert(lang: str) -> dict:
 
 
 # --------------------------------------------------------------------------- faux REAPER
+# pistes du projet de démonstration (Studio) : nom, mute, solo, volume (1 = 0 dB), pan, crête (dB)
+DEMO_TRACKS = [("Chant", 0, 0, 0.69, -0.2, -9), ("Batterie", 0, 0, 0.89, 0.0, -3), ("Basse", 0, 0, 0.6, 0.0, -11),
+               ("Guitares", 1, 0, 1.0, -0.4, -60), ("Claviers", 0, 0, 0.4, 0.3, -18), ("CUES", 0, 0, 1.0, 0.0, -150),
+               ("VOIX", 0, 0, 0.7, 0.0, -150), ("CLICK", 0, 0, 0.8, 0.0, -14)]
+
+
+def demo_tracks() -> list[dict]:
+    return [{"name": n, "mute": m, "solo": so, "vol": v, "pan": pa, "peak": pk} for n, m, so, v, pa, pk in DEMO_TRACKS]
+
+
+def demo_peaks(song: dict) -> dict:
+    """Formes d'onde inventées (enveloppes sinusoïdales) au format de reacue_peaks.json."""
+    import math
+    import numpy as np
+    from reacue_mcp import studio
+    hop = studio.HOP
+    n = int(math.ceil((song["bar_times"][-1] + 1) / hop))
+    t = np.arange(n) * hop
+    out = []
+    for k, (name, role) in enumerate((("Chant", "vocals"), ("Batterie", "drums"), ("Basse", "bass"),
+                                      ("Guitares", "guitars"), ("Claviers", "keys"))):
+        seed = 0.7 + 0.37 * k
+        env = 0.25 + 0.75 * np.abs(np.sin(t * 0.9 * seed + seed) * np.cos(t * 0.13 + 2 * seed))
+        env[t < song["bar_times"][2]] = 0.0              # count-in : silence
+        if role == "vocals":
+            env *= (np.sin(t * 0.21) > -0.3)
+        data, peak = studio.encode_peaks(-env.astype(np.float32), env.astype(np.float32))
+        out.append({"name": name, "role": role, "guid": "", "peak": peak, "data": data})
+    return {"version": 1, "song_id": song["id"], "hop": hop, "n": n, "duration": round(n * hop, 3), "sr": 44100,
+            "tracks": out, "tc": {"fps": 25, "tc_start": "01:00:00:00", "offset_s": 3600.0, "ltc": True, "mtc": False}}
+
+
 class FakeReaper(SimpleHTTPRequestHandler):
     song: dict = {}
     pos: float = 0.0
     play: int = 0
     mix: str = ""
     rehearsal: str = ""
+    studio: str = ""
+    peaks: dict | None = None
+    export: dict | None = None
+    tracks: list = []
+    log: list = []                  # commandes SET/… et actions reçues (tests)
 
     def log_message(self, *a):
         pass
 
+    def _api(self, path: str) -> bytes:
+        """/_/cmd;cmd;… : TRANSPORT, TRACK, GET/EXTSTATE, SET/TRACK, SET/POS, SET/EXTSTATE (accusé immédiat)."""
+        cls = FakeReaper
+        ext = {"mix": cls.mix, "remote_alive": str(int(time.time() * 2)), "remote_ack": cls.__dict__.get("ack", ""),
+               "rehearsal": cls.rehearsal, "studio": cls.studio}
+        body = ""
+        for c in path[3:].split(";"):
+            c = unquote(c)
+            if c == "TRANSPORT":
+                body += f"TRANSPORT\t{cls.play}\t{cls.pos:.4f}\t0\t1.1.00\t1.1.00\n"
+            elif c == "TRACK":
+                for i, tr in enumerate(cls.tracks, 1):
+                    fl = (8 if tr["mute"] else 0) | (16 if tr["solo"] else 0)
+                    body += (f"TRACK\t{i}\t{tr['name']}\t{fl}\t{tr['vol']:.6f}\t{tr['pan']:.6f}\t{int(tr['peak'] * 10)}"
+                             f"\t{int(tr['peak'] * 10)}\t1.0\t3\t0\t0\t0\t0\n")
+            elif c.startswith("GET/EXTSTATE/ReaCue/"):
+                key = c.split("/")[3]
+                body += f"EXTSTATE\tReaCue\t{key}\t{ext.get(key, '')}\n"
+            elif c.startswith("SET/") or c.isdigit():
+                cls.log.append(c)
+                part = c.split("/")
+                if part[:2] == ["SET", "TRACK"] and len(part) >= 5 and part[2].isdigit():
+                    i = int(part[2]) - 1
+                    if 0 <= i < len(cls.tracks):
+                        key, v = part[3], float(part[4])
+                        tr = cls.tracks[i]
+                        if key in ("MUTE", "SOLO"):
+                            tr[key.lower()] = (1 - tr[key.lower()]) if v < 0 else int(v)
+                        elif key in ("VOL", "PAN"):
+                            tr[key.lower()] = v
+                elif part[:2] == ["SET", "POS"]:
+                    cls.pos = float(part[2])
+                elif c.startswith("SET/EXTSTATE/ReaCue/remote/"):
+                    v = c[len("SET/EXTSTATE/ReaCue/remote/"):].split("|")
+                    if len(v) == 4:
+                        cls.ack = f"{v[3]}|{'ok' if v[2] == '1234' else 'badpin'}"
+        return body.encode("utf-8")
+
     def do_GET(self):
         path = self.path.split("?")[0]
-        if path.startswith("/_/TRANSPORT"):           # + EXTSTATE ReaCue : instruments, Régie
-            body = f"TRANSPORT\t{self.play}\t{self.pos:.4f}\t0\t1.1.00\t1.1.00\n"
-            for key, val in (("mix", self.mix), ("remote_alive", str(int(time.time() * 2))),
-                             ("remote_ack", ""), ("rehearsal", self.rehearsal)):
-                if f"GET/EXTSTATE/ReaCue/{key}" in path:
-                    body += f"EXTSTATE\tReaCue\t{key}\t{val}\n"
-            body, ctype = body.encode("utf-8"), "text/plain"
+        if path.startswith("/_/"):           # API web : transport, pistes, EXTSTATE ReaCue (instruments, Régie, Studio)
+            body, ctype = self._api(path), "text/plain"
         elif path == "/reacue_song.json":
             body, ctype = json.dumps(self.song, ensure_ascii=False).encode("utf-8"), "application/json"
+        elif path in ("/reacue_peaks.json", "/reacue_export.json"):
+            d = FakeReaper.peaks if path == "/reacue_peaks.json" else FakeReaper.export
+            if d is None:
+                self.send_error(404)
+                return
+            body, ctype = json.dumps(d).encode("utf-8"), "application/json"
         elif path in ("/", "/prompteur.html"):
             body, ctype = PAGE.read_bytes(), "text/html; charset=utf-8"
+        elif (path == "/studio.html" or path.startswith("/reacue_studio/")) and ".." not in path:
+            f = WEB / unquote(path.lstrip("/"))
+            if not f.is_file():
+                self.send_error(404)
+                return
+            body, ctype = f.read_bytes(), CTYPES.get(f.suffix, "application/octet-stream")
         else:
             self.send_error(404)
             return
@@ -312,6 +398,32 @@ def run(out: Path | None, check_only: bool) -> list[str]:
                             shots.append(f.name)
                     ctx.close()
             FakeReaper.mix, FakeReaper.play, FakeReaper.rehearsal = "", 0, ""
+            # ReaCue Studio, écran Travail (bureau 1440 × 900) : refrain en boucle, rampe 85 → 100 %, 4e passage
+            for lang in ("fr", "en"):
+                song = demo_song(lang)
+                ch2 = next(x for x in song["sections"] if x["start_bar"] == 65)
+                FakeReaper.song, FakeReaper.peaks, FakeReaper.tracks = song, demo_peaks(song), demo_tracks()
+                FakeReaper.pos, FakeReaper.play = bar_time(70, 2.3), 1
+                FakeReaper.rehearsal = f"1|0.94|{bar_time(65):.3f}|{bar_time(81):.3f}|{ch2['name']}"
+                FakeReaper.studio = "0.940|0|4|8|0.85|1.00"
+                ctx = browser.new_context(viewport={"width": 1440, "height": 900}, device_scale_factor=1,
+                                          locale="fr-FR" if lang == "fr" else "en-US")
+                ctx.add_init_script("localStorage.setItem('reacue_studio_me', 'Guitares')")
+                page = ctx.new_page()
+                page.on("console", lambda m, lg=lang: m.type == "error" and errors.append(f"{lg}/studio: {m.text}"))
+                page.on("pageerror", lambda e, lg=lang: errors.append(f"{lg}/studio: {e}"))
+                page.goto(f"{base}/studio.html?lang={lang}")
+                page.wait_for_function("document.querySelectorAll('.tv-row').length >= 5", timeout=8000)
+                page.wait_for_timeout(700)
+                if song["title"].upper() not in (page.text_content("#title") or "").upper():
+                    errors.append(f"{lang}/studio: title missing")
+                if out and not check_only:
+                    f = out / f"studio_{lang}.png"
+                    page.screenshot(path=str(f))
+                    shots.append(f.name)
+                ctx.close()
+            FakeReaper.play, FakeReaper.rehearsal, FakeReaper.studio, FakeReaper.peaks = 0, "", "", None
+            FakeReaper.tracks = []
             # bouton de langue : FR -> EN sans erreur, mémorisé
             ctx = browser.new_context(viewport=PHONE)
             page = ctx.new_page()

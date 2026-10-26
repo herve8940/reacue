@@ -35,7 +35,9 @@ local TXT = {
     phone = "téléphone : %s ✓", phone_badpin = "téléphone : code PIN incorrect",
     cmd = { toggle = "Lecture/Pause", play = "Lecture", pause = "Pause", stop = "Stop", prev = "Précédent",
       next = "Suivant", home = "Début", song = "Morceau", seek = "Section", reh = "Répétition", loop = "Boucle",
-      loopoff = "Boucle off", rate = "Vitesse", mute = "Mute", solo = "Solo", hearall = "Tout entendre" },
+      loopoff = "Boucle off", rate = "Vitesse", mute = "Mute", solo = "Solo", hearall = "Tout entendre",
+      loopsec = "Boucle section", ramp = "Rampe de vitesse", pitch = "Transposition", export = "Export audio" },
+    studio_line = "Studio (ordinateur, tablette) : %s",
     concert_n = "Concert %s / %s",
     none = "Aucun concert dans ce projet", building = "Construction du concert… %d s",
     open_one = "Ouvrir un concert (nouvel onglet) :", none_in = "Aucun concert dans %s",
@@ -101,7 +103,9 @@ local TXT = {
     phone = "phone: %s ✓", phone_badpin = "phone: wrong PIN code",
     cmd = { toggle = "Play/Pause", play = "Play", pause = "Pause", stop = "Stop", prev = "Previous",
       next = "Next", home = "Start", song = "Song", seek = "Section", reh = "Rehearsal", loop = "Loop",
-      loopoff = "Loop off", rate = "Speed", mute = "Mute", solo = "Solo", hearall = "Hear all" },
+      loopoff = "Loop off", rate = "Speed", mute = "Mute", solo = "Solo", hearall = "Hear all",
+      loopsec = "Section loop", ramp = "Speed ramp", pitch = "Transpose", export = "Audio export" },
+    studio_line = "Studio (computer, tablet): %s",
     concert_n = "Concert %s / %s",
     none = "No concert in this project", building = "Building the concert… %d s",
     open_one = "Open a concert (new tab):", none_in = "No concert in %s",
@@ -304,19 +308,50 @@ function L.publish_prompter(c)
   return os.rename(tmp, dst) and true or false
 end
 
--- page du prompteur : copie la version de ReaCue (reacue_mcp/web/prompteur.html) dans reaper_www_root si elle a changé
-function L.publish_page()
-  local src = L.read(L.install_dir() .. SEP .. "reacue_mcp" .. SEP .. "web" .. SEP .. "prompteur.html")
-  if not src or #src < 1000 then return false end
-  local www = reaper.GetResourcePath() .. SEP .. "reaper_www_root"
-  reaper.RecursiveCreateDirectory(www, 0)
-  local dst = www .. SEP .. "prompteur.html"
+-- ReaCue Studio : page et ressources copiées à côté du prompteur (même liste que reacue_mcp/web/,
+-- vérifiée par les tests : tests/test_studio.py)
+L.STUDIO_FILES = {
+  "studio.html",
+  "reacue_studio/base.css", "reacue_studio/core.js", "reacue_studio/travail.css", "reacue_studio/travail.js",
+  "reacue_studio/fonts/OFL-Barlow-Condensed.txt", "reacue_studio/fonts/OFL-IBM-Plex-Mono.txt",
+  "reacue_studio/fonts/OFL-IBM-Plex-Sans.txt",
+  "reacue_studio/fonts/barlow-condensed-latin-600-normal.woff2", "reacue_studio/fonts/barlow-condensed-latin-700-normal.woff2",
+  "reacue_studio/fonts/ibm-plex-mono-latin-400-normal.woff2", "reacue_studio/fonts/ibm-plex-mono-latin-500-normal.woff2",
+  "reacue_studio/fonts/ibm-plex-mono-latin-600-normal.woff2", "reacue_studio/fonts/ibm-plex-sans-latin-400-normal.woff2",
+  "reacue_studio/fonts/ibm-plex-sans-latin-500-normal.woff2", "reacue_studio/fonts/ibm-plex-sans-latin-600-normal.woff2",
+  "reacue_studio/fonts/ibm-plex-sans-latin-700-normal.woff2",
+}
+
+-- copie src (contenu) vers dst si différent (écriture atomique) ; true si à jour
+local function copy_if_changed(src, dst)
   if L.read(dst) == src then return true end
   local tmp = dst .. ".tmp"
   local f = io.open(tmp, "wb"); if not f then return false end
   f:write(src); f:close()
   os.remove(dst)
   return os.rename(tmp, dst) and true or false
+end
+
+-- page du prompteur : copie la version de ReaCue (reacue_mcp/web/prompteur.html) dans reaper_www_root si elle a changé,
+-- ainsi que ReaCue Studio (studio.html, reacue_studio/)
+function L.publish_page()
+  local web = L.install_dir() .. SEP .. "reacue_mcp" .. SEP .. "web"
+  local src = L.read(web .. SEP .. "prompteur.html")
+  if not src or #src < 1000 then return false end
+  local www = reaper.GetResourcePath() .. SEP .. "reaper_www_root"
+  reaper.RecursiveCreateDirectory(www, 0)
+  local ok = copy_if_changed(src, www .. SEP .. "prompteur.html")
+  for _, rel in ipairs(L.STUDIO_FILES) do
+    local native = (rel:gsub("/", SEP))
+    local s = L.read(web .. SEP .. native)
+    if s then
+      local dst = www .. SEP .. native
+      local dir = dst:match("^(.*)[/\\][^/\\]+$")
+      if dir then reaper.RecursiveCreateDirectory(dir, 0) end
+      copy_if_changed(s, dst)
+    end
+  end
+  return ok
 end
 
 function L.fmt_time(s)
@@ -394,6 +429,10 @@ function L.web_port()
   return L.parse_web_port(ini and ("\n" .. ini))
 end
 
+function L.studio_url(ip, port)
+  return string.format("http://%s:%d/studio.html", ip, port)
+end
+
 function L.prompter_url(ip, port)
   return string.format("http://%s:%d/prompteur.html", ip, port)
 end
@@ -413,13 +452,14 @@ end
 
 function L.install_dir() return R.install_dir(LIB_DIR:gsub("[/\\]$", "")) end
 
--- lance la CLI ReaCue en arrière-plan (ex. « concert --setlist <fichier> ») ; renvoie true ou false, message
-function L.run_cli(cmd, arg_path)
+-- lance la CLI ReaCue en arrière-plan (ex. « concert --setlist <fichier> », « export --job <fichier> ») ;
+-- renvoie true ou false, message
+function L.run_cli(cmd, arg_path, flag)
   local windows = R.is_windows()
   local dir = L.install_dir()
   local py = R.python(dir, windows)
   if not L.exists(py) then return false, string.format(L.tr("not_found"), py) end
-  local full = cmd .. (arg_path and (" --setlist " .. (windows and R.winq(arg_path) or R.shq(arg_path))) or "")
+  local full = cmd .. (arg_path and (" " .. (flag or "--setlist") .. " " .. (windows and R.winq(arg_path) or R.shq(arg_path))) or "")
   local log = reaper.GetResourcePath() .. SEP .. "ReaCueMCP" .. SEP .. "cli.log"
   local line = R.command(full, dir, py, windows, log)
   if windows then
@@ -802,6 +842,7 @@ end
 function L.loop_off()
   local R_ = L.reh
   mute_music(false)
+  if R_.ramp then R_.ramp = nil; if R_.on then L.set_rate(1.0) end end
   R_.loop, R_.anchor, R_.prebar = nil, nil, false
   if reaper.GetSet_LoopTimeRange then reaper.GetSet_LoopTimeRange(true, true, 0, 0, false) end
   L.publish_reh()
@@ -836,6 +877,11 @@ end
 function L.loop_restart()
   local lp = L.reh.loop
   if not lp then return end
+  local rp = L.reh.ramp                 -- rampe de vitesse (Studio) : un palier de plus à chaque passage
+  if rp then
+    rp.pass = rp.pass + 1
+    L.set_rate(L.ramp_rate(rp, rp.pass))
+  end
   mute_music(true)
   L.reh.prebar = true
   reaper.SetEditCurPos(lp.start - lp.pre, true, true)
@@ -850,6 +896,7 @@ function L.loop_set(c, a, b)
                a = a.name, b = b.name }
   lp.pre = L.bar_len_before(a.start, c.songs[i] and c.songs[i].bpm)
   mute_music(false)
+  if R_.ramp then R_.ramp.pass = 0 end   -- nouvelle boucle : la rampe repart du début
   R_.loop = lp
   if reaper.GetSet_LoopTimeRange then reaper.GetSet_LoopTimeRange(true, true, lp.start, lp.stop, false) end
   L.publish_reh()
@@ -962,11 +1009,22 @@ function L.remote_exec(c, cmd, arg)
     if not L.mix_solo(c, arg) then return false end
   elseif cmd == "hearall" then
     L.mix_hear_all(c, arg == "1")
+  elseif cmd == "loopsec" then                  -- ReaCue Studio : boucle d'une seule section
+    if not L.loop_section(c, arg) then return false end
+  elseif cmd == "ramp" then                     -- rampe de vitesse « de:à:passages[:début de section] »
+    if not L.set_ramp(c, arg) then return false end
+  elseif cmd == "pitch" then                    -- transposition « +1 », « -1 », « 0 »
+    if not L.transpose(c, arg) then return false end
+  elseif cmd == "export" then                   -- export audio (demande dans ReaCue/export_req)
+    if not L.studio_export(c, arg) then return false end
   else
     return false
   end
   return true
 end
+
+-- commandes possibles sans morceau ni concert reconnu (projet quelconque)
+local NO_CONCERT_OK = { pitch = true, export = true }
 
 -- traite au plus une commande en attente ; renvoie cmd, résultat ("ok", "badpin", "bad", "dup") ou nil
 local seen, seen_list = {}, {}
@@ -982,7 +1040,7 @@ function L.remote_poll(c)
   if #seen_list > 64 then seen[table.remove(seen_list, 1)] = nil end
   local res
   if pin ~= L.remote_pin() then res = "badpin"
-  elseif not c then res = "noconcert"
+  elseif not c and not NO_CONCERT_OK[cmd] then res = "noconcert"
   else res = L.remote_exec(c, cmd, arg) and "ok" or "bad" end
   reaper.SetExtState(REMOTE, "remote_ack", nonce .. "|" .. res, false)
   return cmd, res
@@ -1256,6 +1314,201 @@ function L.live_exc_cycle(c, k, role)
   local ok = save_profile(c)
   L.mix_apply(c)
   return ok
+end
+
+-- ---------------------------------------------------------------------------------------
+-- ReaCue Studio (page studio.html) : boucle de section, rampe de vitesse, transposition, export audio.
+-- La page agit directement sur les pistes par l'API web de REAPER (mute, solo, volume, pan, position) ;
+-- ces commandes-ci passent par la télécommande (PIN) car l'API web ne les permet pas.
+-- État publié pour la page : ExtState ReaCue/studio = vitesse|transposition|passage|passages|de|à
+-- ---------------------------------------------------------------------------------------
+function L.loop_section(c, t)
+  t = tonumber(t)
+  if not c or not t then return false end
+  local i = L.song_index(c, t + 0.01)
+  local secs = L.song_sections(c, i)
+  local k = nil
+  for n, x in ipairs(secs) do if math.abs(x.start - t) < 0.05 then k = n end end
+  if not k then k = L.section_at(secs, t) end
+  if not k then return false end
+  L.reh.anchor = nil
+  L.loop_set(c, secs[k], secs[k])
+  return true
+end
+
+-- vitesse du passage `pass` (1 = premier) : paliers réguliers de `from` à `to`, puis `to`
+function L.ramp_rate(rp, pass)
+  local k = math.min(math.max(pass, 1), rp.n) - 1
+  return rp.from + (rp.to - rp.from) * k / math.max(1, rp.n - 1)
+end
+
+function L.set_ramp(c, arg)
+  arg = arg or ""
+  local R_ = L.reh
+  if arg == "" then
+    if R_.ramp then R_.ramp = nil; if R_.on then L.set_rate(1.0) end end
+    L.studio_publish(true)
+    return true
+  end
+  local f, t, n, at = arg:match("^([%d%.]+):([%d%.]+):(%d+):?([%d%.]*)$")
+  f, t, n = tonumber(f), tonumber(t), tonumber(n)
+  if not f or not t or not n or f < 0.5 or f > 1 or t < 0.5 or t > 1 or n < 2 or n > 32 then return false end
+  local rp = { from = f, to = t, n = math.floor(n), pass = 0 }
+  if at ~= "" then
+    R_.ramp = rp
+    if not L.loop_section(c, at) then R_.ramp = nil; return false end   -- 1er passage compté au départ
+  else
+    if not R_.loop then return false end
+    R_.ramp = rp
+    rp.pass = 1
+    L.set_rate(f)
+  end
+  L.studio_publish(true)
+  return true
+end
+
+-- prises audio des pistes musicales (stems) : celles du morceau en cours dans un concert
+function L.music_takes(c)
+  local out = {}
+  local s = c and not c.pseudo and c.songs and c.songs[L.song_index(c, L.pos())] or nil
+  for _, tr in ipairs(music_tracks()) do
+    for k = 0, (reaper.CountTrackMediaItems and reaper.CountTrackMediaItems(tr) or 0) - 1 do
+      local it = reaper.GetTrackMediaItem(tr, k)
+      local tk = it and reaper.GetActiveTake(it)
+      if tk and not (reaper.TakeIsMIDI and reaper.TakeIsMIDI(tk)) then
+        local pos = reaper.GetMediaItemInfo_Value(it, "D_POSITION")
+        if not s or (pos >= s.start - 0.05 and pos < (s.stop or s.start) + 0.05) then out[#out + 1] = tk end
+      end
+    end
+  end
+  return out
+end
+
+function L.transpose_get(c)
+  local tk = L.music_takes(c)[1]
+  if not tk then return 0 end
+  local p = reaper.GetMediaItemTakeInfo_Value(tk, "D_PITCH") or 0
+  return math.floor(p + 0.5)
+end
+
+-- transposition des stems par REAPER (D_PITCH de chaque prise, mode de pitch par défaut du projet) ;
+-- relative : les écarts déjà réglés à la main entre prises sont gardés. Bornée à ±12 demi-tons.
+function L.transpose(c, arg)
+  local takes = L.music_takes(c)
+  if #takes == 0 then return false end
+  local cur = L.transpose_get(c)
+  local target
+  if arg == "0" or arg == "reset" then target = 0 else
+    local d = tonumber(arg)
+    if not d or d ~= math.floor(d) then return false end
+    target = cur + d
+  end
+  if target < -12 or target > 12 then return false end
+  local delta = target - cur
+  if delta ~= 0 then
+    if reaper.Undo_BeginBlock then reaper.Undo_BeginBlock() end
+    for _, tk in ipairs(takes) do
+      reaper.SetMediaItemTakeInfo_Value(tk, "D_PITCH", (reaper.GetMediaItemTakeInfo_Value(tk, "D_PITCH") or 0) + delta)
+    end
+    if reaper.Undo_EndBlock then reaper.Undo_EndBlock(L.lang() == "en" and "ReaCue: transpose" or "ReaCue : transposition", -1) end
+    if reaper.UpdateArrange then reaper.UpdateArrange() end
+  end
+  L.studio_publish(true)
+  return true
+end
+
+local studio_last, studio_t = nil, -1e9
+function L.studio_publish(force, c)
+  local now = reaper.time_precise()
+  if not force and now - studio_t < 0.25 then return end
+  studio_t = now
+  local rate = reaper.Master_GetPlayRate and reaper.Master_GetPlayRate(0) or 1
+  local rp = L.reh.ramp
+  local v = string.format("%.3f|%d|%d|%d|%.2f|%.2f", rate or 1, L.transpose_get(c or L.studio_c),
+    rp and math.floor(rp.pass) or 0, rp and math.floor(rp.n) or 0, rp and rp.from or 0, rp and rp.to or 0)
+  if v ~= studio_last then
+    reaper.SetExtState("ReaCue", "studio", v, false)
+    studio_last = v
+  end
+end
+
+-- fichier source d'une prise (sources « section » / « reverse » remontées)
+local function take_file(tk)
+  local src = reaper.GetMediaItemTake_Source(tk)
+  local parent = reaper.GetMediaSourceParent and reaper.GetMediaSourceParent(src)
+  while parent do src = parent; parent = reaper.GetMediaSourceParent(src) end
+  return reaper.GetMediaSourceFileName(src, "") or ""
+end
+
+local EXPORT_SKIP = { CUES = true, ["TIMECODE LTC"] = true, ["TIMECODE MTC"] = true }
+
+-- pistes et items du projet pour l'export (fichier, position, longueur, décalage, vitesse, volumes, pan)
+function L.export_tracks()
+  local out = R.json_array({})
+  for i = 0, (reaper.CountTracks and reaper.CountTracks(0) or 0) - 1 do
+    local tr = reaper.GetTrack(0, i)
+    local name = track_name(tr)
+    if not EXPORT_SKIP[name] then
+      local items = R.json_array({})
+      for k = 0, (reaper.CountTrackMediaItems and reaper.CountTrackMediaItems(tr) or 0) - 1 do
+        local it = reaper.GetTrackMediaItem(tr, k)
+        local tk = it and reaper.GetActiveTake(it)
+        if tk and not (reaper.TakeIsMIDI and reaper.TakeIsMIDI(tk)) then
+          local file = take_file(tk)
+          if file ~= "" then
+            items[#items + 1] = {
+              file = file,
+              position = reaper.GetMediaItemInfo_Value(it, "D_POSITION"),
+              length = reaper.GetMediaItemInfo_Value(it, "D_LENGTH"),
+              offset = reaper.GetMediaItemTakeInfo_Value(tk, "D_STARTOFFS"),
+              rate = reaper.GetMediaItemTakeInfo_Value(tk, "D_PLAYRATE"),
+              vol = reaper.GetMediaItemInfo_Value(it, "D_VOL") * reaper.GetMediaItemTakeInfo_Value(tk, "D_VOL"),
+            }
+          end
+        end
+      end
+      if #items > 0 then
+        out[#out + 1] = { name = name, guid = reaper.GetTrackGUID and reaper.GetTrackGUID(tr) or "",
+                          vol = reaper.GetMediaTrackInfo_Value(tr, "D_VOL"), pan = reaper.GetMediaTrackInfo_Value(tr, "D_PAN"),
+                          items = items }
+      end
+    end
+  end
+  return out
+end
+
+-- export audio demandé par la page : la demande (JSON) est dans ReaCue/export_req, `id` doit correspondre ;
+-- la tâche complète (pistes, items, sélection) est écrite dans ReaCueMCP/export_job.json puis la CLI la traite
+function L.studio_export(c, id)
+  if type(id) ~= "string" or not id:match("^%w+$") then return false end
+  local req = R.json_decode(reaper.GetExtState(REMOTE, "export_req"))
+  if type(req) ~= "table" or req.id ~= id then return false end
+  reaper.SetExtState(REMOTE, "export_req", "", false)
+  local www = reaper.GetResourcePath() .. SEP .. "reaper_www_root"
+  local st = R.json_decode(L.read(www .. SEP .. "reacue_export.json") or "")
+  if type(st) == "table" and st.state == "running" and st.id ~= id and tonumber(st.time)
+     and os.time() - tonumber(st.time) < 300 then
+    return false                                -- un autre export tourne encore
+  end
+  local fn = L.project_file()
+  local job = { id = id, request = req, tracks = L.export_tracks(), at = L.pos(), lang = L.lang() }
+  if fn ~= "" then
+    job.project = fn
+    job.project_dir = fn:match("^(.*)[/\\][^/\\]+$")
+  end
+  if reaper.GetSet_LoopTimeRange then
+    local a, b = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+    if a and b and b - a > 0.01 then job.selection = R.json_array({ a, b }) end
+  end
+  local dir = reaper.GetResourcePath() .. SEP .. "ReaCueMCP"
+  reaper.RecursiveCreateDirectory(dir, 0)
+  local path = dir .. SEP .. "export_job.json"
+  if not R.write_atomic(path, R.json_encode(job)) then return false end
+  reaper.RecursiveCreateDirectory(www, 0)
+  R.write_atomic(www .. SEP .. "reacue_export.json",
+    R.json_encode({ id = id, state = "running", progress = 0.02, time = os.time() }))
+  local ok = L.run_cli("export", path, "--job")
+  return ok and true or false
 end
 
 function L._reset_remote() seen, seen_list = {}, {}; last_seen_v = nil; L.regie_seen = nil end

@@ -8,6 +8,11 @@ le prompteur » de REAPER (ou à la main).
     <python du venv> -m reacue_mcp.cli timecode     # pistes TIMECODE LTC / MTC seules (onglet Lumière)
     <python du venv> -m reacue_mcp.cli concert-lighting --setlist "<Concerts>/Concert.setlist.json"
                                                     # export grandMA3 du concert déjà construit (onglet Lumière)
+    <python du venv> -m reacue_mcp.cli export --job "<ReaCueMCP>/export_job.json"
+                                                    # export audio demandé par la page Studio (fenêtre ReaCue)
+    <python du venv> -m reacue_mcp.cli export --request '{"stems": ["Basse"], "format": "mp3",
+                                                          "range": {"kind": "section", "section": "Refrain 1"}}'
+                                                    # même chose à la main (items lus par le pont)
     (Windows : reacue_cli.py, à la racine, fait la même chose sans dépendre du dossier courant)
 
 Même code que le serveur MCP (mêmes réglages, même mémoire du dernier morceau) : on peut ensuite
@@ -214,10 +219,32 @@ def _concert_lighting(args) -> str:
     return "\n".join(lines)
 
 
+def _export(args, log) -> int:
+    """Export audio (ReaCue Studio) : l'état est publié dans reaper_www_root/reacue_export.json (lu par la
+    page) ; cli_status.json n'est pas touché (la fenêtre ReaCue peut avoir une autre tâche en cours)."""
+    from . import export
+    from .i18n import t
+    if args.job:
+        try:
+            res = export.run_job_file(args.job)
+        except Exception:
+            _log_exc(log)
+            return 1
+        print(json.dumps({k: res[k] for k in ("message", "dir")}, ensure_ascii=False))
+        return 0
+    if args.request:
+        from . import server
+        res = asyncio.run(server.export_audio(json.loads(args.request)))
+        print(json.dumps(res, ensure_ascii=False, indent=1))
+        return 0 if not res.get("error") else 1
+    print(t("cli_export_args"), file=sys.stderr)
+    return 2
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="reacue")
     ap.add_argument("cmd", choices=["prepare", "publish", "concert", "concert-extras", "timecode",
-                                    "concert-lighting"])
+                                    "concert-lighting", "export"])
     ap.add_argument("--bpm", type=float, help="tempo approximatif (corrige double/moitié)")
     ap.add_argument("--count-in", type=int, help="mesures de count-in (défaut : réglages, 2)")
     ap.add_argument("--reanalyse", action="store_true",
@@ -227,6 +254,8 @@ def main(argv=None):
     ap.add_argument("--name", help="concert : nom du concert")
     ap.add_argument("--songs", nargs="+", help="concert : morceaux dans l'ordre (noms de projets ou chemins .RPP)")
     ap.add_argument("--gap", type=float, help="concert : blanc minimum entre deux morceaux (s)")
+    ap.add_argument("--job", help="export : tâche écrite par la fenêtre ReaCue (export_job.json)")
+    ap.add_argument("--request", help="export : demande JSON (stems, format, kbps, range, mode, click)")
     args = ap.parse_args(argv)
     if args.resource_dir:
         # avant tout import de bridge : BRIDGE_DIR en dépend (REAPER portable, chemin non standard)
@@ -242,6 +271,8 @@ def main(argv=None):
         except Exception:
             _log_exc(log)
             return 1
+    if args.cmd == "export":                   # ReaCue Studio : export audio (sans fenêtre de progression)
+        return _export(args, log)
     if args.cmd == "concert-lighting":         # onglet Lumière : export d'un concert déjà construit
         _status("running", cmd="concert-lighting", step=t("gma3_running"))
         try:

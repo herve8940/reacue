@@ -52,6 +52,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [La fenêtre ReaCue](#la-fenêtre-reacue)
 - [Utilisation](#utilisation)
 - [Mode concert](#mode-concert)
+- [ReaCue Studio : travailler et exporter](#reacue-studio--travailler-et-exporter)
 - [Paroles](#paroles)
 - [Grille PDF](#grille-pdf)
 - [Lumière : export grandMA3](#lumière--export-grandma3)
@@ -99,6 +100,12 @@ en cinq onglets (Morceau, Concert, Scène, Lumière, Réglages) :
   entendre*, et un profil **« Joué en live »** enregistré avec le concert (le groupe joue batterie et basse
   pour de vrai → ces stems sont coupés sur tous les morceaux, avec des exceptions par morceau). Depuis la
   fenêtre, le téléphone Régie ou Claude.
+
+- **ReaCue Studio** (page web, ordinateur ou tablette) : écran **Travail** avec position, tempo et vitesse,
+  ton, SMPTE, structure et accords cliquables, formes d'onde des stems, console (mute, solo, volume, pan,
+  vumètres) sur les vraies pistes de REAPER, boucle de section avec **rampe de vitesse**, « mon instrument »
+  coupé, transposition, et **exports** WAV / MP3 de chaque stem, d'une section ou de mesures choisies,
+  séparés ou mixés.
 
 Sur les téléphones et tablettes des musiciens (prompteur web) :
 
@@ -203,6 +210,7 @@ list → New action → Load ReaScript…* → choisis `ReaCue.lua` (et, si tu l
 
 Sur chaque téléphone ou tablette, ouvre : **`http://<IP de l'ordinateur>:8080/prompteur.html`**, puis
 choisis ton rôle.
+ReaCue Studio (travail et exports, voir plus bas) : **`http://<IP de l'ordinateur>:8080/studio.html`**.
 
 Trouver l'adresse IP de l'ordinateur :
 
@@ -597,6 +605,48 @@ REAPER.
 
 Pas à pas : [tutoriel, chapitre concert](docs/TUTORIEL_fr.md#16-mode-concert--plusieurs-morceaux-dans-un-projet).
 
+## ReaCue Studio : travailler et exporter
+
+Page web servie par REAPER, comme le prompteur, pour travailler un morceau sur l'ordinateur ou une tablette :
+**`http://<IP de l'ordinateur>:8080/studio.html`** (sur l'ordinateur lui-même : `http://localhost:8080/studio.html`).
+L'adresse figure aussi sous le QR code de la fenêtre ReaCue. Écran **Travail** (les onglets Biblio, Groupe,
+Concert et Lumière arrivent dans les prochaines versions) :
+
+![ReaCue Studio, écran Travail](docs/images/studio_fr.png)
+
+- **Afficheurs** : position mesure.temps.double-croche, temps, tempo (× vitesse de lecture, en %), ton
+  (avec la transposition), SMPTE (`gma3_tc_start` + `gma3_fps`).
+- **Structure et accords** : clic = aller à la section ou à l'accord ; **double-clic** = boucler la section.
+  Les accords défilent sous la tête de lecture (16 mesures visibles).
+- **Une ligne par stem** : forme d'onde (précalculée à la publication : `reacue_peaks.json`), partie jouée en
+  couleur, **M** / **S**, volume. Clic dans la forme d'onde = aller à cet endroit.
+- **Console** : panoramique (glisser vers le haut / le bas, double-clic = centre), vumètre (crête réelle de la
+  piste), fader (double-clic = 0 dB), pour chaque stem, le **CLICK** et la **VOIX**.
+- **Transport** : début, stop, lecture / pause (barre d'espace), boucle de la section en cours, section
+  suivante ; voyants REAPER (vert : la fenêtre ReaCue répond aussi), prompteur, LTC.
+- **Rampe de vitesse** : la section en cours tourne en boucle et accélère à chaque passage (ex. 85 → 100 % en
+  8 passages, hauteur conservée) ; compteur « BOUCLE REFRAIN 1 · 4/8 ».
+- **CLICK ON/OFF**, **VOIX ON/OFF** ; **Mon instrument** : ta piste est coupée automatiquement (choix
+  mémorisé dans le navigateur).
+- **TON − / +** : transposition des stems d'un demi-ton (double-clic sur l'afficheur TON = revenir à 0).
+
+Mute, solo, volume, pan, position et transport passent par l'**API web native de REAPER** (aucun réglage) ;
+la boucle, la rampe, la transposition et l'export sont exécutés par la **fenêtre ReaCue** (elle doit être
+ouverte) et demandent le **PIN** de la Régie (onglet Scène), saisi une fois sur l'appareil.
+
+**Exporter** (bouton en haut à droite) : coche un ou plusieurs instruments (et le click si besoin), choisis la
+région (morceau entier, une section, des mesures « de → à », ou la sélection temporelle de REAPER), un
+fichier par instrument ou tout mixé en un seul fichier, **MP3** (128 à 320 kbit/s, 320 par défaut) ou **WAV**
+24 bits. Les fichiers sont écrits dans le dossier **`exports/`** à côté du projet, nommés
+`<Titre> - <Instrument> - <Section>.mp3`, et proposés au téléchargement directement dans la page (les 5
+derniers exports restent sur le serveur web de REAPER). Le mix est ramené à -1 dBFS s'il dépasse (pas
+d'écrêtage) ; le volume et le pan des pistes s'appliquent au mix, pas aux stems exportés seuls. Le click
+exporté est synthétisé sur la grille de ReaCue (le click de REAPER n'est pas un fichier). Aussi possible en
+ligne de commande (`reacue_cli.py export --request '{"stems": ["Basse"], "format": "mp3"}'`) et avec Claude
+(`set_sections` avec un élément `{"export": {…}}`).
+
+Pas à pas : [tutoriel, ReaCue Studio](docs/TUTORIEL_fr.md#173-reacue-studio--lécran-travail).
+
 ## Lumière : export grandMA3
 
 Chaque préparation (et chaque construction de concert) écrit aussi un **show lumière grandMA3** : un cue par
@@ -861,6 +911,13 @@ nouvelle conversation.
   instruments sont coupées pendant la mesure de décompte par la fenêtre (si REAPER est quitté pendant cette
   mesure, enlève le mute à la main). Les vitesses sous 100 % utilisent la vitesse de lecture de REAPER avec
   préservation de la hauteur (qualité selon le mode d'étirement du projet).
+- **ReaCue Studio** : formes d'onde seulement pour un morceau préparé (pas encore pour un projet concert) ;
+  transposition par le moteur de hauteur de REAPER (mode par défaut du projet) : correcte jusqu'à ±2
+  demi-tons, artefacts audibles au-delà (voix, batterie) ; elle s'applique aux items des stems (annulable
+  avec Ctrl/Cmd+Z). Export : fondus des items ignorés, vitesse d'item ≠ 1 rééchantillonnée simplement
+  (suffisant pour travailler, pas pour un master), polices embarquées limitées à l'alphabet latin. Dans un
+  concert, un mute fait depuis la page peut être remplacé par le profil « joué en live » au changement de
+  morceau.
 - **Vérifier** : « concert à jour » compare chaque projet de morceau à l'empreinte prise à la construction du
   concert — enregistrer un projet de morceau sans changement musical peut quand même le marquer comme
   modifié ; les médias hors ligne sont repérés par le fichier et sa fréquence d'échantillonnage (REAPER ne

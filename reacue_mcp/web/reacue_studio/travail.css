@@ -1,0 +1,82 @@
+/* ReaCue Studio — écran TRAVAIL : règle structure + accords, pistes (formes d'onde), console de tranches. */
+.tv { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.tv-head { padding: 14px 20px 6px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.tv-title { display: flex; align-items: baseline; gap: 14px; min-width: 0; flex-wrap: wrap; }
+.tv-title .rc-h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60vw; }
+.tv-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tv-me { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: .12em; color: var(--mute); }
+.tv-me .rc-select { height: 28px; font-size: 12px; letter-spacing: 0; }
+.tv-tr { display: flex; align-items: center; gap: 4px; }
+.tv-tr .rc-btn { width: 28px; padding: 0; font-family: var(--mono); font-size: 14px; }
+
+/* règle : sections, accords, tête de lecture ------------------------------------------------- */
+.tv-ruler { position: relative; margin: 0 20px; padding: 8px; }
+.tv-secs { display: flex; gap: 2px; height: 26px; }
+.tv-sec {
+  min-width: 0; background: #22262B; border-top: 3px solid #4A5361; border-radius: 2px; padding: 3px 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--ink2); white-space: nowrap; overflow: hidden;
+  text-overflow: clip; text-transform: uppercase; cursor: pointer; user-select: none;
+}
+.tv-sec:hover { color: var(--ink); background: #272C32; }
+.tv-sec.now { background: #3A2A1E; color: #fff; }
+.tv-sec.looped { box-shadow: inset 0 0 0 1px var(--sig); }
+.tv-chords { position: relative; height: 24px; margin-top: 4px; overflow: hidden; }
+.tv-ch {
+  position: absolute; top: 0; bottom: 0; border-radius: 2px; background: #22262B; color: #C9CDD2; font-family: var(--mono);
+  font-size: 11px; font-weight: 600; display: flex; align-items: center; padding-left: 6px; overflow: hidden; white-space: nowrap;
+  cursor: pointer; border-right: 2px solid var(--inset);
+}
+.tv-ch.past { background: #1B1E22; color: var(--dim); }
+.tv-ch.now { background: var(--ink); color: var(--bg); }
+.tv-ch.narrow { padding-left: 0; color: transparent !important; }
+.tv-head-line { position: absolute; top: 4px; bottom: 4px; width: 2px; background: var(--sig); pointer-events: none; left: 8px; }
+.tv-loop { position: absolute; top: 2px; bottom: 2px; border: 1px solid var(--sig); border-radius: 3px; background: rgba(255, 138, 61, .08); pointer-events: none; }
+
+/* corps : pistes + console ----------------------------------------------------------------------- */
+.tv-body { flex: 1; display: flex; gap: 14px; padding: 14px 20px; min-height: 0; }
+.tv-stems { flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 6px; position: relative; min-width: 0; min-height: 0; overflow: auto; }
+.tv-row { flex: 1 1 0; min-height: 64px; max-height: 160px; display: flex; border-radius: 3px; overflow: hidden; background: var(--row); }
+.tv-row .sw { width: 6px; flex: none; }
+.tv-row .hd {
+  width: 150px; flex: none; padding: 8px 10px; display: flex; flex-direction: column; justify-content: space-between;
+  border-right: 1px solid var(--edge); background: var(--panel); min-width: 0;
+}
+.tv-row .nm { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tv-row .ctl { display: flex; gap: 4px; align-items: center; }
+.tv-row .db { font-family: var(--mono); font-size: 10px; color: var(--mute); margin-left: auto; white-space: nowrap; }
+.tv-row .wv { flex: 1; position: relative; min-width: 0; cursor: pointer; }
+.tv-row .wv canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tv-row .wv .none { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 11px; letter-spacing: .1em; }
+.tv-row.muted .wv { opacity: .28; }
+.tv-stems .tv-head-line { top: 6px; bottom: 6px; box-shadow: 0 0 8px var(--sig); }
+
+.tv-console { width: 456px; flex: none; display: flex; gap: 3px; padding: 6px; overflow-x: auto; min-height: 0; }
+.tv-strip { flex: 1 0 54px; background: var(--panel); border-radius: 3px; display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 8px; min-height: 0; }
+.tv-knob { width: 28px; height: 28px; border-radius: 50%; background: var(--raise); border: 1px solid var(--edge); position: relative; cursor: ns-resize; touch-action: none; flex: none; }
+.tv-knob span { position: absolute; left: 12px; top: 3px; width: 2px; height: 9px; background: var(--ink); transform-origin: 1px 10px; }
+.tv-fad { flex: 1; width: 100%; display: flex; justify-content: center; gap: 6px; position: relative; min-height: 80px; }
+.tv-meter { width: 6px; border-radius: 3px; background: var(--edge); position: relative; overflow: hidden; }
+.tv-meter i { position: absolute; bottom: 0; left: 0; right: 0; height: 0; background: linear-gradient(to top, #3BE37A 0%, #3BE37A 65%, #F2C230 82%, #FF4D4D 100%); background-size: 100% var(--mh, 100px); background-position: bottom; }
+.tv-rail { width: 4px; border-radius: 2px; background: var(--edge); position: relative; cursor: ns-resize; touch-action: none; }
+.tv-rail::before { content: ""; position: absolute; left: -14px; right: -14px; top: 0; bottom: 0; }
+.tv-thumb { position: absolute; left: -10px; width: 24px; height: 14px; margin-bottom: -7px; border-radius: 2px; background: #C9CDD2; border: 1px solid var(--edge); box-shadow: inset 0 -2px 0 var(--mute); pointer-events: none; }
+.tv-strip .col { width: 100%; height: 3px; flex: none; }
+.tv-strip .sh { font-size: 10px; font-weight: 600; letter-spacing: .08em; color: var(--ink2); flex: none; }
+.tv-strip.me .sh { color: var(--lcd); }
+.tv-strip.muted .tv-meter { opacity: .35; }
+.tv-strip .val { font-family: var(--mono); font-size: 9px; color: var(--mute); height: 10px; flex: none; }
+
+.tv-chips .rc-chip.off { color: var(--dim); text-decoration: line-through; }
+
+@media (max-width: 1100px) {
+  .tv-body { flex-direction: column; overflow: auto; }
+  .tv-stems { flex: none; min-height: 360px; }
+  .tv-console { width: auto; min-height: 260px; }
+}
+@media (max-width: 640px) {
+  .tv-head { padding: 10px 12px 4px; }
+  .tv-ruler { margin: 0 12px; }
+  .tv-body { padding: 10px 12px; }
+  .tv-row .hd { width: 104px; padding: 6px; }
+  .rc-h1 { font-size: 26px; }
+}

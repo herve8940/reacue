@@ -966,6 +966,57 @@ Open the song's project; in the ReaCue window, **Stage** tab (“Single song”)
 There is no automatic stop and no setlist (a single song). Only REAPER (and the ReaCue window for the loop)
 needs to run during rehearsal: Claude is not needed.
 
+### 17.3 ReaCue Studio: the Practice screen
+
+ReaCue Studio is a web page served by REAPER (like the prompter), made to work on a song on the computer or a
+tablet.
+
+1. Prepare the song (chapter 10): publishing also creates the stems' **waveforms**.
+2. Open the **ReaCue** window in REAPER (it runs the loop, the ramp, transpose and export).
+3. In the browser: **`http://localhost:8080/studio.html`** on the computer, or
+   `http://<computer's IP>:8080/studio.html` on a tablet (the address is shown under the QR code).
+4. The first time you use a loop, a ramp, transpose or export, the page asks for the **PIN** (ReaCue window,
+   **Stage** tab): it is remembered on the device.
+
+![ReaCue Studio, Practice screen](images/studio_en.png)
+
+| Area | What it does |
+|---|---|
+| Displays (top) | POSITION bar.beat.sixteenth · TIME · TEMPO and speed in % · KEY (± transpose) · SMPTE |
+| Structure | click = go to the section; double-click = loop it (with the count-in bar, as in 17.1) |
+| Chords | scroll under the play head; click = go to the chord |
+| Stem rows | waveform (played part in colour), **M** (mute), **S** (solo), volume; click = go there |
+| Console (right) | pan (drag; double-click = centre), meter, fader (double-click = 0 dB), CLICK and VOICE included |
+| Footer | Start, Stop, Play/Pause (space bar), Loop, Next section; LOOP · RAMP · CLICK · VOICE; LEDs |
+| My instrument | the chosen track is muted automatically (you play your part over the rest) |
+| KEY − / + | transposes the stems by a semitone; double-click the KEY display = back to 0 |
+
+**Speed ramp**: put the play head in the section to practise, click **RAMP**, set for example **from 85 % to
+100 % over 8 passes**, then **START**. The section loops; at each repeat the speed goes up one step (pitch
+kept); the counter shows “LOOP CHORUS 1 · 4/8”. After the last pass the loop goes on at the final speed.
+**STOP** (or the Loop button) brings back 100 %.
+
+> The **REAPER** LED is green when REAPER and the ReaCue window answer, orange when the window is closed
+> (mute, volume, transport still work; loop, ramp, transpose and export do not). Transpose stays clean up to
+> about ±2 semitones; beyond that, vocals and drums sound artificial. It changes the stem items: Ctrl/Cmd+Z
+> in REAPER undoes it.
+
+### 17.4 Export stems and ranges (WAV / MP3)
+
+In ReaCue Studio, **EXPORT** button:
+
+1. **Instruments**: tick the ones to export (ALL / NONE), and **with the click** if you want a click
+   synthesised on the song's grid.
+2. **Range**: whole song, a **section** (list), **bars** “from → to”, or **REAPER's time selection**.
+3. **Files**: one file per instrument, or everything **mixed** into one file (brought down to -1 dBFS when it
+   would clip: never any clipping; track volume and pan applied to the mix).
+4. **Format**: **MP3** (128, 192, 256 or 320 kbit/s; 320 by default) or 24-bit **WAV**.
+5. **EXPORT**: progress is shown, then the download links. The files are also in the **`exports/`** folder next
+   to the project, named `<Title> - <Instrument> - <Section>.mp3`.
+
+Examples: the bass alone in the chorus as an MP3 to revise on the bus; “everything but the guitar” mixed with
+the click, bars 33 to 48, to practise your part; every stem as WAV for another program.
+
 ---
 
 ## 18. Troubleshooting

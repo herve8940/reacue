@@ -23,6 +23,7 @@ from . import drums
 from . import sheet
 from . import structure
 from . import timecode
+from . import studio
 from .regions import regions_to_sections, same_structure
 
 mcp = FastMCP(
@@ -132,7 +133,7 @@ async def _apply(analysis: Analysis, item: dict, opts: Options, items: list[dict
                 info = None
         try:
             summary["prompteur"] = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items,
-                                                           _project_of(info))
+                                                           _project_of(info), plan.get("items"), plan.get("item"))
         except Exception as e:          # le prompteur ne doit jamais bloquer la préparation
             summary.setdefault("warnings", []).append(t("prompter_not_updated", e=e))
     if analysis.stems:
@@ -217,9 +218,28 @@ async def _publish_only(analysis, item, opts, items) -> dict:
         project = _project_of(await bridge.call("ping"))
     except Exception:
         project = None
-    out = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items, project)
+    out = await asyncio.to_thread(_publish_prompter, analysis, item, timeline, items, project,
+                                  plan.get("items"), plan.get("item"))
     return {"prompteur": out, "reaper": t("unchanged"), "warnings": [],
             "sections": [{"name": s.name, "bars": f"{s.start_bar + 1}-{s.end_bar}"} for s in analysis.sections]}
+
+
+async def export_audio(request: dict) -> dict:
+    """Export audio des stems du projet ouvert (items lus par le pont) ; voir export.py."""
+    from . import export
+    info = await bridge.call("ping")
+    found = (await bridge.call("get_audio_items")).get("items") or []
+    song = None
+    try:
+        song = json.loads((prompter.WWW_DIR / prompter.SONG_NAME).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    job = export.mcp_job(request, found, _project_of(info), song=song)
+    try:
+        res = await asyncio.to_thread(export.run_job, job)
+    except export.ExportError as e:
+        return {"error": str(e)}
+    return {"export": res, "warnings": []}
 
 
 async def update_timecode_tracks() -> dict:
@@ -256,7 +276,8 @@ def _export_lighting(song: dict, project: str | None) -> tuple[dict | None, str 
     return res, None
 
 
-def _publish_prompter(analysis, item, timeline, items, project: str | None = None):
+def _publish_prompter(analysis, item, timeline, items, project: str | None = None,
+                      plan_items: list[dict] | None = None, plan_item: dict | None = None):
     act = prompter.stem_activity(analysis, items)
     grid, chord_warn = None, None
     names = [d["file"] for d in items] if items else [item.get("file", "")]
@@ -278,6 +299,13 @@ def _publish_prompter(analysis, item, timeline, items, project: str | None = Non
     song = prompter.build_song(analysis, item, timeline, items, act, chords=grid, lyrics=words, drums=kit)
     light, light_warn = _export_lighting(song, project)     # lumière grandMA3 (onglet Lumière du prompteur)
     out = prompter.publish(song)
+    peaks_warn = None
+    try:                                # formes d'onde de ReaCue Studio (jamais bloquantes)
+        placed = studio.placed_items(items, item, plan_items, plan_item)
+        if placed:
+            out["studio"] = studio.publish_peaks(placed, song)
+    except Exception as e:
+        peaks_warn = t("studio_peaks_failed", e=e)
     out["chords"] = bool(song.get("chords"))
     out["lyrics"] = len(song.get("lyrics") or [])
     out["drums"] = bool(song.get("drums"))
@@ -290,7 +318,7 @@ def _publish_prompter(analysis, item, timeline, items, project: str | None = Non
             out["pdf"] = str(sheet.write_sheet(song, folder))
     except Exception as e:
         pdf_warn = t("sheet_failed", e=e)
-    warns = [w for w in (chord_warn, lyr_warn, drum_warn, light_warn, pdf_warn) if w]
+    warns = [w for w in (chord_warn, lyr_warn, drum_warn, light_warn, pdf_warn, peaks_warn) if w]
     if warns:
         out["warning"] = " ; ".join(warns)
     out["url"] = t("prompter_url", page=prompter.PAGE_NAME)
@@ -459,8 +487,15 @@ async def set_sections(sections: list[dict]) -> dict:
     Profil « joué en live » d'un concert existant, sans le reconstruire : un élément
     {"concert_live": {"concert": "Concert du 15/11", "live": [...], "exceptions": {...}}} (même effet que
     set_live_profile).
+    Export audio (ReaCue Studio), sans rien modifier dans REAPER : un élément {"export": {"stems": ["Basse"],
+    "format": "mp3", "kbps": 320, "range": {"kind": "section", "section": "Refrain 1"} | {"kind": "bars",
+    "from": 9, "to": 24} | {"kind": "song"}, "mode": "separate" | "mix", "click": false}} ; stems vides =
+    tous. Fichiers dans <dossier du projet>/exports/ (et téléchargeables depuis la page studio.html).
     """
     use_settings_lang()
+    exp = next((d["export"] for d in sections if isinstance(d, dict) and isinstance(d.get("export"), dict)), None)
+    if exp is not None:
+        return await export_audio(exp)
     conc = next((d["concert"] for d in sections if isinstance(d, dict) and isinstance(d.get("concert"), dict)), None)
     if conc is not None:
         return await build_concert(conc.get("name") or "Concert", list(conc.get("songs") or []),

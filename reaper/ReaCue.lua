@@ -278,7 +278,7 @@ local function draw_result(x, y, w)
 end
 
 -- QR code du prompteur -----------------------------------------------------------------
-local QR_W, QR_H = 460, 640
+local QR_W, QR_H = 460, 664
 local qr = nil
 
 function ctx.open_qr()
@@ -287,6 +287,7 @@ function ctx.open_qr()
   local v = { ips = ips, port = port, found = found, dock = gfx.dock(-1) }
   if #ips > 0 then
     v.url = L.prompter_url(ips[1], port)
+    v.studio = L.studio_url(ips[1], port)
     v.m, v.err = L.qr_matrix(v.url, script_dir)
   end
   qr = v
@@ -307,7 +308,7 @@ local function draw_qr()
   U.text(L.tr("qr_title"), 18, 14, 18, U.INK, true)
   U.text(L.tr("qr_sub"), 18, 40, 13, U.MUTED)
   if U.button("qrclose", T("close"), w - 104, 12, 90, 30) then close_qr() return end
-  local foot, top = 106, 66
+  local foot, top = 126, 66
   if not qr.url then
     U.text(L.tr("no_ip"), 18, top + 10, 15, U.INK, true)
     U.text(L.tr("no_ip2"), 18, top + 36, 13, U.MUTED)
@@ -343,10 +344,13 @@ local function draw_qr()
   local pin = string.format(L.tr("pin_line"), L.remote_pin())
   local pw = U.text_w(pin, 14, true)
   U.text(pin, math.max(10, (w - pw) / 2), y + 48, 14, U.INK, true)
+  local sl = string.format(L.tr("studio_line"), qr.studio or "")
+  local sw = U.text_w(sl, 12)
+  U.text(sl, math.max(6, (w - sw) / 2), y + 72, 12, U.MUTED)
   if not qr.found then
     local warn = L.tr("no_web")
     local ww = U.text_w(warn, 12)
-    U.text(warn, math.max(6, (w - ww) / 2), y + 72, 12, U.WARN)
+    U.text(warn, math.max(6, (w - ww) / 2), y + 92, 12, U.WARN)
   end
 end
 
@@ -486,6 +490,8 @@ local function background(now)
   end
   for _, k in ipairs(TAB_ORDER) do if tabs[k].tick then tabs[k].tick(now) end end   -- test timecode : fin, Stop
   if c and not ctx.tc_test then L.mix_tick(c, now) end   -- pendant le test : mutes des instruments laissés tels quels
+  L.studio_c = c
+  L.studio_publish(false, c)                              -- ReaCue Studio : vitesse, transposition, rampe
   local g = reaper.GetExtState("ReaCue", "win_goto")
   if g ~= "" then
     reaper.SetExtState("ReaCue", "win_goto", "", false)
@@ -566,6 +572,7 @@ reaper.atexit(function()
   if tabs.lighting and tabs.lighting.test_stop then pcall(tabs.lighting.test_stop, "exit") end   -- solo / mute rétablis
   if L.reh.on then pcall(L.set_rehearsal, false) end
   reaper.SetExtState("ReaCue", "rehearsal", "", false)
+  reaper.SetExtState("ReaCue", "studio", "", false)
   reaper.SetExtState("ReaCue", "win_alive", "", false)
   reaper.SetExtState("ReaCue", "win_script", "", false)
   L.remote_off()

@@ -1,5 +1,53 @@
 # Changelog
 
+## Non publié / Unreleased — ReaCue Studio, étape 1 : écran Travail et exports
+
+### ReaCue Studio
+- **New web page `studio.html`** (served by REAPER next to the prompter, FR / EN, “Studio pro” style, no
+  internet: IBM Plex Sans / Mono and Barlow Condensed fonts bundled under the SIL OFL 1.1 in
+  `reacue_mcp/web/reacue_studio/fonts/`). Top navigation BIBLIO · TRAVAIL · GROUPE · CONCERT · LUMIÈRE (only
+  TRAVAIL for now). Shared base for the next screens: `reacue_studio/base.css` (colour tokens, header, LCD
+  displays, buttons, chips, LEDs, panels, dialogs) and `reacue_studio/core.js` (language, REAPER web API,
+  ReaCue commands with PIN and queue, published data, bar/beat, SMPTE, chord transposition).
+- **Practice screen (TRAVAIL)**: position bar.beat.sixteenth, time, tempo × speed, key ± transpose, SMPTE;
+  clickable structure (double-click = loop) and chords scrolling under the play head; one row per stem with its
+  waveform, M / S and volume; console strips (pan knob, real meter, fader) for the stems, CLICK and VOIX;
+  transport; LOOP / RAMP / CLICK / VOIX chips; REAPER / prompter / LTC LEDs.
+- Mute, solo, volume, pan, position and transport use **REAPER's native web API** (`/_/TRACK`,
+  `SET/TRACK/n/MUTE|SOLO|VOL|PAN`, `SET/POS`, actions 1007 / 1008 / 1016); tracks found by name.
+- New remote commands run by the ReaCue window (PIN): `loopsec` (loop one section), `ramp`
+  (`from:to:passes[:section]`, one speed step per loop pass), `pitch` (±1 semitone on the stem takes, ±12 max,
+  undoable), `export`. State published in ExtState `ReaCue/studio` (speed, transpose, pass, passes, from, to).
+- **“My instrument”**: the chosen track is muted automatically (remembered in the browser).
+
+### Exports
+- New module `reacue_mcp/export.py`: each stem, a section, bars X to Y or REAPER's time selection, one or more
+  instruments, separate files or one mix (brought down to -1 dBFS, no clipping), optional synthesised click;
+  **WAV 24-bit** or **MP3** 128–320 kbit/s (libsndfile through soundfile ≥ 0.13; `lameenc` used if installed and
+  soundfile is older). Sample-exact cut on ReaCue's grid; item position / offset / volume, track volume / pan for
+  the mix. Files in `<project>/exports/` named `<Title> - <Stem> - <Section>.mp3`, copied to
+  `reaper_www_root/reacue_exports/` (last 5 exports kept) for download from the page; status in
+  `reacue_export.json`.
+- CLI `export --job <file>` (written by the ReaCue window) or `export --request '<JSON>'`; MCP:
+  `set_sections([{"export": {…}}])` (tool list unchanged).
+
+### Publication, installer
+- Waveforms precomputed at each publication (`reacue_mcp/studio.py` → `reacue_peaks.json`: min/max every 40 ms
+  on REAPER's timeline, base64, track names and roles, timecode settings); never blocking.
+- `prompter.publish`, the ReaCue window (`L.publish_page`) and the installer copy `studio.html` and
+  `reacue_studio/`; the uninstaller removes them with the published data and web exports. Studio address under
+  the QR code and in the installer's last message.
+- `requirements.txt`: `soundfile>=0.13` (MP3 bitrate control). THIRD_PARTY_NOTICES: fonts (OFL-1.1),
+  libsndfile / LAME in the soundfile wheel, optional lameenc.
+
+### Docs / tests
+- README / LISEZMOI section “ReaCue Studio”, tutorials 17.3 (Practice screen) and 17.4 (exports), screenshots
+  `docs/images/studio_fr.png`, `studio_en.png`.
+- Tests: exports (WAV / MP3 bitrate, sample-exact cut, padding, mix without clipping, several stems, click,
+  rate, names, web cleanup, CLI, MCP), waveforms, publication, no external resource, FR / EN strings, page in
+  Chromium (native commands, “my instrument”, PIN commands, export flow), Lua commands (loop, ramp, transpose,
+  export job), installer.
+
 ## 1.2.1 — 2026-10-26 — correction Windows (analyse de structure)
 
 ### Corrections
