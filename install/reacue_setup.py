@@ -65,6 +65,7 @@ MSG = {
     "settings_kept": ("Réglages existants conservés (langue : {lang}) : {f}",
                       "Existing settings kept (language: {lang}): {f}"),
     "install_path": ("Dossier d'installation mémorisé : {d}", "Install folder recorded: {d}"),
+    "gpu_detected": ("Accélération : {info}", "Acceleration: {info}"),
     "reaper_running": ("REAPER est ouvert : les actions ne peuvent pas être enregistrées automatiquement.",
                        "REAPER is running: the actions cannot be registered automatically."),
     "actions_manual": (
@@ -83,13 +84,42 @@ MSG = {
     "actions_removed": ("Actions ReaCue retirées de {f}", "ReaCue actions removed from {f}"),
     "ask_mcp": ("Déclarer ReaCue dans Claude Desktop (mode optionnel, pilotage par Claude) ? [o/N] ",
                 "Register ReaCue in Claude Desktop (optional mode, control with Claude)? [y/N] "),
+    "ask_mcp_title": ("Pilotage par assistant IA (serveur MCP optionnel)",
+                      "AI assistant control (optional MCP server)"),
+    "ask_mcp_desc": (
+        "ReaCue peut être piloté en langage naturel par un assistant IA compatible MCP.\n"
+        "      Choisissez le ou les assistants à configurer :",
+        "ReaCue can be controlled in natural language by an MCP-compatible AI assistant.\n"
+        "      Choose the assistant(s) to configure:"),
+    "ask_mcp_detected": ("Assistant(s) détecté(s) sur cet ordinateur : {clients}",
+                         "Detected assistant(s) on this computer: {clients}"),
+    "ask_mcp_menu": (
+        "1. Claude Desktop\n"
+        "      2. Google Antigravity\n"
+        "      3. Cursor (modèles OpenAI / ChatGPT / Codex)\n"
+        "      4. Tous les assistants détectés [recommandé]\n"
+        "      5. Exporter la configuration JSON (pour ChatGPT, VS Code, ou autre)\n"
+        "      0. Aucun (passer)\n"
+        "      Votre choix [4] : ",
+        "1. Claude Desktop\n"
+        "      2. Google Antigravity\n"
+        "      3. Cursor (OpenAI / ChatGPT / Codex models)\n"
+        "      4. All detected assistants [recommended]\n"
+        "      5. Export JSON configuration (for ChatGPT, VS Code, or custom client)\n"
+        "      0. None (skip)\n"
+        "      Your choice [4]: "),
     "mcp_added": ("Serveur « reacue » déclaré dans {f} (sauvegarde : {b})",
                   "“reacue” server registered in {f} (backup: {b})"),
-    "mcp_skipped": ("Claude Desktop : non configuré (relance avec --mcp yes pour le faire plus tard).",
-                    "Claude Desktop: not configured (run again with --mcp yes to do it later)."),
+    "mcp_export_created": (
+        "Configuration MCP exportée dans {f}\n"
+        "      (À copier dans les réglages MCP de votre client, ex: ChatGPT via pont, VS Code, Codex).",
+        "MCP configuration exported to {f}\n"
+        "      (Copy this into your client's MCP settings, e.g. ChatGPT via bridge, VS Code, Codex)."),
+    "mcp_skipped": ("Serveur MCP : non configuré (relance avec --mcp pour le faire plus tard).",
+                    "MCP server: not configured (run again with --mcp to do it later)."),
     "mcp_removed": ("Serveur « reacue » retiré de {f}", "“reacue” server removed from {f}"),
-    "mcp_bad_json": ("Configuration Claude illisible ({f}) : non modifiée.",
-                     "Unreadable Claude configuration ({f}): left unchanged."),
+    "mcp_bad_json": ("Configuration illisible ({f}) : non modifiée.",
+                     "Unreadable configuration ({f}): left unchanged."),
     "web_found": ("Interface web de REAPER : active (port {port}). Adresse du prompteur : "
                   "http://<IP de cet ordinateur>:{port}/prompteur.html\n"
                   "      ReaCue Studio (ordinateur, tablette) : http://<IP de cet ordinateur>:{port}/studio.html",
@@ -173,6 +203,111 @@ def claude_config_path(platform: str | None = None, env: dict | None = None, hom
     return home / ".config" / "Claude" / "claude_desktop_config.json"
 
 
+def antigravity_config_path(platform: str | None = None, env: dict | None = None, home: Path | None = None) -> Path:
+    env = os.environ if env is None else env
+    home = home or (Path(env.get("USERPROFILE") or env.get("HOME")) if (env and (env.get("USERPROFILE") or env.get("HOME"))) else Path.home())
+    return home / ".gemini" / "config" / "mcp_config.json"
+
+
+def cursor_config_path(platform: str | None = None, env: dict | None = None, home: Path | None = None) -> Path:
+    env = os.environ if env is None else env
+    home = home or (Path(env.get("USERPROFILE") or env.get("HOME")) if (env and (env.get("USERPROFILE") or env.get("HOME"))) else Path.home())
+    return home / ".cursor" / "mcp.json"
+
+
+MCP_TARGETS = {
+    "claude": {
+        "name": "Claude Desktop",
+        "path_fn": lambda platform=None, env=None, home=None: claude_config_path(platform, env, home),
+    },
+    "antigravity": {
+        "name": "Google Antigravity",
+        "path_fn": lambda platform=None, env=None, home=None: antigravity_config_path(platform, env, home),
+    },
+    "cursor": {
+        "name": "Cursor (OpenAI / ChatGPT / Codex)",
+        "path_fn": lambda platform=None, env=None, home=None: cursor_config_path(platform, env, home),
+    },
+}
+
+
+def detect_mcp_targets(platform: str | None = None, env: dict | None = None, home: Path | None = None) -> list[str]:
+    detected = []
+    for key, info in MCP_TARGETS.items():
+        try:
+            cfg = info["path_fn"](platform, env, home)
+            if cfg.exists() or cfg.parent.exists():
+                detected.append(key)
+        except Exception:
+            pass
+    return detected
+
+
+def ask_mcp_selection(detected: list[str]) -> list[str]:
+    print()
+    print("  " + msg("ask_mcp_title"))
+    print("  " + msg("ask_mcp_desc"))
+    if detected:
+        names = [MCP_TARGETS[k]["name"] for k in detected if k in MCP_TARGETS]
+        print("  " + msg("ask_mcp_detected", clients=", ".join(names)))
+    default_choice = "4" if detected else "1"
+    try:
+        ans = input("    " + msg("ask_mcp_menu")).strip()
+    except EOFError:
+        return []
+    if not ans:
+        ans = default_choice
+
+    low = ans.lower()
+    if low in ("0", "n", "no", "non", "none"):
+        return []
+
+    targets = set()
+    tokens = [t.strip() for t in low.replace(";", ",").replace(" ", ",").split(",") if t.strip()]
+    for t in tokens:
+        if t in ("1", "claude"):
+            targets.add("claude")
+        elif t in ("2", "antigravity"):
+            targets.add("antigravity")
+        elif t in ("3", "cursor"):
+            targets.add("cursor")
+        elif t in ("4", "all", "tous"):
+            targets.update(detected if detected else ["claude"])
+        elif t in ("5", "export", "json"):
+            targets.add("export")
+        elif t in MCP_TARGETS:
+            targets.add(t)
+
+    return sorted(targets)
+
+
+def resolve_mcp_targets(want: str, detected: list[str]) -> list[str]:
+    low = want.strip().lower()
+    if low in ("no", "none", "0", "false"):
+        return []
+    if low in ("yes", "true"):
+        return ["claude"]
+    if low in ("all", "tous"):
+        return sorted(list(MCP_TARGETS.keys()) + ["export"])
+    if low == "export":
+        return ["export"]
+
+    targets = set()
+    tokens = [t.strip() for t in low.replace(";", ",").split(",") if t.strip()]
+    for t in tokens:
+        if t in ("1", "claude"):
+            targets.add("claude")
+        elif t in ("2", "antigravity"):
+            targets.add("antigravity")
+        elif t in ("3", "cursor"):
+            targets.add("cursor")
+        elif t in ("5", "export"):
+            targets.add("export")
+        elif t in MCP_TARGETS:
+            targets.add(t)
+    return sorted(targets)
+
+
 def venv_python(install_dir: Path, platform: str | None = None, windowed: bool = False) -> Path:
     platform = platform or sys.platform
     if platform.startswith("win"):
@@ -207,7 +342,7 @@ def reaper_running(platform: str | None = None, run=subprocess.run) -> bool:
     platform = platform or sys.platform
     try:
         if platform.startswith("win"):
-            r = run(["tasklist", "/FI", "IMAGENAME eq reaper.exe", "/NH"], capture_output=True, text=True,
+            r = run(["tasklist", "/FI", "IMAGENAME eq reaper.exe", "/NH"], capture_output=True, text=True, errors="replace",
                     creationflags=0x08000000)
             return "reaper.exe" in (r.stdout or "").lower()
         r = run(["pgrep", "-ix", "reaper(64)?"], capture_output=True, text=True)
@@ -331,7 +466,8 @@ def unregister_actions(kb: Path) -> bool:
 # Réglages, chemin d'installation
 # --------------------------------------------------------------------------- #
 def write_settings(path: Path, lang: str) -> bool:
-    """Crée reacue_settings.json (défauts) ou met seulement à jour la langue. True si créé."""
+    """Crée reacue_settings.json (défauts) ou met à jour langue et matériel. True si créé."""
+    created = not path.exists()
     if path.exists():
         try:
             d = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -343,11 +479,37 @@ def write_settings(path: Path, lang: str) -> bool:
         d["language"] = lang
         for k, v in SETTINGS_DEFAULTS.items():
             d.setdefault(k, v)
-        _write_text(path, json.dumps(d, indent=2, ensure_ascii=False) + "\n")
-        return False
-    d = dict(SETTINGS_DEFAULTS, language=lang)
+    else:
+        d = dict(SETTINGS_DEFAULTS, language=lang)
+
+    # Détection et synchronisation matérielle automatique
+    try:
+        import reacue_gpu
+        gpu_info = reacue_gpu.detect_gpu()
+        rec_model = reacue_gpu.recommended_stems_model(gpu_info)
+        d["hardware"] = {
+            "vendor": gpu_info.get("vendor"),
+            "name": gpu_info.get("name"),
+            "vram_mb": gpu_info.get("vram_mb", 0),
+            "backend": gpu_info.get("backend"),
+            "is_dedicated": gpu_info.get("is_dedicated", False),
+            "index_url": gpu_info.get("index_url"),
+            "recommended_stems_model": rec_model,
+        }
+        if created:
+            d["stems_model"] = rec_model
+        else:
+            if not gpu_info.get("has_gpu") or not gpu_info.get("is_dedicated"):
+                if d.get("stems_model") == "htdemucs_6s":
+                    d["stems_model"] = "htdemucs"
+            elif gpu_info.get("is_dedicated") and gpu_info.get("vram_mb", 0) >= 7500:
+                if d.get("stems_model") == "htdemucs":
+                    d["stems_model"] = "htdemucs_6s"
+    except Exception:
+        pass
+
     _write_text(path, json.dumps(d, indent=2, ensure_ascii=False) + "\n")
-    return True
+    return created
 
 
 def write_install_path(path: Path, install_dir: Path):
@@ -493,18 +655,32 @@ def do_install(args) -> int:
         for status, detail in register_actions(kb, LANG):
             say({"added": "action_added", "present": "action_present"}.get(status, "action_other"),
                 name=detail, path=detail)
-    # Claude Desktop
+    # MCP (Claude, Antigravity, Cursor, export)
     want = args.mcp
+    detected = detect_mcp_targets()
     if want == "ask":
-        want = "yes" if _ask_yes(msg("ask_mcp")) else "no"
-    if want == "yes":
-        cfg = claude_config_path()
-        try:
-            b = add_mcp(cfg, mcp_entry(install_dir, reaper_dir=rdir, default_reaper_dir=reaper_resource_dir(
-                env={k: v for k, v in os.environ.items() if k != "REAPER_RESOURCE_PATH"})))
-            say("mcp_added", f=cfg, b=b or "-")
-        except ValueError:
-            say("mcp_bad_json", f=cfg)
+        targets = ask_mcp_selection(detected)
+    else:
+        targets = resolve_mcp_targets(want, detected)
+
+    if targets:
+        entry = mcp_entry(install_dir, reaper_dir=rdir, default_reaper_dir=reaper_resource_dir(
+            env={k: v for k, v in os.environ.items() if k != "REAPER_RESOURCE_PATH"}))
+        for target in targets:
+            if target == "export":
+                export_p = rdir / "ReaCueMCP" / "reacue_mcp_config.json"
+                _write_text(export_p, json.dumps({"mcpServers": {"reacue": entry}}, indent=2, ensure_ascii=False) + "\n")
+                say("mcp_export_created", f=export_p)
+                continue
+            info = MCP_TARGETS.get(target)
+            if not info:
+                continue
+            cfg = info["path_fn"]()
+            try:
+                b = add_mcp(cfg, entry)
+                say("mcp_added", f=cfg, b=b or "-")
+            except ValueError:
+                say("mcp_bad_json", f=cfg)
     else:
         say("mcp_skipped")
     # interface web
@@ -535,9 +711,17 @@ def do_uninstall(args) -> int:
         _backup(kb)
         if unregister_actions(kb):
             say("actions_removed", f=kb)
-    cfg = claude_config_path()
-    if remove_mcp(cfg):
-        say("mcp_removed", f=cfg)
+    for key, info in MCP_TARGETS.items():
+        try:
+            cfg = info["path_fn"]()
+            if remove_mcp(cfg):
+                say("mcp_removed", f=cfg)
+        except Exception:
+            pass
+    export_p = rdir / "ReaCueMCP" / "reacue_mcp_config.json"
+    if export_p.exists():
+        export_p.unlink()
+        say("removed", p=export_p)
     stems_env = None
     struct_dirs = []
     try:
@@ -593,6 +777,12 @@ def do_status(args) -> int:
     }
     info["stems"] = bool(info["install_dir"]) and stems_python(Path(info["install_dir"])).exists()
     info["structure"] = bool(info["install_dir"]) and structure_python(Path(info["install_dir"])).exists()
+    try:
+        sys.path.insert(0, str(ROOT))
+        import reacue_gpu
+        info["gpu"] = reacue_gpu.detect_gpu()
+    except Exception:
+        info["gpu"] = None
     print(json.dumps(info, indent=2, ensure_ascii=False))
     return 0
 
@@ -604,7 +794,7 @@ def main(argv=None) -> int:
     ap.add_argument("--lang", default=None, choices=["fr", "en"])
     ap.add_argument("--install-dir")
     ap.add_argument("--reaper-dir")
-    ap.add_argument("--mcp", default="ask", choices=["yes", "no", "ask"])
+    ap.add_argument("--mcp", default="ask", help="Configuration MCP (yes, no, ask, all, claude, antigravity, cursor, export)")
     ap.add_argument("--reaper-running", choices=["yes", "no"], help=argparse.SUPPRESS)   # tests
     ap.add_argument("--purge", action="store_true")
     args = ap.parse_args(argv)

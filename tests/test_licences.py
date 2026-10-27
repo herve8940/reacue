@@ -2,7 +2,10 @@
 de l'analyse de structure (refus, acceptation tapée, variable d'environnement, mémorisation), réglages Lua.
 Legal notices, licence acceptance in the structure installers, settings tab."""
 import os
-import pty
+try:
+    import pty
+except ImportError:
+    pty = None
 import re
 import shutil
 import subprocess
@@ -107,12 +110,16 @@ def _mac_sandbox(tmp_path):
 
 
 def _run_mac(inst, env, lang="fr", stdin=subprocess.DEVNULL):
+    if shutil.which("bash") is None:
+        pytest.skip("bash non disponible sur ce système")
     return subprocess.run(["bash", str(inst / "install" / "install_structure_mac.sh"), lang], env=env,
                           stdin=stdin, capture_output=True, text=True, timeout=60)
 
 
 def _run_mac_tty(inst, env, typed, lang="fr"):
     """Lance l'installateur dans un vrai terminal (pty) et tape `typed` + Entrée."""
+    if pty is None:
+        pytest.skip("pty non disponible sur Windows")
     pid, fd = pty.fork()
     if pid == 0:
         os.execvpe("bash", ["bash", str(inst / "install" / "install_structure_mac.sh"), lang], env)
@@ -251,7 +258,7 @@ def test_settings_tab_licences_runs(tmp_path):
     end""")(str(install))
     M = make(ctx)
     target = M.open_licences()
-    assert target == str(install / "THIRD_PARTY_NOTICES.md")
+    assert Path(target) == install / "THIRD_PARTY_NOTICES.md"
     assert "open '" in lua.eval("opened[1]")
     (install / "THIRD_PARTY_NOTICES.md").unlink()
     assert M.licences_target() == "https://github.com/herve8940/reacue/blob/main/THIRD_PARTY_NOTICES.md"
