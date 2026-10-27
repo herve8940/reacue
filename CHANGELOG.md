@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2 — 2026-10-27 — correction macOS (séparation de stems)
+
+### Corrections
+- macOS (Intel & Apple Silicon) : séparation de stems (Demucs) — correction du test de processus en vie (`pid_alive` dans `ReaCue_stems.lua`). L'appel REAPER `ExecProcess('/bin/kill -0 <pid>')` renvoyait une chaîne (`"0\n"`) et non un entier, ce qui faisait échouer la comparaison `r == 0` en Lua et provoquait l'affichage erroné d'une alerte de crash (« Le processus de séparation s'est arrêté de façon inattendue ») au bout de 3 secondes alors que Demucs tournait normalement en arrière-plan. / macOS (Intel & Apple Silicon): fixed stem separation alive-check (`pid_alive` in `ReaCue_stems.lua`) where REAPER `ExecProcess` returns string exit codes, falsely triggering a crash popup.
+
 ## 1.2.1 — 2026-10-26 — correction Windows (analyse de structure)
 
 ### Corrections

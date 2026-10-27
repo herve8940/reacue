@@ -284,3 +284,62 @@ def test_lyrics_found_next_to_original_song(tmp_path):
     assert lyrics.find_lyrics_file([str(stems / "Song-vocals.wav")]) == song / "paroles.txt"
     (stems / "lyrics.txt").write_text("b\n", encoding="utf-8")          # à côté des stems : prioritaire
     assert lyrics.find_lyrics_file([str(stems / "Song-vocals.wav")]) == stems / "lyrics.txt"
+
+def test_pid_alive_macos_and_windows(tmp_path):
+    L, S, R = lua(tmp_path, os_name="OSX64")
+    # macOS: REAPER ExecProcess returns "0\n" when /bin/kill -0 succeeds
+    L.execute('reaper.ExecProcess = function(cmd, t) return "0\\n" end')
+    assert S.pid_alive(1234, False) is True
+
+    # macOS: REAPER ExecProcess returns "1\n..." when process is dead
+    L.execute('reaper.ExecProcess = function(cmd, t) return "1\\nkill: 1234: No such process" end')
+    assert S.pid_alive(1234, False) is False
+
+    # macOS: REAPER ExecProcess returns nil on failure
+    L.execute('reaper.ExecProcess = function(cmd, t) return nil end')
+    assert S.pid_alive(1234, False) is True
+
+    # Windows: tasklist output
+    L.execute('reaper.ExecProcess = function(cmd, t) return "0\\npython.exe 1234 Console 1" end')
+    assert S.pid_alive(1234, True) is True
+    L.execute('reaper.ExecProcess = function(cmd, t) return "0\\nINFO: No tasks running with specified criteria" end')
+    assert S.pid_alive(1234, True) is False
+
+
+def test_poll_alive_macos_demucs_flow(tmp_path):
+    (tmp_path / "ReaCueMCP").mkdir()
+    L, S, R = lua(tmp_path, os_name="OSX64")
+    outroot = tmp_path / "song-stems"
+    outroot.mkdir()
+    status_file = outroot / "demucs_status.json"
+    status_file.write_text(json.dumps({"state": "running", "pid": 4242, "time": 1000}), encoding="utf-8")
+    (outroot / "demucs.log").write_text("Selected model is a bag of 1 models.\n 15%|\u2588\u258c        | 15/100", encoding="utf-8")
+
+    outroot_posix = outroot.as_posix()
+    status_posix = status_file.as_posix()
+    log_posix = (outroot / "demucs.log").as_posix()
+
+    L.execute("""
+    reaper.ExecProcess = function(cmd, timeout)
+      if cmd:find("/bin/kill -0 4242") then
+        return "0\\n"
+      end
+      return "1\\nNo such process"
+    end
+    reaper.time_precise = function() return 1005 end
+    """)
+    job = L.eval(f"""{{
+      item = items[1],
+      model = "htdemucs_6s",
+      t0 = 1000,
+      p = {{
+        outroot = [[{outroot_posix}]],
+        status = [[{status_posix}]],
+        log = [[{log_posix}]],
+        stems = {{}}
+      }}
+    }}""")
+    state, pct = S.poll(R, job)
+    assert state == "running"
+    assert pct == 15
+
