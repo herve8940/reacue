@@ -14,7 +14,7 @@ return function(ctx)
       hw = "Sortie click + voix", hw_none = "sortie principale", hw_pair = "sorties %d/%d",
       to_master = "Aussi en façade", click_vol = "Volume du click", voice_vol = "Volume des voix",
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixe", tempo_beatmap = "variable",
-      stems = "Séparation de stems", stems6 = "6 stems", stems4 = "4 stems",
+      stems = "Séparation de stems", stems6 = "6 stems", stems4_ft = "4 stems HQ (GPU)", stems4 = "4 stems (rapide)",
       structure = "Détection de structure", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue seul",
       structure_on = "SongFormer installé", structure_off = "SongFormer non installé",
       projects_dir = "Dossier des projets", concert_dir = "Dossier des concerts", default = "par défaut",
@@ -35,7 +35,7 @@ return function(ctx)
       hw = "Click + voice output", hw_none = "main output", hw_pair = "outputs %d/%d",
       to_master = "Also to front of house", click_vol = "Click volume", voice_vol = "Voice volume",
       tempo = "Tempo", tempo_auto = "auto", tempo_constant = "fixed", tempo_beatmap = "variable",
-      stems = "Stem separation", stems6 = "6 stems", stems4 = "4 stems",
+      stems = "Stem separation", stems6 = "6 stems", stems4_ft = "4 stems HQ (GPU)", stems4 = "4 stems (fast)",
       structure = "Structure detection", structure_auto = "auto (SongFormer)", structure_reacue = "ReaCue only",
       structure_on = "SongFormer installed", structure_off = "SongFormer not installed",
       projects_dir = "Projects folder", concert_dir = "Concerts folder", default = "default",
@@ -320,7 +320,7 @@ return function(ctx)
       if ch then M.set("tempo_mode", v) end
       y = y + row
       label(t("stems"), x, y, w)
-      v, ch = seg("stems", cx, y, cw, { { "htdemucs_6s", t("stems6") }, { "htdemucs", t("stems4") } }, get("stems_model"))
+      v, ch = seg("stems", cx, y, cw, { { "htdemucs_6s", t("stems6") }, { "htdemucs_ft", t("stems4_ft") }, { "htdemucs", t("stems4") } }, get("stems_model"), 11)
       if ch then M.set("stems_model", v) end
       y = y + row
       for _, k in ipairs({ "projects_dir", "concert_dir" }) do

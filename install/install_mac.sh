@@ -40,6 +40,10 @@ if [ ! -d "$REAPER_DIR" ]; then
 fi
 echo "  REAPER : $REAPER_DIR"
 echo "  ReaCue : $HERE"
+if [ "$(uname -m)" = "arm64" ]; then
+  t "  Puce Apple Silicon détectée (Metal / MPS) — Accélération matérielle activée" \
+    "  Apple Silicon detected (Metal / MPS) — Hardware acceleration enabled"
+fi
 
 echo
 t "== 2/6 uv (gestionnaire Python d'Astral)" "== 2/6 uv (Astral's Python manager)"
