@@ -121,18 +121,24 @@ MSG = {
     "mcp_bad_json": ("Configuration illisible ({f}) : non modifiée.",
                      "Unreadable configuration ({f}): left unchanged."),
     "web_found": ("Interface web de REAPER : active (port {port}). Adresse du prompteur : "
-                  "http://<IP de cet ordinateur>:{port}/prompteur.html",
+                  "http://<IP de cet ordinateur>:{port}/prompteur.html\n"
+                  "      ReaCue Studio (ordinateur, tablette) : http://<IP de cet ordinateur>:{port}/studio.html",
                   "REAPER web interface: enabled (port {port}). Prompter address: "
-                  "http://<this computer's IP>:{port}/prompteur.html"),
+                  "http://<this computer's IP>:{port}/prompteur.html\n"
+                  "      ReaCue Studio (computer, tablet): http://<this computer's IP>:{port}/studio.html"),
+    "web_pages": ("Pages web copiées dans {d} : prompteur.html, studio.html (+ reacue_studio/)",
+                  "Web pages copied to {d}: prompteur.html, studio.html (+ reacue_studio/)"),
     "web_missing": (
         "Interface web de REAPER : à activer une fois (nécessaire au prompteur) :\n"
         "      REAPER > Préférences (Options > Preferences) > Control/OSC/web > Add >\n"
         "      « Web browser interface », port 8080, OK.\n"
-        "      Puis, sur les téléphones : http://<IP de cet ordinateur>:8080/prompteur.html",
+        "      Puis, sur les téléphones : http://<IP de cet ordinateur>:8080/prompteur.html\n"
+        "      et ReaCue Studio : http://<IP de cet ordinateur>:8080/studio.html",
         "REAPER web interface: enable it once (needed by the prompter):\n"
         "      REAPER > Options > Preferences > Control/OSC/web > Add >\n"
         "      “Web browser interface”, port 8080, OK.\n"
-        "      Then, on the phones: http://<this computer's IP>:8080/prompteur.html"),
+        "      Then, on the phones: http://<this computer's IP>:8080/prompteur.html\n"
+        "      and ReaCue Studio: http://<this computer's IP>:8080/studio.html"),
     "ip": ("Adresse(s) IP probable(s) de cet ordinateur : {ips}", "Likely IP address(es) of this computer: {ips}"),
     "done": ("Installation terminée. Redémarre REAPER : le pont se lance tout seul, et l'action « ReaCue »\n"
              "(fenêtre en 4 onglets : Morceau, Concert, Scène, Réglages) est dans la liste des actions — mets-la\n"
@@ -590,6 +596,28 @@ def _ask_yes(prompt: str) -> bool:
     return ans[:1] in ("o", "y")
 
 
+# pages web servies par REAPER (aussi recopiées par la fenêtre ReaCue et à chaque publication du prompteur)
+WEB_PAGES = ("prompteur.html", "studio.html")
+WEB_DIRS = ("reacue_studio",)
+# fichiers publiés par ReaCue dans reaper_www_root (retirés à la désinstallation)
+WEB_DATA = ("reacue_song.json", "reacue_peaks.json", "reacue_export.json")
+WEB_DATA_DIRS = ("reacue_studio", "reacue_exports")
+
+
+def copy_web(install_dir: Path, www: Path) -> bool:
+    src = install_dir / "reacue_mcp" / "web"
+    if not (src / "prompteur.html").exists():
+        return False
+    www.mkdir(parents=True, exist_ok=True)
+    for name in WEB_PAGES:
+        if (src / name).exists():
+            shutil.copyfile(src / name, www / name)
+    for d in WEB_DIRS:
+        if (src / d).is_dir():
+            shutil.copytree(src / d, www / d, dirs_exist_ok=True)
+    return True
+
+
 def do_install(args) -> int:
     install_dir = Path(args.install_dir or ROOT).resolve()
     rdir = Path(args.reaper_dir).expanduser() if args.reaper_dir else reaper_resource_dir()
@@ -612,10 +640,9 @@ def do_install(args) -> int:
     write_install_path(data / "reacue_install.txt", install_dir)
     say("install_path", d=install_dir)
     try:
-        sys.path.insert(0, str(install_dir))
-        import reacue_gpu
-        say("gpu_detected", info=reacue_gpu.summary(reacue_gpu.detect_gpu(), LANG))
-    except Exception:
+        if copy_web(install_dir, rdir / "reaper_www_root"):
+            say("web_pages", d=rdir / "reaper_www_root")
+    except OSError:
         pass
     # actions
     kb = rdir / "reaper-kb.ini"
@@ -705,11 +732,15 @@ def do_uninstall(args) -> int:
             struct_dirs = [Path(inst) / n for n in (".venv-structure", "structure") if (Path(inst) / n).is_dir()]
     except OSError:
         pass
-    for p in (rdir / "ReaCueMCP" / "reacue_install.txt", rdir / "reaper_www_root" / "prompteur.html",
-              rdir / "reaper_www_root" / "reacue_song.json"):
+    www = rdir / "reaper_www_root"
+    for p in [rdir / "ReaCueMCP" / "reacue_install.txt"] + [www / n for n in WEB_PAGES + WEB_DATA]:
         if p.exists():
             p.unlink()
             say("removed", p=p)
+    for d in WEB_DATA_DIRS:
+        if (www / d).is_dir():
+            shutil.rmtree(www / d, ignore_errors=True)
+            say("removed", p=www / d)
     data = rdir / "ReaCueMCP"
     if args.purge and data.exists():
         shutil.rmtree(data, ignore_errors=True)

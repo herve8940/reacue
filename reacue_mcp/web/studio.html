@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>ReaCue Studio</title>
+<link rel="stylesheet" href="reacue_studio/base.css">
+<link rel="stylesheet" href="reacue_studio/travail.css">
+<link rel="stylesheet" href="reacue_studio/concert.css">
+<link rel="stylesheet" href="reacue_studio/biblio.css">
+</head>
+<body class="rc">
+<div class="rc-app">
+  <header class="rc-top">
+    <div class="rc-brand">
+      <div class="rc-logo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16181B" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M3 12h3l2.5-7 4 14 2.5-7h6"/></svg></div>
+      <span class="rc-word">REACUE</span>
+    </div>
+    <nav class="rc-nav" id="nav" aria-label="Modes">
+      <button data-mode="biblio" data-t="navBiblio">BIBLIO</button>
+      <button data-mode="travail" class="on" data-t="navTravail">TRAVAIL</button>
+      <button data-mode="groupe" data-t="navGroupe">GROUPE</button>
+      <button data-mode="concert" data-t="navConcert">CONCERT</button>
+      <button data-mode="lumiere" data-t="navLumiere">LUMIÈRE</button>
+    </nav>
+    <button class="rc-lang" id="langBtn" aria-label="Langue / Language">EN</button>
+    <div class="rc-lcds" aria-live="off">
+      <div class="rc-lcd"><div class="k" data-t="lPos">POSITION</div><div class="v" id="lcdPos">---.-.-</div></div>
+      <div class="rc-lcd"><div class="k" data-t="lTime">TEMPS</div><div class="v" id="lcdTime">00:00.00</div></div>
+      <div class="rc-lcd"><div class="k" data-t="lTempo">TEMPO</div><div class="v"><span id="lcdTempo">—</span> <small id="lcdRate">100 %</small></div></div>
+      <div class="rc-lcd"><div class="k" data-t="lKey">TON</div><div class="v"><span id="lcdKey">—</span> <small id="lcdTr">±0</small></div></div>
+      <div class="rc-lcd tc"><div class="k">SMPTE</div><div class="v" id="lcdTc">00:00:00:00</div></div>
+    </div>
+  </header>
+
+  <main id="travail" class="tv" data-screen="travail">
+    <section class="tv-head">
+      <div class="tv-title">
+        <h1 class="rc-h1" id="title">—</h1>
+        <span class="rc-meta" id="meta"></span>
+      </div>
+      <div class="tv-tools">
+        <label class="tv-me"><span data-t="me">MON INSTRUMENT</span>
+          <select class="rc-select" id="meSel"><option value="" data-t="meNone">— aucun —</option></select></label>
+        <div class="tv-tr" id="trBox">
+          <span class="rc-label" data-t="trLabel">TON</span>
+          <button class="rc-btn sm" id="trDown" aria-label="-1">−</button>
+          <button class="rc-btn sm" id="trUp" aria-label="+1">+</button>
+        </div>
+        <button class="rc-btn sm sig" id="expBtn" data-t="export">EXPORTER</button>
+      </div>
+    </section>
+
+    <section class="tv-ruler rc-inset" id="ruler">
+      <div class="tv-secs" id="secs"></div>
+      <div class="tv-chords" id="chords"></div>
+      <div class="tv-loop" id="rulerLoop" hidden></div>
+      <div class="tv-head-line" id="rulerHead" aria-hidden="true"></div>
+    </section>
+
+    <div class="tv-body">
+      <section class="tv-stems rc-inset" id="stems" aria-label="Stems">
+        <div class="rc-empty" id="stemsEmpty" data-t="waiting">Connexion à REAPER…</div>
+      </section>
+      <section class="tv-console rc-inset" id="console" aria-label="Console"></section>
+    </div>
+  </main>
+
+
+  <!-- écran BIBLIO : morceaux connus (projets, concerts), composants, étape du parcours ; clic = ouvrir dans REAPER -->
+  <main id="biblio" class="bb" data-screen="biblio" hidden>
+    <section class="bb-head">
+      <div class="lm-title">
+        <h1 class="rc-h1" data-t="bbTitle">BIBLIOTHÈQUE</h1>
+        <span class="rc-meta" id="bbMeta"></span>
+      </div>
+      <div class="bb-path rc-inset" id="bbPath" aria-label="Parcours"></div>
+    </section>
+    <section class="bb-tools">
+      <input class="rc-input bb-search" id="bbSearch" type="search" autocomplete="off" data-ph="bbSearch">
+      <div class="bb-filters" id="bbFilters" role="group"></div>
+    </section>
+    <p class="cs-msg" id="bbMsg" hidden></p>
+    <section class="cs-panel bb-list">
+      <div class="bb-row th"><span data-t="bbColTitle">MORCEAU</span><span data-t="bbColTempo">TEMPO</span><span data-t="bbColKey">TON</span>
+        <span data-t="bbColDur">DURÉE</span><span data-t="bbColStruct">STRUCTURE</span><span data-t="bbColComp">COMPOSANTS</span><span data-t="bbColStage">ÉTAPE</span></div>
+      <div class="bb-rows" id="bbRows"></div>
+    </section>
+    <section class="cs-panel bb-concerts">
+      <div class="cs-ph"><span data-t="bbConcerts">CONCERTS</span></div>
+      <div class="bb-clist" id="bbConcerts"></div>
+    </section>
+  </main>
+
+  <!-- écran GROUPE (répétition) : notes par section, « On reprend à… », musiciens connectés et « Prêt » -->
+  <main id="groupe" class="gr" data-screen="groupe" hidden>
+    <section class="gr-head">
+      <div class="lm-title">
+        <h1 class="rc-h1" id="grTitle">—</h1>
+        <span class="rc-meta" id="grMeta"></span>
+      </div>
+      <div class="gr-ready rc-inset" id="grReady">
+        <div class="k" data-t="grReadyK">PRÊTS</div>
+        <div class="v"><span id="grReadyN">0</span><small id="grReadyOf">/ 0</small></div>
+      </div>
+    </section>
+    <p class="cs-msg" id="grMsg" hidden></p>
+    <div class="gr-body">
+      <section class="cs-panel">
+        <div class="cs-ph"><span data-t="grNotesH">NOTES PAR SECTION</span><span class="cs-ro" data-t="grNotesHint">VISIBLES SUR TOUS LES PROMPTEURS</span></div>
+        <div class="gr-notes" id="grNotes"></div>
+      </section>
+      <aside class="gr-side">
+        <section class="cs-panel">
+          <div class="cs-ph"><span data-t="grResumeH">ON REPREND À…</span><span class="cs-ro" data-t="grResumeHint">1 MESURE AVANT</span></div>
+          <div class="gr-resume" id="grResume"></div>
+          <div class="cs-trans">
+            <button class="cs-big" id="grStop" data-t="grStop">■ STOP</button>
+            <button class="cs-big play" id="grPlay"><span id="grPlayL">LECTURE</span></button>
+          </div>
+        </section>
+        <section class="cs-panel">
+          <div class="cs-ph"><span id="grBandH">MUSICIENS CONNECTÉS</span><button class="rc-btn sm" id="grReset" data-t="grReset">REMISE À ZÉRO</button></div>
+          <div class="gr-band" id="grBand"></div>
+          <p class="rc-note gr-help" data-t="grBandHelp"></p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- écran CONCERT : bandeau lecture, setlist, sections du morceau, transport, lumière -->
+  <main id="concert" class="cs" data-screen="concert" hidden>
+    <section class="cs-banner rc-inset">
+      <div class="cs-state" id="csState"><i></i><span id="csStateTxt">—</span></div>
+      <div class="cs-title">
+        <div class="cs-rank" id="csRank"></div>
+        <h1 class="cs-h" id="csTitle">—</h1>
+      </div>
+      <div class="cs-lcds">
+        <div class="cs-lcd"><div class="k" data-t="cRest">RESTE</div><div class="v" id="csRest">0:00</div></div>
+        <div class="cs-lcd"><div class="k" id="csElK">CONCERT</div><div class="v" id="csEl">0:00</div></div>
+        <div class="cs-lcd tc"><div class="k" id="csTcK">SMPTE</div><div class="v" id="csTc">00:00:00:00</div></div>
+      </div>
+    </section>
+    <p class="cs-msg" id="csMsg" hidden></p>
+    <section class="cs-setlist rc-inset" id="csSetlist" aria-label="Setlist"></section>
+    <div class="cs-body">
+      <section class="cs-panel">
+        <div class="cs-ph"><span id="csSecH">SECTIONS</span></div>
+        <div class="cs-secs" id="csSecs"></div>
+        <div class="cs-trans">
+          <button class="cs-big" id="csPrev" data-tt="cPrevTip"><span id="csPrevL">◀ PRÉC.</span></button>
+          <button class="cs-big play" id="csPlay" data-tt="cPlayTip"><span id="csPlayL">LECTURE</span></button>
+          <button class="cs-big" id="csNext" data-tt="cNextTip"><span id="csNextL">SUIV. ▶</span></button>
+        </div>
+      </section>
+      <section class="cs-panel" id="csLight">
+        <div class="cs-ph"><span id="csLightH">LUMIÈRE · GRANDMA3</span><span class="cs-out" id="csOut"></span></div>
+        <div class="cs-cues">
+          <div class="cs-cue th"><span data-t="colCue">CUE</span><span data-t="colTc">TIMECODE</span><span data-t="colSec">SECTION</span><span data-t="colFx">EFFET</span></div>
+          <div id="csCues"></div>
+        </div>
+        <div class="cs-foot">
+          <span class="cs-pill" id="csLtc"></span>
+          <span class="cs-pill" id="csMtc"></span>
+          <span class="cs-pill" id="csExp"></span>
+          <button class="cs-test" id="csTest">TEST 10 S</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- écran LUMIÈRE : cues grandMA3, cue en cours, sorties timecode, fichiers, test d'envoi -->
+  <main id="lumiere" class="lm" data-screen="lumiere" hidden>
+    <section class="lm-head">
+      <div class="lm-title">
+        <h1 class="rc-h1" data-t="lmTitle">LUMIÈRE · GRANDMA3</h1>
+        <span class="rc-meta" id="lmMeta"></span>
+      </div>
+      <div class="lm-now rc-inset" id="lmNow">
+        <div class="k" data-t="lmNow">CUE EN COURS</div>
+        <div class="lm-now-row"><span class="n" id="lmNowN">—</span><span class="tc" id="lmNowTc"></span><span class="nm" id="lmNowName"></span></div>
+        <div class="fx" id="lmNowFx"></div>
+      </div>
+    </section>
+    <p class="cs-msg" id="lmMsg" hidden></p>
+    <div class="lm-body">
+      <section class="cs-panel lm-cues">
+        <div class="cs-ph"><span data-t="lmCues">CUES</span><span class="cs-ro" data-t="lmFxRo">EFFETS SUGGÉRÉS · LECTURE SEULE</span></div>
+        <div class="cs-cue wide th"><span data-t="colCue">CUE</span><span data-t="colTc">TIMECODE</span><span data-t="colSec">SECTION</span><span data-t="colType">TYPE</span><span data-t="colFx">EFFET</span></div>
+        <div class="lm-list" id="lmList"></div>
+      </section>
+      <aside class="lm-side">
+        <section class="cs-panel">
+          <div class="cs-ph"><span data-t="lmOut">SORTIES TIMECODE</span></div>
+          <div class="lm-kv" id="lmKv"></div>
+          <div class="lm-pills"><span class="cs-pill" id="lmLtc"></span><span class="cs-pill" id="lmMtc"></span><span class="cs-pill" id="lmExp"></span></div>
+          <div class="lm-test">
+            <button class="cs-test" id="lmTest">TEST 10 S</button>
+            <p class="rc-note" data-t="lmOneway"></p>
+          </div>
+        </section>
+        <section class="cs-panel">
+          <div class="cs-ph"><span data-t="lmFiles">FICHIERS GRANDMA3</span></div>
+          <div class="rc-files lm-files" id="lmFiles"></div>
+          <p class="rc-note" data-t="lmUsb"></p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="rc-foot" data-screen="travail">
+    <div class="rc-group">
+      <button class="rc-btn" id="bHome" data-tt="tHome" aria-label="Début"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-8 6 8 6M6 6v12"/></svg></button>
+      <button class="rc-btn" id="bStop" data-tt="tStop" aria-label="Stop"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg></button>
+      <button class="rc-btn play" id="bPlay" data-tt="tPlay" aria-label="Lecture"><svg id="icPlay" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg><svg id="icPause" hidden width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+      <button class="rc-btn" id="bLoop" data-tt="tLoop" aria-label="Boucle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg></button>
+      <button class="rc-btn" id="bNext" data-tt="tNext" aria-label="Section suivante"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l8 6-8 6M18 6v12"/></svg></button>
+    </div>
+    <div class="rc-group tv-chips">
+      <span class="rc-chip" id="cLoop">—</span>
+      <button class="rc-chip" id="cRamp">—</button>
+      <button class="rc-chip" id="cClick">CLICK ON</button>
+      <button class="rc-chip" id="cVoice">VOIX ON</button>
+    </div>
+    <div class="rc-leds" style="margin-left:auto">
+      <span class="rc-led" id="ledReaper"><i></i>REAPER</span>
+      <span class="rc-led" id="ledPrompt"><i></i><span data-t="ledPrompt">PROMPTEUR</span><span id="ledPromptN"></span></span>
+      <span class="rc-led" id="ledLtc"><i></i>LTC</span>
+    </div>
+  </footer>
+</div>
+
+<!-- export -->
+<div class="rc-veil" id="expVeil">
+  <div class="rc-pop" role="dialog" aria-labelledby="expH">
+    <h2 id="expH" data-t="expTitle">EXPORTER</h2>
+    <h3 data-t="expStems">INSTRUMENTS</h3>
+    <div class="rc-row" id="expStems"></div>
+    <div class="rc-row" style="margin-top:6px">
+      <button class="rc-btn sm" id="expAll" data-t="all">TOUS</button>
+      <button class="rc-btn sm" id="expNone" data-t="none">AUCUN</button>
+      <label class="rc-check"><input type="checkbox" id="expClick"><span data-t="withClick">avec le click</span></label>
+    </div>
+    <h3 data-t="expRange">RÉGION</h3>
+    <div class="rc-row">
+      <label class="rc-check"><input type="radio" name="rng" value="song" checked><span data-t="rSong">morceau entier</span></label>
+      <label class="rc-check"><input type="radio" name="rng" value="section"><span data-t="rSection">section</span></label>
+      <select class="rc-select" id="expSection"></select>
+    </div>
+    <div class="rc-row" style="margin-top:6px">
+      <label class="rc-check"><input type="radio" name="rng" value="bars"><span data-t="rBars">mesures</span></label>
+      <input class="rc-input num" id="expFrom" type="number" min="1" value="1" aria-label="de">
+      <span>→</span>
+      <input class="rc-input num" id="expTo" type="number" min="1" value="8" aria-label="à">
+      <label class="rc-check"><input type="radio" name="rng" value="selection"><span data-t="rSel">sélection REAPER</span></label>
+    </div>
+    <h3 data-t="expMode">FICHIERS</h3>
+    <div class="rc-row">
+      <label class="rc-check"><input type="radio" name="mode" value="separate" checked><span data-t="mSep">un fichier par instrument</span></label>
+      <label class="rc-check"><input type="radio" name="mode" value="mix"><span data-t="mMix">tout mixé en un fichier</span></label>
+    </div>
+    <h3 data-t="expFormat">FORMAT</h3>
+    <div class="rc-row">
+      <label class="rc-check"><input type="radio" name="fmt" value="mp3" checked><span>MP3</span></label>
+      <select class="rc-select" id="expKbps"><option>128</option><option>192</option><option>256</option><option selected>320</option></select>
+      <span class="rc-note">kbit/s</span>
+      <label class="rc-check"><input type="radio" name="fmt" value="wav"><span>WAV 24 bits</span></label>
+    </div>
+    <div class="rc-row" style="margin-top:16px">
+      <button class="rc-btn sm sig" id="expGo" data-t="expGo">EXPORTER</button>
+      <button class="rc-btn sm" id="expClose" data-t="close">FERMER</button>
+      <div class="rc-bar" style="flex:1;min-width:80px"><i id="expProg"></i></div>
+    </div>
+    <p class="rc-note" id="expMsg"></p>
+    <div class="rc-files" id="expFiles"></div>
+  </div>
+</div>
+
+<!-- rampe de vitesse -->
+<div class="rc-veil" id="rampVeil">
+  <div class="rc-pop" role="dialog" aria-labelledby="rampH" style="width:min(420px,100%)">
+    <h2 id="rampH" data-t="rampTitle">RAMPE DE VITESSE</h2>
+    <p class="rc-note" data-t="rampHelp"></p>
+    <div class="rc-row">
+      <span data-t="rampFrom">de</span><input class="rc-input num" id="rFrom" type="number" min="50" max="100" step="1" value="85"><span>%</span>
+      <span data-t="rampTo">à</span><input class="rc-input num" id="rTo" type="number" min="50" max="100" step="1" value="100"><span>%</span>
+    </div>
+    <div class="rc-row" style="margin-top:8px">
+      <span data-t="rampN">en</span><input class="rc-input num" id="rN" type="number" min="2" max="32" step="1" value="8"><span data-t="rampPasses">passages</span>
+    </div>
+    <p class="rc-note" id="rampSec"></p>
+    <div class="rc-row" style="margin-top:12px">
+      <button class="rc-btn sm sig" id="rGo" data-t="rampGo">LANCER</button>
+      <button class="rc-btn sm" id="rOff" data-t="rampOff">ARRÊTER</button>
+      <button class="rc-btn sm" id="rClose" data-t="close">FERMER</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN de la fenêtre ReaCue -->
+<div class="rc-veil" id="pinVeil">
+  <div class="rc-pop" role="dialog" aria-labelledby="pinH" style="width:min(360px,100%)">
+    <h2 id="pinH">PIN</h2>
+    <p class="rc-note" data-t="pinHelp"></p>
+    <div class="rc-row">
+      <input class="rc-input num" id="pinIn" inputmode="numeric" maxlength="4" autocomplete="off" style="width:110px;font-size:18px">
+      <button class="rc-btn sm sig" id="pinOk">OK</button>
+      <button class="rc-btn sm" id="pinCancel" data-t="cancel">ANNULER</button>
+    </div>
+    <p class="rc-note bad" id="pinErr"></p>
+  </div>
+</div>
+
+<div class="rc-toast" id="toast"></div>
+<script src="reacue_studio/core.js"></script>
+<script src="reacue_studio/travail.js"></script>
+<script src="reacue_studio/biblio.js"></script>
+<script src="reacue_studio/groupe.js"></script>
+<script src="reacue_studio/concert.js"></script>
+</body>
+</html>

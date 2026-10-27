@@ -135,7 +135,7 @@ def test_tab_present_cues_timecode_and_pills(concert, tmp_path, lang):
     assert ("Lumière" if fr else "Lighting") in T and ("Réglages" if fr else "Settings") in T, T
     assert g.state.persist["tab"] == "lighting"
     # cues exportés : n°, timecode (départ 01:00:00:00, 25 i/s), nom ; timecode actuel
-    assert any(t.endswith("exportés" if fr else "exported") for t in T), T
+    assert any(t.upper().endswith("EXPORTÉS" if fr else "EXPORTED") for t in T), T
     for s in ("01:00:04:00", "01:00:12:00", "01:00:30:00", "Intro", "Couplet 1", "Refrain 1"):
         assert s in T, (s, T)
     assert "01:00:00:00" in T and any(t.startswith("temps projet 0:00 + départ" if fr else "project time 0:00 + start")
@@ -170,7 +170,8 @@ def test_tab_present_cues_timecode_and_pills(concert, tmp_path, lang):
     assert M.current(M.load().cues, 13.0) == 2
     x, y = W.text_xy(g, "Couplet 1")
     rects = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "rect"]
-    hl = [r for r in rects if r[2] <= y <= r[2] + r[4] and round(r[5] * 255) == 29 and round(r[6] * 255) == 158]
+    sig = [int(v) for v in L.eval("REACUE_CTX.U.SIG").values()]          # repère orange du cue en cours
+    hl = [r for r in rects if r[2] <= y <= r[2] + r[4] and [round(c * 255) for c in r[5:8]] == sig]
     assert hl, "ligne du cue en cours non surlignée"
     assert "01:00:13:00" in TL.texts(g)                                  # timecode actuel = temps projet + départ
     g.state.play = 0
@@ -180,7 +181,7 @@ def test_cues_from_regions_message_and_stale(concert, tmp_path):
     L, g, _ = song_rt(concert, tmp_path, publish=False, gma3_fps=30)
     open_lighting(L, g)
     T = TL.texts(g)
-    assert any(t.endswith("calculés depuis les régions") for t in T), T
+    assert any(t.upper().endswith("CALCULÉS DEPUIS LES RÉGIONS") for t in T), T
     assert any(t.startswith("Rien n'est encore exporté") for t in T), T
     assert "00:00:04:00" in T and "Refrain 1" in T
     # régions avec noms en double : numérotées comme l'export (Refrain, Refrain (2))
@@ -205,7 +206,7 @@ def test_concert_cues_from_published_prompter(concert):
     L.execute(EXTRA)
     open_lighting(L, g)
     T = TL.texts(g)
-    assert any(t.endswith("exportés") for t in T), T
+    assert any(t.upper().endswith("EXPORTÉS") for t in T), T
     M = tab(L)
     cues = list(M.load().cues.values())
     data = json.loads(res.prompter.read_text(encoding="utf-8"))

@@ -770,10 +770,10 @@ return function(ctx)
       U.set(col, over and 0.95 or 0.72); gfx.rect(bx, y, bw - 2, H, 1)
       if dt then
         U.set(U.WARN); gfx.rect(bx, y, bw - 2, 5, 1)
-        U.set(U.WARN); gfx.roundrect(bx, y, bw - 3, H - 1, 4, 1)
+        U.frame(bx, y, bw - 2, H, U.WARN)
       end
       if sel == k then
-        U.set(U.INK); gfx.roundrect(bx, y, bw - 3, H - 1, 4, 1); gfx.roundrect(bx + 1, y + 1, bw - 5, H - 3, 4, 1)
+        U.frame(bx, y, bw - 2, H, U.INK); U.frame(bx + 1, y + 1, bw - 4, H - 2, U.INK)
       end
       if bw > 22 then
         local nm = U.fit(r.name, bw - 8, 11, true)
@@ -951,7 +951,7 @@ return function(ctx)
       local rw = U.text_w(right, 12)
       local name_w = w - tools_w - rw - 24
       local over = U.over(x, y, name_w, rh)
-      U.text(U.fit(r.name, name_w, 14, inside), x + 6, y + 4, 14, over and U.INK or { 220, 220, 224 }, inside)
+      U.text(U.fit(r.name, name_w, 14, inside), x + 6, y + 4, 14, over and U.INK or U.INK2, inside)
       if over then U.hover_tip = string.format(t("sel_line"), r.name, r.bar, r.len) .. (dt and ("  —  " .. dt) or "") end
       if over and U.clicked then sel = k; listen(r) end
       U.text(right, x + w - tools_w - rw - 10, y + 5, 12, dt and U.WARN or U.MUTED)

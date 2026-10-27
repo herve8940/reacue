@@ -16,7 +16,9 @@ pytest.importorskip("lupa")
 import test_concert_lua as TL  # noqa: E402  (API REAPER simulée + concert de démonstration)
 
 ROOT = Path(__file__).resolve().parents[1]
-PAGE = (ROOT / "reacue_mcp" / "web" / "prompteur.html").read_text(encoding="utf-8")
+WEB = ROOT / "reacue_mcp" / "web"
+PAGE = (WEB / "prompteur.html").read_text(encoding="utf-8")
+CTYPES = {".css": "text/css", ".js": "application/javascript", ".woff2": "font/woff2"}
 
 TXT = {
     "fr": {"pick": "Régie", "state_play": "Lecture", "state_stop": "Arrêt", "pin4": "4 chiffres.",
@@ -69,6 +71,16 @@ class Fake:
                     return self.send(PAGE, "text/html; charset=utf-8")
                 if path == "/reacue_song.json":
                     return self.send(fake.song, "application/json")
+                if path.startswith("/reacue_studio/") and ".." not in path:     # base commune (style, core.js, polices)
+                    f = WEB / urllib.parse.unquote(path.lstrip("/"))
+                    if f.is_file():
+                        b = f.read_bytes()
+                        self.send_response(200)
+                        self.send_header("Content-Type", CTYPES.get(f.suffix, "application/octet-stream"))
+                        self.send_header("Content-Length", str(len(b)))
+                        self.end_headers()
+                        self.wfile.write(b)
+                        return
                 if path.startswith("/_/"):
                     out, st = [], fake.st
                     with fake.lock:
@@ -206,18 +218,22 @@ def test_regie_end_to_end(TL_concert, lang):
             # PIN mémorisé après rechargement ; autres rôles : aucune requête Régie
             pg.reload(); pg.wait_for_timeout(800)
             assert pg.is_visible("#regie") and tx["pin_foot"] in pg.inner_text("#rFootL")
-            # musiciens : seulement l'état des stems (« ton stem est coupé / joué ») ; vue générale : rien
+            # musiciens : seulement l'état des stems (« ton stem est coupé / joué ») et la vitesse / transposition
+            # (ReaCue/studio, lecture seule) ; vue générale : vitesse / transposition seulement ; jamais la Régie
             fake.M.mix_toggle(fake.C, "drums")
             for r in ["drums", "vocals", "all"]:
                 pg.evaluate(f"localStorage.setItem('reacue_role','{r}')"); pg.reload(); pg.wait_for_timeout(900)
                 assert not pg.is_visible("#regie")
                 n0 = len(fake.log)
                 pg.wait_for_timeout(400)
-                got = {x for x in fake.log[n0:] if x.startswith(("GET/EXTSTATE", "SET/EXTSTATE"))}
+                # présence (écran GROUPE de ReaCue Studio) : battement ReaCue/hb<n> et lecture de ReaCue/band, à part
+                got = {x for x in fake.log[n0:] if x.startswith(("GET/EXTSTATE", "SET/EXTSTATE"))
+                       and not x.startswith(("GET/EXTSTATE/ReaCue/band", "SET/EXTSTATE/ReaCue/hb"))}
                 if r == "all":
-                    assert not got and not pg.is_visible("#stemNote")
+                    assert got == {"GET/EXTSTATE/ReaCue/studio"}, got
+                    assert not pg.is_visible("#stemNote")
                 else:
-                    assert got == {"GET/EXTSTATE/ReaCue/mix"}, got
+                    assert got == {"GET/EXTSTATE/ReaCue/mix", "GET/EXTSTATE/ReaCue/studio"}, got
                     assert pg.inner_text("#stemNote") == (tx["stem_cut"] if r == "drums" else tx["stem_on"])
             br.close()
     finally:

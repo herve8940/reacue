@@ -121,8 +121,12 @@ def test_uninstall(reaper, monkeypatch, tmp_path):
     monkeypatch.setattr(S, "claude_config_path", lambda *a, **k: tmp_path / "none.json")
     (reaper / "Scripts" / "__startup.lua").write_text("-- autre\n", encoding="utf-8")
     run_install(reaper)
-    (reaper / "reaper_www_root").mkdir()
-    (reaper / "reaper_www_root" / "prompteur.html").write_text("x")
+    www = reaper / "reaper_www_root"
+    assert (www / "studio.html").exists() and (www / "reacue_studio" / "fonts").is_dir()   # pages copiées
+    (www / "prompteur.html").write_text("x")
+    (www / "reacue_peaks.json").write_text("{}")
+    (www / "reacue_exports").mkdir()
+    (www / "reacue_exports" / "a_x.mp3").write_text("x")
     (reaper / "ReaCueMCP" / "last_session.json").write_text("{}")
     assert S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no"]) == 0
     assert not (reaper / "Scripts" / "ReaCue").exists()
@@ -130,6 +134,8 @@ def test_uninstall(reaper, monkeypatch, tmp_path):
     assert "REACUE_" not in (reaper / "reaper-kb.ini").read_text(encoding="utf-8")
     assert (reaper / "ReaCueMCP" / "last_session.json").exists()            # données conservées
     assert not (reaper / "reaper_www_root" / "prompteur.html").exists()
+    assert not (www / "studio.html").exists() and not (www / "reacue_studio").exists()
+    assert not (www / "reacue_peaks.json").exists() and not (www / "reacue_exports").exists()
     S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no", "--purge"])
     assert not (reaper / "ReaCueMCP").exists()
 

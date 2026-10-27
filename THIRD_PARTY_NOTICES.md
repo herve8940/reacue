@@ -34,6 +34,13 @@ downloads weights under **CC BY-NC-SA 4.0 (non-commercial)**. The rest of ReaCue
 | Composant / Component | Rôle / Role | Auteurs / Authors | Licence | Fichier |
 |---|---|---|---|---|
 | [luaqrcode](https://github.com/speedata/luaqrcode) | QR code du prompteur / prompter QR code | Patrick Gundlach and contributors | BSD 3 clauses / 3-clause BSD | `reaper/ReaCue_qrcode.lua` (copié sans modification, en-tête de licence conservé / unmodified, licence header kept) |
+| [IBM Plex Sans, IBM Plex Mono](https://github.com/IBM/plex) | Polices de ReaCue Studio / ReaCue Studio fonts | IBM Corp. | SIL Open Font License 1.1 (OFL-1.1) | `reacue_mcp/web/reacue_studio/fonts/ibm-plex-*.woff2` (sous-ensemble latin des paquets npm `@fontsource/ibm-plex-sans` et `@fontsource/ibm-plex-mono` 5.3.0, non modifié / latin subset, unmodified) ; licences : `OFL-IBM-Plex-Sans.txt`, `OFL-IBM-Plex-Mono.txt` |
+| [Barlow Condensed](https://github.com/jpt/barlow) | Titres de ReaCue Studio / ReaCue Studio headings | The Barlow Project Authors | SIL Open Font License 1.1 (OFL-1.1) | `reacue_mcp/web/reacue_studio/fonts/barlow-condensed-*.woff2` (`@fontsource/barlow-condensed` 5.3.0, sous-ensemble latin, non modifié / latin subset, unmodified) ; licence : `OFL-Barlow-Condensed.txt` |
+
+Les polices sont servies par REAPER avec la page `studio.html` (aucun accès internet) ; l'OFL permet de les
+redistribuer avec un logiciel, à condition de garder leur licence et de ne pas les vendre seules. / The fonts are
+served by REAPER with `studio.html` (no internet access); the OFL allows bundling them with software, provided
+their licence is kept and they are not sold on their own.
 
 ## Modèles téléchargés par l'utilisateur / Models downloaded by the user
 
@@ -74,7 +81,8 @@ installer; never redistributed by this repository.
 |---|---|---|
 | mcp (Model Context Protocol SDK) | `.venv` | MIT |
 | librosa | `.venv`, `.venv-structure` | ISC |
-| soundfile | tous / all | BSD 3-Clause |
+| soundfile | tous / all | BSD 3-Clause (la roue embarque libsndfile, LGPL-2.1, avec LAME et mpg123, LGPL : export MP3 de ReaCue Studio / the wheel bundles libsndfile, LGPL-2.1, with LAME and mpg123, LGPL: ReaCue Studio MP3 export) |
+| lameenc (facultatif / optional) | `.venv`, si soundfile < 0.13 / if soundfile < 0.13 | LGPL-3.0-or-later (non installé par défaut / not installed by default) |
 | numpy | tous / all | BSD-3-Clause (+ 0BSD, MIT, Zlib, CC0-1.0 pour des parties incluses / for bundled parts) |
 | scipy | tous / all | BSD |
 | demucs | `.venv-demucs` | MIT |

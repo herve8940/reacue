@@ -114,9 +114,9 @@ return function(ctx)
     local miss = 0
     for _, it in ipairs(A.list) do if not it.ok then miss = miss + 1 end end
     local col = miss == 0 and U.ACCENT or U.WARN
-    U.set(col, 0.22); gfx.rect(x, y, w, 32, 1)
-    U.set(col); gfx.roundrect(x, y, w - 1, 31, 6, 1)
-    U.text(miss == 0 and t("all_ok") or string.format(t("n_missing"), miss), x + 12, y + 7, 15, U.INK, true)
+    U.panel(x, y, w, 32, U.INSET)
+    U.set(col); gfx.rect(x, y, 3, 32, 1); gfx.circle(x + 16, y + 16, 5, 1, 1)
+    U.text(miss == 0 and t("all_ok") or string.format(t("n_missing"), miss), x + 28, y + 7, 15, U.INK, true)
     y = y + 44
     for k, it in ipairs(A.list) do
       local c = it.ok and U.ACCENT or (it.warn and U.WARN or U.RED)

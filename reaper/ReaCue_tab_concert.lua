@@ -317,7 +317,8 @@ return function(ctx)
       local on = picked[p.path]
       local cov = U.over(cbx, yy + 3, 18, 18)
       if cov then U.hover = "bsel" .. k end
-      U.set(on and U.BLUE or U.MUTED, on and 1 or 0.7); gfx.roundrect(cbx, yy + 3, 17, 17, 4, 1)
+      U.set(U.INSET); gfx.rect(cbx, yy + 3, 17, 17, 1)
+      U.set(on and U.SIG or U.MUTED, on and 1 or 0.7); gfx.rect(cbx, yy + 3, 17, 17, 0)
       if on then gfx.rect(cbx + 4, yy + 7, 10, 10, 1) end
       if cov and U.clicked then picked[p.path] = (not on) or nil end
       if U.ibutton("addp" .. k, "plus", x + w - 28, yy + 1, 26, ROWH - 5) then
