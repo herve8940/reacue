@@ -57,7 +57,7 @@ language with Claude (MCP server).
 - [PDF chart](#pdf-chart)
 - [Lighting: grandMA3 export](#lighting-grandma3-export)
 - [Settings](#settings)
-- [Optional: drive ReaCue with Claude (MCP)](#optional-drive-reacue-with-claude-mcp)
+- [Optional: drive ReaCue with an AI assistant (MCP)](#optional-drive-reacue-with-an-ai-assistant-mcp-claude-antigravity-cursor-etc)
 - [Known limitations](#known-limitations)
 - [Troubleshooting / FAQ](#troubleshooting--faq)
 - [Uninstall](#uninstall)
@@ -146,8 +146,8 @@ On the musicians' phones and tablets (web prompter):
      developer”), right-click it → *Open* → *Open*. Alternative in Terminal: `bash "Install ReaCue.command"`.
    - **Windows**: double-click **`Install ReaCue.bat`**. If SmartScreen shows a warning, click
      *More info* → *Run anyway*.
-4. Answer the questions: language (`fr` / `en`), whether to register ReaCue in Claude Desktop
-   (optional, answer *no* if you don't use Claude) and whether to install **stem separation** (optional,
+4. Answer the questions: language (`fr` / `en`), whether to register ReaCue in your AI assistant(s) / MCP server
+   (Claude Desktop, Google Antigravity, Cursor, JSON export — optional) and whether to install **stem separation** (optional,
    about 1 GB to download, 5 to 15 minutes; see [Stem separation](#stem-separation-optional)).
    Last question: **SongFormer structure analysis**, offered by default (*Enter* = yes); then type
    **`I accept`** to accept the models' licences (non-commercial use). Models already on the computer are
@@ -237,12 +237,13 @@ models and measures the speed of your computer. ReaCue's own environment is not 
 
 Details:
 
-- Duration: about **5 to 8 minutes for a 4-minute song** on a recent Intel Mac (4 cores), faster on Apple
-  Silicon. The computer's processor does the work (no graphics card needed).
+- Duration: **5 to 20 seconds** with a dedicated GPU (NVIDIA GeForce/RTX with CUDA, Apple Silicon Metal/MPS); about **5 to 8 minutes** in CPU processor mode.
+- **Automatic hardware audit and realignment**: every time `Install ReaCue.bat` (or `installation.bat`) or `Install ReaCue Stems.bat` is run, the installer analyzes your machine (detecting dedicated GPU, VRAM, Blackwell architecture/RTX 50-series requiring CUDA 12.8, Apple Silicon or CPU). If a hardware change or mismatched dependencies are detected (e.g. CPU PyTorch installed on a machine with a dedicated GPU, or outdated CUDA versions), it automatically uninstalls the mismatched packages, installs the optimal hardware-accelerated PyTorch wheel, and configures the recommended model in `reacue_settings.json` (`htdemucs_6s` on GPU $\ge 8\text{ GB}$, `htdemucs` on CPU). If the environment is already optimal, no unnecessary download is performed.
+
 - The stems are written next to the original file, in `<song name>-stems/htdemucs_6s/`, and keep the
   original file name (key and tempo in the name are still read by ReaCue). Running the action again on the
   same file imports them immediately, without separating again.
-- `stems_model` in the settings: `"htdemucs_6s"` (6 stems, default) or `"htdemucs"` (4 stems: vocals,
+- `stems_model` in the settings: `"htdemucs_6s"` (6 stems, default), `"htdemucs_ft"` (4 stems HQ fine-tuned, recommended with GPU) or `"htdemucs"` (4 stems: vocals,
   drums, bass, other — guitar and keys stay together in “other”).
 - Quality: vocals, drums and bass are very good; guitar and especially piano are less clean than with
   commercial services (some bleed). Lead and rhythm guitars are not separated, so the solo detection
@@ -268,6 +269,8 @@ It creates a separate Python environment `.venv-structure` in the ReaCue folder,
 its two dependencies (MuQ, MusicFM) at fixed versions into `structure/`, downloads the models once (into
 `structure/hf` and SongFormer's own folder), runs a short test and shows `STRUCTURE_OK` with the speed of
 your computer. About **3 GB** to download, 10 to 40 minutes. ReaCue's own environment is not touched.
+
+- **Hardware acceleration and automatic audit**: as with Demucs, the installer audits `.venv-structure` and installs the optimal PyTorch build for your machine (CUDA 12.8 for Blackwell / RTX 50 series, CUDA 12.4 for other NVIDIA GPUs, Metal MPS for Apple Silicon, or standard CPU). On a dedicated GPU, analyzing a full 4-minute song takes only about **1 minute** (compared to 3 to 5 minutes on CPU). If the environment is already optimal, no redownload is performed.
 
 **Models already downloaded**: before downloading, the installer looks for models already on the computer —
 another copy of SongFormer (for example `~/Documents/ReaCue-labo/SongFormer/src/SongFormer/ckpts`, files
@@ -731,7 +734,7 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `click_to_master` | `true` | `false` = click and voice only on `click_hw_output` (in-ears) |
 | `click_hw_output` | `null` | hardware output index (0 = outputs 1/2, 2 = 3/4…) |
 | `tempo_mode` | `"auto"` | `auto`, `constant` (one tempo) or `beatmap` (one tempo per bar) |
-| `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems) or `"htdemucs"` (4 stems) |
+| `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems), `"htdemucs_ft"` (4 stems HQ) or `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
 | `words_engine` | `"auto"` | lyrics: `"auto"` (word by word when the component is installed) or `"off"` (lines only) |
 | `words_language` | `"auto"` | sung language for word timing: `"auto"` (guessed from the text), `"fr"` or `"en"` |
@@ -753,11 +756,15 @@ Voices: on Windows, extra voices (e.g. French) are added in *Settings → Time &
 voices visible to SAPI (“Desktop” voices) are used. If no voice is available, everything works except the
 spoken cues (a warning is shown).
 
-## Optional: drive ReaCue with Claude (MCP)
+## Optional: drive ReaCue with an AI assistant (MCP: Claude, Antigravity, Cursor, etc.)
 
-If you use [Claude Desktop](https://claude.ai/download), answer *yes* during installation (or run the
-installer again). The `reacue` server is added to Claude Desktop's configuration (a backup is kept as
-`claude_desktop_config.json.bak-reacue`). Restart Claude Desktop, then ask for example:
+ReaCue includes a local server compatible with the open **MCP (Model Context Protocol)** standard. During installation, you can automatically register it in:
+- **Claude Desktop** (`claude_desktop_config.json`)
+- **Google Antigravity** (`~/.gemini/config/mcp_config.json`)
+- **Cursor** (`~/.cursor/mcp.json` — supports OpenAI / ChatGPT / Codex models)
+- **Generic JSON export** (`ReaCueMCP/reacue_mcp_config.json` for ChatGPT via MCP bridge, VS Code / Cline, etc.)
+
+A backup of your previous configuration is always kept (e.g. `.bak-reacue`). Restart your assistant, then ask for example:
 
 - “Prepare the song in REAPER.”
 - “The chorus starts at bar 29, not 25.” → `set_sections`
