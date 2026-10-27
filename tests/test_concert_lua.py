@@ -78,16 +78,18 @@ local _moc = reaper.Main_OnCommand
 reaper.Main_OnCommand=function(c, f) if c==40671 then state.toggles[c] = 1 - (state.toggles[c] or 0) end; _moc(c, f) end
 os.execute = function(cmd) table.insert(state.shell, cmd); return true end
 local function op(...) table.insert(state.ops, {...}) end
+-- polices « installées » (largeur moyenne d'un caractère / taille) ; absente : largeur par défaut 0,55
+FONTW = FONTW or { Menlo = 0.62, ["Avenir Next Condensed"] = 0.6, Consolas = 0.62, ["Arial Narrow"] = 0.6 }
 gfx = setmetatable({w=540,h=300,mouse_x=0,mouse_y=0,mouse_cap=0,x=0,y=0}, {__index=function(t,k)
   return function(...)
     local a = {...}
     if k=="getchar" then return 0
-    elseif k=="measurestr" then local s=a[1]; return utf8.len(s)*state.font[1]*0.55, state.font[1]
+    elseif k=="measurestr" then local s=a[1]; return utf8.len(s)*state.font[1]*(FONTW[state.font[3] or ""] or 0.55), state.font[1]
     elseif k=="dock" then if a[1] and a[1] >= 0 then state.dock=a[1] end return state.dock
     elseif k=="set" then state.color={a[1],a[2],a[3],a[4] or 1}
-    elseif k=="setfont" then state.font={a[3] or 14, a[4] or 0}
+    elseif k=="setfont" then state.font={a[3] or 14, a[4] or 0, a[2]}
     elseif k=="init" then if a[2] then gfx.w=a[2] end if a[3] then gfx.h=a[3] end
-    elseif k=="drawstr" then op("text", gfx.x, gfx.y, a[1], state.font[1], state.font[2], state.color[1], state.color[2], state.color[3], state.color[4])
+    elseif k=="drawstr" then op("text", gfx.x, gfx.y, a[1], state.font[1], state.font[2], state.color[1], state.color[2], state.color[3], state.color[4], state.font[3])
     elseif k=="rect" then op("rect", a[1],a[2],a[3],a[4], state.color[1], state.color[2], state.color[3], state.color[4], a[5] or 1)
     elseif k=="roundrect" then op("rrect", a[1],a[2],a[3],a[4], state.color[1], state.color[2], state.color[3], state.color[4])
     elseif k=="circle" then op("circle", a[1],a[2],a[3], state.color[1], state.color[2], state.color[3], state.color[4])
@@ -177,14 +179,26 @@ def frame(L, g, click=None):
     g.state.deferred()
 
 
+class Texts(list):
+    """textes dessinés ; « in » ignore la casse : titres et étiquettes en capitales (thème Studio pro)"""
+    def __contains__(self, s):
+        if list.__contains__(self, s):
+            return True
+        return isinstance(s, str) and s.upper() in {t.upper() for t in self if isinstance(t, str)}
+
+
 def texts(g):
-    return [list(o.values())[3] for o in g.state.ops.values() if list(o.values())[0] == "text"]
+    return Texts(list(o.values())[3] for o in g.state.ops.values() if list(o.values())[0] == "text")
 
 
 def find_text(g, s):
     for o in g.state.ops.values():
         o = list(o.values())
         if o[0] == "text" and s in o[3]:
+            return o[1], o[2]
+    for o in g.state.ops.values():             # titres en capitales
+        o = list(o.values())
+        if o[0] == "text" and s.upper() in o[3].upper():
             return o[1], o[2]
     return None
 
@@ -307,7 +321,7 @@ def test_window_detached(concert, lang):
     st.cursor = res.songs[1]["bar1"] + 1.0
     frame(L, g); frame(L, g)
     T = texts(g)
-    assert "Second Demo" in T and "2 / 3" in T, T
+    assert "Second Demo" in T and ("MORCEAU 2 / 3" if lang == "fr" else "SONG 2 / 3") in T, T   # espace avant le n°
     nxt = "Ensuite : 3 · Third Demo" if lang == "fr" else "Next: 3 · Third Demo"
     assert any(t.startswith(nxt) for t in T), T
     assert any(("mesure" if lang == "fr" else "bar") in t and "BPM" in t for t in T), T
@@ -326,7 +340,7 @@ def test_window_detached(concert, lang):
     xy = find_text(g, "encore ?" if lang == "fr" else "again?"); frame(L, g, (xy[0] + 2, xy[1] - 12))
     assert st.play == 0                                                  # 2e appui : stop
     frame(L, g)
-    press(lab("Suivant", "Next"))                                        # à l'arrêt : Suivant en un appui
+    press(lab("SUIVANT", "NEXT"))                                        # à l'arrêt : Suivant en un appui (capitales)
     assert st.cursor == pytest.approx(res.songs[2]["start"])
     st.cursor = res.songs[1]["bar1"] + 1.0; frame(L, g)
     xy = find_text(g, "Solo"); assert xy

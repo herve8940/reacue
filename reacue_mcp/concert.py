@@ -960,6 +960,8 @@ def concert_prompter(res: ConcertResult, extras: bool = True, log=None) -> dict:
             act = out.get("activity") or {}
             grid, words, kit = out.get("chords"), out.get("lyrics"), out.get("drums")
         song = prompter.build_song(a, item, timeline, items, act, chords=grid, lyrics=words, drums=kit)
+        from . import library
+        library.attach(song, str(s.path))        # projet + notes de section (écran GROUPE de ReaCue Studio)
         song.update({"n": side["n"], "start_t": side["start"], "stop_t": side["stop"], "next_t": side["next"],
                      "next_title": res.songs[k + 1]["title"] if k + 1 < len(res.songs) else None})
         if warns:
@@ -976,6 +978,9 @@ def concert_prompter(res: ConcertResult, extras: bool = True, log=None) -> dict:
     except Exception:
         pass
     data["id"] = hashlib.md5(json.dumps(data, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
+    from . import library
+    for s, sg in zip(res.song_srcs, songs_out):      # résumés pour l'écran BIBLIO
+        library.record_song(sg, str(s.path), lighting=bool(data.get("lighting")))
     return data
 
 

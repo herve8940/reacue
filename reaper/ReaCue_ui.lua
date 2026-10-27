@@ -1,37 +1,155 @@
--- ReaCue : éléments d'interface de la fenêtre ReaCue (gfx) : couleurs, textes, boutons, icônes,
--- double appui, appui long. Aucun accès au projet ici.
--- ReaCue: UI kit of the ReaCue window (gfx): colours, text, buttons, icons, double tap, long press.
+-- ReaCue : éléments d'interface de la fenêtre ReaCue (gfx) : thème « Studio pro » (couleurs, polices), textes,
+-- boutons, afficheurs LCD, voyants, icônes, double appui, appui long. Aucun accès au projet ici.
+-- ReaCue: UI kit of the ReaCue window (gfx): “Studio pro” theme (colours, fonts), text, buttons, LCD readouts,
+-- LEDs, icons, double tap, long press.
 
 local U = {}
 
-U.BG = { 29, 29, 31 }
-U.PANEL = { 44, 44, 48 }
-U.PANEL2 = { 36, 36, 40 }
-U.INK = { 236, 236, 236 }
-U.MUTED = { 150, 150, 156 }
-U.ACCENT = { 29, 158, 117 }
-U.BLUE = { 55, 138, 221 }
-U.WARN = { 239, 159, 39 }
-U.RED = { 226, 75, 74 }
-U.GREY = { 120, 120, 126 }
-U.DARK = { 16, 16, 18 }
+-- thème « Studio pro » (même palette que ReaCue Studio, reacue_mcp/web/reacue_studio/base.css) ------------------
+-- Toutes les couleurs de la fenêtre viennent d'ici : les onglets n'utilisent que U.<NOM> (pas de RVB en dur).
+-- Les fenêtres gfx n'ont ni ombres ni arrondis fins : bords nets (rectangles, filets de 1 px).
+U.THEME = {
+  bg = { 0x16, 0x18, 0x1B },      -- fond
+  panel = { 0x1E, 0x21, 0x25 },   -- panneaux, en-tête, ligne d'aide
+  inset = { 0x0F, 0x11, 0x13 },   -- zones encastrées (afficheurs LCD, bandeau, listes)
+  well = { 0x12, 0x14, 0x17 },    -- creux (barre d'onglets, pastilles)
+  edge = { 0x0C, 0x0D, 0x0F },    -- bordures sombres
+  raise = { 0x2B, 0x2F, 0x35 },   -- boutons, reliefs
+  row = { 0x22, 0x26, 0x2B },     -- blocs à venir (setlist, sections)
+  slate = { 0x4A, 0x53, 0x61 },   -- bord des blocs sans couleur
+  now = { 0x3A, 0x2A, 0x1E },     -- bloc / ligne en cours
+  done = { 0x14, 0x16, 0x19 },    -- bloc joué
+  ink = { 0xE6, 0xE8, 0xEB },     -- texte
+  ink2 = { 0xB4, 0xBA, 0xC2 },    -- texte secondaire clair
+  mute = { 0x8A, 0x90, 0x99 },    -- gris (étiquettes)
+  dim = { 0x5E, 0x64, 0x6C },     -- gris sombre (éteint)
+  sig = { 0xFF, 0x8A, 0x3D },     -- orange : action principale, sélection, en cours
+  led = { 0x3B, 0xE3, 0x7A },     -- vert LED : lecture, OK
+  lcd = { 0xF2, 0xC2, 0x30 },     -- jaune LCD : afficheurs, attention
+  smpte = { 0x8F, 0xD1, 0xFF },   -- bleu : timecode, bascule active
+  red = { 0xFF, 0x4D, 0x4D },     -- erreur
+}
+local TH = U.THEME
+-- noms utilisés par les onglets (rôle -> couleur du thème)
+U.BG, U.PANEL2, U.INSET, U.WELL, U.EDGE = TH.bg, TH.panel, TH.inset, TH.well, TH.edge
+U.PANEL = TH.raise              -- boutons et barres en relief
+U.ROW, U.SLATE, U.NOW, U.DONE = TH.row, TH.slate, TH.now, TH.done
+U.INK, U.INK2, U.MUTED, U.GREY = TH.ink, TH.ink2, TH.mute, TH.dim
+U.SIG, U.LED, U.LCD, U.SMPTE = TH.sig, TH.led, TH.lcd, TH.smpte
+U.ACCENT = TH.led               -- état OK, progression, voyant
+U.BLUE = TH.smpte               -- information, tâche en cours
+U.WARN = TH.lcd                 -- attention, double appui armé
+U.RED = TH.red
+U.DARK = TH.bg                  -- texte sur fond clair ou coloré
 
+-- polices : texte (système), afficheurs LCD (monospace), titres (condensée grasse) -----------------------------
+-- La première police installée de la liste est retenue ; sinon la dernière (repli toujours présent).
+U.FONTS = {
+  mac = { sans = { "Helvetica" }, mono = { "Menlo", "Monaco", "Courier New" },
+          cond = { "Avenir Next Condensed", "Helvetica Neue Condensed Bold", "Arial Narrow", "Arial" } },
+  win = { sans = { "Arial" }, mono = { "Consolas", "Lucida Console", "Courier New" },
+          cond = { "Arial Narrow", "Bahnschrift SemiCondensed", "Arial" } },
+}
+local SLOT = { sans = 1, mono = 2, cond = 3 }
 U.FONT = "Helvetica"
-function U.init(is_windows) U.FONT = is_windows and "Arial" or "Helvetica" end
+local platform, faces = "mac", {}
+function U.init(is_windows)
+  platform = is_windows and "win" or "mac"
+  faces = {}
+  U.FONT = U.FONTS[platform].sans[1]
+end
+
+-- une police absente est remplacée par la police par défaut : même largeur qu'un nom inexistant
+local PROBE, NOFONT = "MWmw il1 0:É", "ReaCue-no-such-font"
+local function installed(face)
+  gfx.setfont(SLOT.cond, NOFONT, 40, 0)
+  local w0 = gfx.measurestr(PROBE)
+  gfx.setfont(SLOT.cond, face, 40, 0)
+  local w1 = gfx.measurestr(PROBE)
+  if (w0 or 0) <= 0 and (w1 or 0) <= 0 then return nil end      -- pas encore de fenêtre : on ne sait pas
+  return math.abs((w1 or 0) - (w0 or 0)) > 0.5
+end
+
+-- police retenue pour kind ("sans", "mono", "cond")
+function U.face(kind)
+  kind = SLOT[kind] and kind or "sans"
+  if faces[kind] then return faces[kind] end
+  local list = U.FONTS[platform][kind]
+  if #list == 1 then faces[kind] = list[1] return list[1] end
+  for i = 1, #list - 1 do
+    local ok = installed(list[i])
+    if ok == nil then return list[#list] end
+    if ok then faces[kind] = list[i] return list[i] end
+  end
+  faces[kind] = list[#list]
+  return faces[kind]
+end
+function U.reset_fonts() faces = {} end
+
+local function setfont(size, bold, kind)
+  kind = SLOT[kind] and kind or "sans"
+  if kind == "cond" then bold = true end
+  gfx.setfont(SLOT[kind], U.face(kind), size, bold and string.byte("b") or 0)
+end
+
+-- majuscules (titres) : accents français compris
+local UP = { ["à"] = "À", ["â"] = "Â", ["ä"] = "Ä", ["á"] = "Á", ["ç"] = "Ç", ["é"] = "É", ["è"] = "È", ["ê"] = "Ê",
+  ["ë"] = "Ë", ["î"] = "Î", ["ï"] = "Ï", ["í"] = "Í", ["ô"] = "Ô", ["ö"] = "Ö", ["ó"] = "Ó", ["ù"] = "Ù", ["û"] = "Û",
+  ["ü"] = "Ü", ["ú"] = "Ú", ["ÿ"] = "Ÿ", ["ñ"] = "Ñ", ["æ"] = "Æ", ["œ"] = "Œ" }
+function U.upper(s)
+  s = tostring(s or ""):upper()
+  return (s:gsub("[\xC3\xC5][\x80-\xBF]", function(c) return UP[c] or c end))
+end
 
 function U.rgb(r, g, b, a) gfx.set(r / 255, g / 255, b / 255, a or 1) end
 function U.set(c, a) U.rgb(c[1], c[2], c[3], a) end
 
-function U.text(s, x, y, size, c, bold)
-  gfx.setfont(1, U.FONT, size, bold and string.byte("b") or 0)
+-- font : nil (texte), "mono" (afficheurs), "cond" (titres, toujours en gras)
+function U.text(s, x, y, size, c, bold, font)
+  setfont(size, bold, font)
   U.set(c or U.INK)
   gfx.x, gfx.y = x, y
   gfx.drawstr(s)
 end
 
-function U.text_w(s, size, bold)
-  gfx.setfont(1, U.FONT, size, bold and string.byte("b") or 0)
+function U.text_w(s, size, bold, font)
+  setfont(size, bold, font)
   return (gfx.measurestr(s))
+end
+
+-- cadre net de 1 px
+function U.frame(x, y, w, h, c, a)
+  U.set(c or U.EDGE, a)
+  gfx.rect(x, y, w, h, 0)
+end
+
+-- panneau : fond + bordure sombre
+function U.panel(x, y, w, h, fill)
+  U.set(fill or U.PANEL2); gfx.rect(x, y, w, h, 1)
+  U.frame(x, y, w, h)
+end
+
+-- afficheur LCD : étiquette en petites capitales, valeur monospace (jaune ; bleu pour le timecode)
+-- renvoie la largeur utilisée (w si donné)
+function U.lcd(label, value, x, y, w, h, col, vsize)
+  vsize = vsize or 20
+  local vw = U.text_w(value, vsize, false, "mono")
+  w = w or math.max(vw, U.text_w(U.upper(label), 9)) + 24
+  U.set(U.INSET); gfx.rect(x, y, w, h, 1)
+  U.frame(x, y, w, h)
+  U.text(U.upper(label), x + 10, y + 5, 9, U.MUTED)
+  U.text(value, x + 10, y + h - vsize - 6, vsize, col or U.LCD, false, "mono")
+  return w
+end
+
+-- titre en majuscules condensées
+function U.title(s, x, y, size, c)
+  U.text(U.upper(s), x, y, size or 22, c or U.INK, true, "cond")
+end
+
+-- voyant (pastille ronde)
+function U.led(x, y, r, c, on)
+  U.set(on == false and U.GREY or (c or U.LED)); gfx.circle(x, y, r, 1, 1)
 end
 
 -- texte coupé à la largeur w (avec « … »), sans couper un caractère UTF-8
@@ -46,11 +164,11 @@ function U.fit_path(prefix, path, w, size, bold)
 end
 
 -- U.on_cut(s) : appelé quand un texte est coupé (tests : aucun libellé coupé dans les captures)
-function U.fit(s, w, size, bold)
+function U.fit(s, w, size, bold, font)
   s = tostring(s or "")
-  if U.text_w(s, size, bold) <= w then return s end
+  if U.text_w(s, size, bold, font) <= w then return s end
   if U.on_cut then U.on_cut(s) end
-  while #s > 1 and U.text_w(s .. "…", size, bold) > w do
+  while #s > 1 and U.text_w(s .. "…", size, bold, font) > w do
     local cut = utf8.offset(s, -1) or #s
     s = s:sub(1, math.max(1, cut - 1))
   end
@@ -83,23 +201,32 @@ function U.over(x, y, w, h)
   return mx >= x and mx < x + w and my >= y and my < y + h
 end
 
--- bouton ; style : nil, "primary", "on" (bascule active), "warn", "armed", "ghost"
+-- bouton ; style : nil, "primary" (orange), "on" (bascule active : clair), "warn" / "armed" (jaune), "ghost" (encastré)
+local STYLE = {
+  primary = { "sig", "dark" }, on = { "ink", "dark" }, warn = { "lcd", "dark" }, armed = { "lcd", "dark" },
+  ghost = { "inset", "ink" },
+}
+local function style_cols(style)
+  if style == true then style = "primary" end
+  local s = STYLE[style]
+  if not s then return U.PANEL, U.INK end
+  local fill = ({ sig = U.SIG, ink = U.INK, lcd = U.WARN, inset = U.INSET })[s[1]]
+  return fill, s[2] == "dark" and U.DARK or U.INK
+end
+U.style_cols = style_cols
+
 function U.button(id, label, x, y, w, h, style, size)
   local over = U.over(x, y, w, h)
   if over then U.hover = id end
-  if style == "primary" or style == true then U.set(U.ACCENT, over and 1 or 0.85)
-  elseif style == "on" then U.set(U.BLUE, over and 0.95 or 0.8)
-  elseif style == "warn" or style == "armed" then U.set(U.WARN, 1)
-  elseif style == "ghost" then U.set(U.BG, 1)
-  else U.set(U.PANEL, 1) end
-  gfx.rect(x, y, w, h, 1)
-  if over and (style == nil or style == "ghost") then U.set(U.INK, 0.08); gfx.rect(x, y, w, h, 1) end
-  U.set(over and U.INK or U.MUTED, 0.6); gfx.roundrect(x, y, w - 1, h - 1, 6, 1)
+  local fill, ink = style_cols(style)
+  U.set(fill); gfx.rect(x, y, w, h, 1)
+  if over then U.set(ink == U.DARK and U.DARK or U.INK, 0.1); gfx.rect(x, y, w, h, 1) end
+  U.frame(x, y, w, h, over and U.MUTED or U.EDGE, over and 0.7 or 1)
   size = size or (h <= 28 and 13 or 15)
-  local ink = (style == "warn" or style == "armed") and { 20, 20, 20 } or U.INK
-  label = U.fit(label, w - 10, size)
-  local tw = U.text_w(label, size)
-  U.text(label, x + (w - tw) / 2, y + (h - size) / 2 - 1, size, ink)
+  local bold = style == "primary" or style == true or style == "on"
+  label = U.fit(label, w - 10, size, bold)
+  local tw = U.text_w(label, size, bold)
+  U.text(label, x + (w - tw) / 2, y + (h - size) / 2 - 1, size, ink, bold)
   return over and U.clicked
 end
 
@@ -116,8 +243,8 @@ function U.press_button(id, label, x, y, w, h, col, dim, sub)
       press = nil
     end
   end
-  U.set(col, dim and 0.25 or (over and 1 or 0.85)); gfx.rect(x, y, w, h, 1)
-  U.set(over and U.INK or U.MUTED, dim and 0.35 or 0.6); gfx.roundrect(x, y, w - 1, h - 1, 6, 1)
+  U.set(col, dim and 0.22 or (over and 1 or 0.88)); gfx.rect(x, y, w, h, 1)
+  U.frame(x, y, w, h, over and U.INK or U.EDGE, over and 0.6 or 1)
   local ink = dim and U.MUTED or U.DARK
   local lab = U.fit(label, w - 8, 13, not dim)
   local lw = U.text_w(lab, 13, not dim)
@@ -127,7 +254,7 @@ function U.press_button(id, label, x, y, w, h, col, dim, sub)
     local sw = U.text_w(s2, 11)
     U.text(s2, x + (w - sw) / 2, y + h - 16, 11, ink)
   end
-  if dim then U.set(U.MUTED, 0.8); gfx.line(x + 6, y + h / 2, x + w - 7, y + h / 2) end
+  if dim then U.set(U.MUTED, 0.6); gfx.line(x + 6, y + h / 2, x + w - 7, y + h / 2) end
   return res
 end
 
@@ -159,32 +286,32 @@ function U.ibutton(id, kind, x, y, w, h, style)
   if style == "warn" then U.set(U.WARN, 1) else U.set(U.PANEL, 1) end
   gfx.rect(x, y, w, h, 1)
   if over then U.set(U.INK, 0.1); gfx.rect(x, y, w, h, 1) end
-  U.set(over and U.INK or U.MUTED, 0.5); gfx.roundrect(x, y, w - 1, h - 1, 5, 1)
-  U.set(style == "warn" and { 20, 20, 20 } or U.INK)
+  U.frame(x, y, w, h, over and U.MUTED or U.EDGE)
+  U.set(style == "warn" and U.DARK or U.INK)
   U.icon(kind, x + w / 2, y + h / 2, math.min(w, h) / 4.5)
   return over and U.clicked
 end
 
--- bouton de transport : icône + libellé ; style : "primary", "armed" ou nil
+-- bouton de transport : icône + libellé ; style : "primary" (lecture / pause : vert LED), "armed" ou nil
+-- grand bouton (h >= 44) : icône + libellé en capitales condensées
 function U.tbutton(id, kind, label, x, y, w, h, style, again)
   local over = U.over(x, y, w, h)
   if over then U.hover = id end
-  if style == "armed" then U.set(U.WARN, 1)
-  elseif style == "primary" then U.set(U.ACCENT, over and 1 or 0.85)
-  else U.set(U.PANEL, 1) end
-  gfx.rect(x, y, w, h, 1)
-  if over and not style then U.set(U.INK, 0.08); gfx.rect(x, y, w, h, 1) end
-  U.set(over and U.INK or U.MUTED, 0.6); gfx.roundrect(x, y, w - 1, h - 1, 6, 1)
-  local ink = style == "armed" and { 20, 20, 20 } or U.INK
+  local fill = (style == "armed" and U.WARN) or (style == "primary" and U.LED) or U.PANEL
+  U.set(fill); gfx.rect(x, y, w, h, 1)
+  if over then U.set(style and U.DARK or U.INK, 0.1); gfx.rect(x, y, w, h, 1) end
+  U.frame(x, y, w, h, over and U.MUTED or U.EDGE)
+  local ink = style and U.DARK or U.INK
   local big = h >= 44
   local s = big and math.min(10, h / 6) or math.min(7, h / 4.2)
   U.set(ink)
   if big then
     U.icon(kind, x + w / 2, y + h * 0.36, s)
-    local lab = style == "armed" and again or label
-    local size = w < 80 and 11 or 12
-    local lw = U.text_w(lab, size, style == "armed")
-    U.text(lab, x + (w - lw) / 2, y + h - size - 7, size, ink, style == "armed")
+    local lab = U.upper(style == "armed" and again or label)
+    local size = w < 80 and 12 or 14
+    lab = U.fit(lab, w - 6, size, true, "cond")
+    local lw = U.text_w(lab, size, true, "cond")
+    U.text(lab, x + (w - lw) / 2, y + h - size - 7, size, ink, true, "cond")
   else
     if style == "armed" then
       local lw = U.text_w(again, 11, true)
@@ -210,17 +337,18 @@ function U.is_armed(id) return U.armed ~= nil and U.armed.id == id and U.now - U
 function U.armed_style(id, default) if U.is_armed(id) then return "armed" end return default end
 function U.tick_armed() if U.armed and U.now - U.armed.t > 2 then U.armed = nil end end
 
--- pastille d'état (alignée à droite sur x)
+-- pastille d'état (alignée à droite sur x) : voyant + libellé en capitales, fond encastré
 function U.pill(lab, col, x, y)
-  local w = U.text_w(lab, 13, true) + 30
-  U.set(col, 0.22); gfx.rect(x - w, y, w, 24, 1)
-  U.set(col); gfx.roundrect(x - w, y, w - 1, 23, 6, 1)
-  gfx.circle(x - w + 12, y + 12, 4, 1, 1)
-  U.text(lab, x - w + 22, y + 4, 13, U.INK, true)
+  lab = U.upper(lab)
+  local w = U.text_w(lab, 15, true, "cond") + 34
+  U.set(U.INSET); gfx.rect(x - w, y, w, 26, 1)
+  U.frame(x - w, y, w, 26)
+  U.set(col); gfx.circle(x - w + 13, y + 13, 5, 1, 1)
+  U.text(lab, x - w + 24, y + 5, 15, col, true, "cond")
   return w
 end
 
--- pastille cliquable (état du morceau) : ok = vert, false = gris, "warn" = orange, "bad" = rouge ; renvoie largeur, clic
+-- pastille cliquable (état du morceau) : ok = vert, false = gris, "warn" = jaune, "bad" = rouge ; renvoie largeur, clic
 function U.chip(id, lab, ok, x, y, size)
   size = size or 12
   local w = U.text_w(lab, size, true) + 26
@@ -228,10 +356,10 @@ function U.chip(id, lab, ok, x, y, size)
   local over = U.over(x, y, w, h)
   if over then U.hover = id end
   local col = ok == true and U.ACCENT or (ok == "warn" and U.WARN or (ok == "bad" and U.RED or U.GREY))
-  U.set(col, over and 0.34 or 0.2); gfx.rect(x, y, w, h, 1)
-  U.set(col, over and 1 or 0.8); gfx.roundrect(x, y, w - 1, h - 1, 6, 1)
-  gfx.circle(x + 10, y + h / 2, 3.5, 1, 1)
-  U.text(lab, x + 18, y + 6, size, ok == true and U.INK or { 205, 205, 210 }, true)
+  U.set(over and U.PANEL or U.WELL); gfx.rect(x, y, w, h, 1)
+  U.frame(x, y, w, h, over and col or U.EDGE, over and 0.9 or 1)
+  U.set(col); gfx.circle(x + 10, y + h / 2, 3.5, 1, 1)
+  U.text(lab, x + 18, y + 6, size, ok == true and U.INK or (ok == false and U.MUTED or col), true)
   return w, over and U.clicked
 end
 
@@ -245,8 +373,8 @@ function U.tip(x, y, w, h, text, id)
   return false
 end
 
--- titre de bloc (« 1. Préparer »)
-function U.heading(s, x, y) U.text(s, x, y, 12, U.MUTED) end
+-- titre de bloc (« 1. Préparer ») : capitales, gris
+function U.heading(s, x, y) U.text(U.upper(s), x, y, 11, U.MUTED, true) end
 
 -- texte sur plusieurs lignes, coupé à la largeur w ; renvoie la hauteur utilisée
 function U.para(s, x, y, w, size, col, max_lines)

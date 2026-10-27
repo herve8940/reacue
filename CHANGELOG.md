@@ -1,5 +1,133 @@
 # Changelog
 
+## Non publié / Unreleased — ReaCue Studio, étapes 1 à 4 : écran Travail, exports, prompteur, Concert, Lumière, Biblio, Groupe, nouvelle apparence
+
+### Library and Band screens (step 4)
+- **ReaCue Studio, LIBRARY screen** (`studio.html#biblio`): every known song (projects folder and its direct
+  subfolders, like the window's Concert tab, plus the songs of the shows) with title, tempo, key, length,
+  coloured mini-structure, components (stems, chords, lyrics, drums, lights), shows, and **stage of the
+  journey** (Discovered → Practised alone → Rehearsed as a band → Ready for the stage): computed from the
+  playback time counted by the ReaCue window (alone / with ≥ 2 musicians' prompters connected / band on 2 days
+  for a prepared song) or set by hand (`libstage`). Stage counters and chips filter, search. Click = open the
+  `.RPP` in REAPER (new project tab, as the Concert tab; remote command `open`), publish its prompter (CLI
+  `open-song`: structure at once, then chords / lyrics / drums), then PRACTICE. Built shows open the same way.
+- `reacue_mcp/library.py`: `reacue_library.json` published at every prompter publication, show build and
+  opening of the ReaCue window (CLI `library`); summaries of published songs cached in
+  `ReaCueMCP/library_cache.json`. Durable state written by the window: `ReaCueMCP/reacue_state.json` (manual
+  stage, section notes, playback time alone / as a band per day).
+- **ReaCue Studio, BAND screen** (`studio.html#groupe`): **notes per section** of the current song (remote
+  `note` → state file → CLI `notes` rewrites the `notes` field of `reacue_song.json`, and of
+  `<show>.prompteur.json` for a show: pink frame on every prompter within 2–3 s; notes kept at every
+  preparation / show build); **take it from…** (remote `resume`: playback one bar before the section, loop
+  stopped); **musicians connected** with role and optional name, **READY n / N**, **RESET** (remote
+  `readyreset`).
+- **Prompter**: discreet **“Ready?”** button for musicians' roles (green once ReaCue got it), optional first name
+  in the role picker; heartbeat every ~2 s in `ReaCue/hb0…hb7` (slot from the phone id: several phones at once,
+  a lost beat is taken up by the next), `Ready` only valid for the current epoch (reset = new epoch), phones
+  forgotten after 10 s. The window publishes `ReaCue/band`; PRACTICE footer shows “PROMPTER · n”.
+- Published songs carry their `project` path; section notes come from the durable state.
+- ReaCue window, Stage tab: “SONG 2 / 3” drawn as one text (the space was missing: “MORCEAU2 / 3”).
+- Tests: library JSON (projects, shows, components, stages, manual stage, language), notes republished (single
+  song and show), CLI `library` / `notes` / `open-song`, Lua (several phones, slots, expiry, epoch reset,
+  notes, manual stage, resume, playback time, open from the library), Library / Band screens FR / EN, prompter
+  Ready button with three phones; screenshots `studio_biblio_*`, `studio_groupe_*` (prompter ones regenerated).
+
+### Show and Lights screens, “Studio pro” look for the ReaCue window (step 3)
+- **ReaCue Studio, SHOW screen** (`studio.html#concert`, same base CSS / JS and navigation as Practice):
+  playback banner with LED (PLAYING / PAUSED / STOPPED), “SONG n / N”, title, LEFT / SHOW / SMPTE · LTC
+  readouts; setlist as blocks (played / current / next, width = length); sections of the current song (start
+  bar, name, PLAYED / NOW n/16 / NEXT); big ◀ PREV / PLAY-PAUSE / NEXT ▶ buttons (two taps while playing);
+  lighting panel (cues of the song with timecode, section and effect, current cue, REAPER → LTC, MTC → console,
+  EXPORT UP TO DATE LEDs, TEST 10 S). Uses the published data (`reacue_song.json`, concert or single song) and
+  the existing remote protocol with PIN (`song`, `prev`, `next`, `toggle`, `seek`); window closed: play / pause
+  and jumps through REAPER's web API. No concert open: single song with its sections and a clear message.
+- **ReaCue Studio, LIGHTS screen** (`studio.html#lumiere`): current cue, every cue (number, SMPTE timecode,
+  section, type, effect; per song in a concert; click = go to the cue), timecode outputs as exported
+  (gma3_* settings: LTC output, MTC device, TC Slot, fps, start), LEDs, download links for the grandMA3 files,
+  TEST 10 S with countdown. Effects are read-only for now (editing comes later).
+- New remote command **`tctest`** (ReaCue window, PIN): starts / stops the Lighting tab's 10 s timecode test
+  (TIMECODE tracks only, state restored); seconds left published in ExtState `ReaCue/tctest`. The window
+  library accepts commands added by the window (`L.remote_ext`).
+- **ReaCue window, “Studio pro” look** (all tabs and views; functions and layout unchanged): palette of ReaCue
+  Studio centralised in `ReaCue_ui.lua` (`U.THEME`; tabs only use `U.<NAME>`), LCD readouts in a monospace
+  system font (Menlo / Monaco, Consolas, fallback Courier New) and titles in condensed capitals (Avenir Next
+  Condensed / Helvetica Neue Condensed Bold, Arial Narrow / Bahnschrift SemiCondensed, fallback Arial Bold),
+  picked by measuring which font is installed; header with brand and tab bar; sharp panels and buttons (no
+  rounded corners); Stage tab: playback banner with LED, LEFT / SHOW / SMPTE readouts (second row when the
+  window is narrow), big transport buttons with play in green, sections and setlist as blocks with a coloured
+  top edge (played / current / next); Lighting tab: SMPTE readout and cue list in monospace. Docked compact bar,
+  hover help, pills and narrow windows keep working (the window has no light mode).
+- Tests: Show / Lights screens FR / EN, nothing external, remote commands with PIN, two taps while playing,
+  fallback without the window, single song; theme colours centralised and identical to the web palette, font
+  fallbacks (Mac / Windows), accented capitals, `tctest` end-to-end; window screenshots regenerated (renderer
+  uses DejaVu Sans Mono / Condensed for the mono / condensed faces) and Studio Show / Lights screenshots added.
+
+### Prompter in the “Studio pro” style (step 2)
+- `prompteur.html` (same address: QR codes and phones already set up keep working) now uses the ReaCue Studio
+  base (`reacue_studio/base.css` + `core.js`, bundled fonts, no internet), large stage type, contrast ≥ 4.5:1,
+  touch targets ≥ 44 px. Header: title + song number in concert (x/N), role button, FR/EN, full screen, REAPER
+  link LED. Three LCD displays **bar.beat · tempo · key**; section card with green beat LEDs, bar within the
+  section (7/16) and progress; current chord on a light card + next chord (bass: bass note), section chart
+  with the current bar in orange (2-row window on phones for long sections); **section note**; entries / exits
+  as coloured alerts; **NEXT / IN n bars** block; slim colour structure strip (tap = section list).
+- **Transposition and speed**: the musician roles read ExtState `ReaCue/studio` (read-only, set by the ReaCue
+  window / ReaCue Studio): chords, chart and key follow the stem transposition, tempo shows × speed.
+- **Section notes**: new `notes` field on each published section (empty for now, editing comes with ReaCue
+  Studio); shown under the chart when present (also for drums).
+- Drums, Vocals (word highlight, count-down), Overview, Stage control (PIN, same remote protocol) and Lighting
+  (cues, timecode) keep every function, restyled; landscape / tablet two-column layouts and a compact layout for
+  phones held sideways; Stage control section buttons pick black or white text for contrast.
+- Tests: page linked to the Studio base and nothing external, FR / EN strings, LCDs / note / transposition,
+  touch targets and contrast per role, Stage control end-to-end (fake server now serves `reacue_studio/`);
+  prompter screenshots regenerated.
+
+
+### ReaCue Studio
+- **New web page `studio.html`** (served by REAPER next to the prompter, FR / EN, “Studio pro” style, no
+  internet: IBM Plex Sans / Mono and Barlow Condensed fonts bundled under the SIL OFL 1.1 in
+  `reacue_mcp/web/reacue_studio/fonts/`). Top navigation BIBLIO · TRAVAIL · GROUPE · CONCERT · LUMIÈRE (only
+  TRAVAIL for now). Shared base for the next screens: `reacue_studio/base.css` (colour tokens, header, LCD
+  displays, buttons, chips, LEDs, panels, dialogs) and `reacue_studio/core.js` (language, REAPER web API,
+  ReaCue commands with PIN and queue, published data, bar/beat, SMPTE, chord transposition).
+- **Practice screen (TRAVAIL)**: position bar.beat.sixteenth, time, tempo × speed, key ± transpose, SMPTE;
+  clickable structure (double-click = loop) and chords scrolling under the play head; one row per stem with its
+  waveform, M / S and volume; console strips (pan knob, real meter, fader) for the stems, CLICK and VOIX;
+  transport; LOOP / RAMP / CLICK / VOIX chips; REAPER / prompter / LTC LEDs.
+- Mute, solo, volume, pan, position and transport use **REAPER's native web API** (`/_/TRACK`,
+  `SET/TRACK/n/MUTE|SOLO|VOL|PAN`, `SET/POS`, actions 1007 / 1008 / 1016); tracks found by name.
+- New remote commands run by the ReaCue window (PIN): `loopsec` (loop one section), `ramp`
+  (`from:to:passes[:section]`, one speed step per loop pass), `pitch` (±1 semitone on the stem takes, ±12 max,
+  undoable), `export`. State published in ExtState `ReaCue/studio` (speed, transpose, pass, passes, from, to).
+- **“My instrument”**: the chosen track is muted automatically (remembered in the browser).
+
+### Exports
+- New module `reacue_mcp/export.py`: each stem, a section, bars X to Y or REAPER's time selection, one or more
+  instruments, separate files or one mix (brought down to -1 dBFS, no clipping), optional synthesised click;
+  **WAV 24-bit** or **MP3** 128–320 kbit/s (libsndfile through soundfile ≥ 0.13; `lameenc` used if installed and
+  soundfile is older). Sample-exact cut on ReaCue's grid; item position / offset / volume, track volume / pan for
+  the mix. Files in `<project>/exports/` named `<Title> - <Stem> - <Section>.mp3`, copied to
+  `reaper_www_root/reacue_exports/` (last 5 exports kept) for download from the page; status in
+  `reacue_export.json`.
+- CLI `export --job <file>` (written by the ReaCue window) or `export --request '<JSON>'`; MCP:
+  `set_sections([{"export": {…}}])` (tool list unchanged).
+
+### Publication, installer
+- Waveforms precomputed at each publication (`reacue_mcp/studio.py` → `reacue_peaks.json`: min/max every 40 ms
+  on REAPER's timeline, base64, track names and roles, timecode settings); never blocking.
+- `prompter.publish`, the ReaCue window (`L.publish_page`) and the installer copy `studio.html` and
+  `reacue_studio/`; the uninstaller removes them with the published data and web exports. Studio address under
+  the QR code and in the installer's last message.
+- `requirements.txt`: `soundfile>=0.13` (MP3 bitrate control). THIRD_PARTY_NOTICES: fonts (OFL-1.1),
+  libsndfile / LAME in the soundfile wheel, optional lameenc.
+
+### Docs / tests
+- README / LISEZMOI section “ReaCue Studio”, tutorials 17.3 (Practice screen) and 17.4 (exports), screenshots
+  `docs/images/studio_fr.png`, `studio_en.png`.
+- Tests: exports (WAV / MP3 bitrate, sample-exact cut, padding, mix without clipping, several stems, click,
+  rate, names, web cleanup, CLI, MCP), waveforms, publication, no external resource, FR / EN strings, page in
+  Chromium (native commands, “my instrument”, PIN commands, export flow), Lua commands (loop, ramp, transpose,
+  export job), installer.
+
 ## 1.2.1 — 2026-10-26 — correction Windows (analyse de structure)
 
 ### Corrections

@@ -3,7 +3,8 @@
 Après chaque construction (prepare_song, set_sections…), le serveur écrit dans
 <ressources REAPER>/reaper_www_root/ :
   - prompteur.html       : la page (une seule, chaque musicien choisit son rôle) ;
-  - reacue_song.json     : le morceau (mesures sur la timeline, sections, présence des instruments).
+  - reacue_song.json     : le morceau (mesures sur la timeline, sections, présence des instruments) ;
+  - studio.html + reacue_studio/ : ReaCue Studio (écran Travail, studio.py), même données.
 La page lit la position de lecture via l'interface web de REAPER (/_/TRANSPORT) : pendant le
 live, seul REAPER doit tourner.
 """
@@ -214,6 +215,8 @@ def build_song(a: Analysis, item: dict, timeline: dict, items: list[dict] | None
             "name": s.name, "type": section_type(s.name), "group": s.label,
             "start_bar": s.start_bar + 1, "end_bar": s.end_bar,      # 1-based, fin incluse
             "color": "#%02x%02x%02x" % tuple(section_color(s.name)),
+            # note de section affichée par le prompteur (écran GROUPE de ReaCue Studio ; library.attach)
+            "notes": str(getattr(s, "notes", "") or ""),
         })
     song = {
         "version": 1,
@@ -257,4 +260,11 @@ def publish(song: dict, www: Path | None = None) -> dict:
     page = www / PAGE_NAME
     if PAGE_SRC.exists() and (not page.exists() or page.read_bytes() != PAGE_SRC.read_bytes()):
         shutil.copyfile(PAGE_SRC, page)
-    return {"page": str(page), "data": str(www / SONG_NAME)}
+    from .studio import publish_static           # ReaCue Studio : studio.html + reacue_studio/ (CSS, JS, polices)
+    publish_static(www)
+    try:                                         # BIBLIO de ReaCue Studio : reacue_library.json (jamais bloquant)
+        from .library import publish_library
+        publish_library(www)
+    except Exception:
+        pass
+    return {"page": str(page), "data": str(www / SONG_NAME), "studio": str(www / "studio.html")}
