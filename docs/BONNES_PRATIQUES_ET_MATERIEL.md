@@ -291,7 +291,31 @@ En conservant le préfixe du fichier source (`Titre-Am-120bpm-`), ReaCue hérite
 - **Espace disque requis :** Comptez environ **200 à 300 Mo** d'espace disque par morceau pour l'ensemble des stems au format WAV 24-bit 44.1/48 kHz.
 - **Sécurité d'annulation :** L'import des stems retire l'item audio original de l'arrangement pour faire place nette, mais le fichier audio d'origine sur votre disque n'est jamais supprimé. Un simple *Annuler* (`Ctrl+Z` / `Cmd+Z`) rétablit instantanément la piste d'origine.
 
+### 3.5 Les autres modèles d'IA intégrés à ReaCue (en plus de Demucs)
+
+En complément de la séparation de stems, ReaCue propose quatre composants d'IA spécialisés, exécutés localement :
+
+1. **Analyse de Structure — SongFormer (MuQ + MusicFM) :**
+   - *Rôle :* Découpe musicale intelligente en sections nommées (*Intro, Couplet, Refrain, Pont, Solo, Outro*) avec alignement automatique sur les barres de mesure de REAPER.
+   - *Avantage :* Évite la découpe manuelle des régions et assure une navigation parfaite sur le prompteur et dans le concert.
+   - *Configuration :* Fenêtre de 420 s (résolution maximale si $\ge 15\text{ Go}$ RAM ou GPU puissant), ou fenêtre de 120 s (mode économique 4 Go RAM).
+
+2. **Reconnaissance d'Accords — Modèle ISMIR 2019 (Chord Structure Decomposition) :**
+   - *Rôle :* Transcription harmonique de haute précision à partir des stems harmoniques (guitares, basse, claviers).
+   - *Capacités :* Détecte les accords majeurs, mineurs, 7e, maj7, m7, sus4, dim, aug et les renversements de basse (ex. `D/F#`, `C/E`, `Bb/D`).
+   - *Poids :* ~60 Mo seulement, téléchargement très rapide.
+
+3. **Transcription de Batterie — ADTOF (Automatic Drum Transcription on the Fly) :**
+   - *Rôle :* Décodage des éléments de batterie entraîné sur 359 heures de musique réelle.
+   - *Capacités :* Précision chirurgicale sur la caisse claire, les toms, le charley ouvert vs fermé, les crashs et les fills.
+   - *Usage :* Alimente la vue « Batterie » du prompteur avec anticipation visuelle des accents et breaks. Poids : ~16 Mo.
+
+4. **Paroles et Chant — Whisper & wav2vec2 (Alignement Forcé) :**
+   - *Rôle :* Calage synchronisé mot-à-mot des paroles sur le stem de chant (défilement type karaoké pro) et transcription automatique de brouillon lorsque le groupe ne dispose pas des paroles officielles.
+   - *Usage :* Prompteur chant haute lisibilité. Modèle Whisper `large-v3-turbo` + modèles acoustiques par langue (~1,5 Go).
+
 ---
+
 
 ## 4. Guide Matériel & Adéquation avec les Meilleurs Modèles
 
@@ -308,7 +332,22 @@ ReaCue intègre depuis la version 1.2 un module d'audit matériel intelligent (`
 | **AMD Radeon dédié** *(Windows / Linux ROCm)* | ROCm / DirectML | **`htdemucs_ft`** ou `htdemucs_6s` | Fenêtre 120s / 420s | **~ 30 à 90 secondes** |
 | **Processeur seul (CPU)** *(Intel / AMD sans GPU dédié)* | CPU (`cpu`) | **`htdemucs`** *(4 stems standard)* | Fenêtre 120s | **~ 5 à 8 minutes** |
 
-### 4.2 Accélération IA : NVIDIA, Apple Silicon, AMD & CPU
+### 4.2 Mode d'Installation Automatique (Novice) et Sélection des Modèles
+
+L'installateur unifié de ReaCue (`Install ReaCue.bat` / `Install ReaCue.command`) intègre un **audit matériel automatique** couplé à un choix simplifié dès le démarrage :
+
+1. **Option 1 : Mode Automatique [Recommandé pour débutants / Novices] :**
+   - En un seul appui sur **Entrée**, ReaCue audite votre processeur, votre carte graphique et votre mémoire vive via `reacue_gpu.py`.
+   - Il configure automatiquement la version exacte de PyTorch (CUDA 12.8 pour Blackwell RTX 50, CUDA 12.4 pour RTX 20/30/40, Metal MPS pour Apple Silicon, ou processeur standard).
+   - Il sélectionne et installe la suite optimale sans aucune question technique :
+     - *Sur machine puissante (GPU $\ge 8\text{ Go}$ ou Apple Silicon) :* profil **Studio Pro**, avec `htdemucs_6s`, SongFormer, Accords, Batterie ADTOF et Paroles.
+     - *Sur GPU intermédiaire (2 à 8 Go) :* profil **Équilibré**, avec `htdemucs_ft` et SongFormer 120s.
+     - *Sur processeur CPU :* profil **Léger & Rapide**, avec `htdemucs` (4 stems rapides pour éviter les temps de calcul de 15 à 20 min).
+   - Les licences d'usage non commercial des modèles de recherche (SongFormer et ADTOF) sont validées automatiquement en toute transparence.
+2. **Option 2 : Mode Personnalisé [Avancé / Sélection détaillée] :**
+   - Permet à l'utilisateur expert de choisir et valider individuellement chaque modèle d'IA (Stems, Structure, Accords, Batterie, Paroles, Serveur MCP).
+
+### 4.3 Accélération IA : NVIDIA, Apple Silicon, AMD & CPU
 
 #### A. NVIDIA CUDA & Architecture Blackwell (RTX 50)
 - **Architecture Blackwell (Séries RTX 50) :** Les GPU récents basés sur l'architecture Blackwell nécessitent impérativement le support Compute Capability 12.0 et CUDA 12.8. L'installateur ReaCue installe automatiquement la roue PyTorch `2.8.0+cu128` dédiée, éliminant tout risque de crash de compatibilité binaire.
@@ -321,7 +360,7 @@ Sur les Mac équipés de puces Apple Silicon (M1 à M4), ReaCue exploite l'accé
 - **AMD :** Pris en charge sous Linux via ROCm, ou en détection standard sous Windows.
 - **Processeur (CPU seul) :** Si aucune carte dédiée n'est détectée, ReaCue bascule automatiquement sur le modèle `htdemucs` (4 stems). Cela évite à l'utilisateur de subir une attente de 15 à 20 minutes par morceau, ramenant le temps de calcul à environ 5 à 7 minutes. Une fois le calcul initial achevé, les stems sont stockés en cache et le morceau se charge ensuite instantanément.
 
-### 4.3 Interfaces audio et routage physique
+### 4.4 Interfaces audio et routage physique
 
 Pour une utilisation professionnelle en répétition et en concert, le choix de l'interface audio branchée à la machine REAPER conditionne la clarté d'écoute de l'équipe :
 
@@ -370,7 +409,7 @@ flowchart TD
 - **Sorties 7 & 8 :** Bus dédié In-Ears pour le métronome et les annonces vocales ReaCue.
 - **Sortie 9 (ou sortie ligne assignée) :** Envoi du signal **Timecode LTC (SMPTE)** directement vers le connecteur LTC XLR de la console lumière (grandMA3).
 
-### 4.4 Équipements réseau, contrôleurs au pied et supports scène
+### 4.5 Équipements réseau, contrôleurs au pied et supports scène
 
 1. **Routeur Wi-Fi scénique indépendant :**
    - Modèles recommandés : Routeurs de voyage compacts (ex. *GL.iNet Beryl AX / Slate AX*, *TP-Link TL-WR902AC*).

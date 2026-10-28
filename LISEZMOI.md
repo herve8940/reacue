@@ -162,12 +162,12 @@ très gros caractères pour la scène) :
      `bash "Install ReaCue.command"`.
    - **Windows** : double-clic sur **`Install ReaCue.bat`**. Si SmartScreen affiche un avertissement :
      *Informations complémentaires* → *Exécuter quand même*.
-4. Réponds aux questions : langue (`fr` / `en`), déclaration de ReaCue dans vos assistants IA / serveur MCP
-   (Claude Desktop, Google Antigravity, Cursor, export JSON — facultatif) et installation de la **séparation de stems** (facultatif,
-   environ 1 Go à télécharger, 5 à 15 minutes ; voir [Séparation de stems](#séparation-de-stems-facultatif)).
-   Dernière question : l'**analyse de structure SongFormer**, proposée par défaut (*Entrée* = oui) ; il faut
-   ensuite taper **`J'accepte`** pour accepter les licences des modèles (usage non commercial). Les modèles
-   déjà présents sur l'ordinateur sont réutilisés ([détails](#analyse-de-structure-songformer-par-défaut)).
+4. Réponds aux questions :
+   - Langue (`fr` / `en`) et déclaration dans vos assistants IA / serveurs MCP (Claude Desktop, Google Antigravity, Cursor, export JSON — facultatif).
+   - **Mode d'installation :**
+     - **Mode 1 : Automatique (Recommandé / Débutant, touche *Entrée*) :** ReaCue audite votre matériel et installe automatiquement les meilleurs modèles d'IA adaptés à votre machine sans question technique (Demucs `htdemucs_6s` sur GPU $\ge 8\text{ Go}$ / Apple Silicon ou `htdemucs` sur CPU, SongFormer pour la structure, modèle ISMIR 2019 pour les accords, ADTOF pour la batterie, et Whisper pour les paroles).
+     - **Mode 2 : Personnalisé (Avancé) :** vous choisissez individuellement chaque modèle d'IA et chaque option.
+   - Les modèles déjà présents sur votre ordinateur sont réutilisés automatiquement sans être retéléchargés.
 5. Lance REAPER. Le pont démarre tout seul et les actions sont disponibles dans *Actions → Show action list*
    (au premier lancement, la fenêtre ReaCue ouvre un assistant qui vérifie l'installation) :
    - **ReaCue** — la fenêtre principale (onglets Morceau, Concert, Scène, Lumière, Réglages) : **ajoute celle-ci à

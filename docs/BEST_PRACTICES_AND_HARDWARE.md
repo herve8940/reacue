@@ -269,7 +269,31 @@ SongTitle-Am-120bpm-stems/
 - **Disk usage:** Budget approximately **200 to 300 MB** per 4-minute song for 24-bit WAV stems.
 - **Undo safety:** The original media item is removed from the timeline for cleanliness, but the file on disk is never deleted. A simple *Undo* (`Ctrl+Z` / `Cmd+Z`) restores it.
 
+### 3.5 Additional AI Models Integrated in ReaCue (Beyond Demucs)
+
+In addition to stem separation, ReaCue features four specialized, locally-run AI components:
+
+1. **Structure Analysis — SongFormer (MuQ + MusicFM):**
+   - *Role:* Intelligent musical segmentation (*Intro, Verse, Chorus, Bridge, Solo, Outro*) aligned to REAPER's bar grid.
+   - *Advantage:* Removes the need for manual marker slicing and guarantees prompter and concert sync.
+   - *Setting:* 420s window (max accuracy with $\ge 15\text{ GB}$ RAM or dedicated GPU), or 120s window (lightweight mode).
+
+2. **Chord Recognition — ISMIR 2019 Model (Chord Structure Decomposition):**
+   - *Role:* High-precision harmonic transcription from harmonic stems (guitars, bass, keyboards).
+   - *Features:* Identifies major, minor, 7th, maj7, m7, sus4, dim, aug, and bass inversions (e.g. `D/F#`, `C/E`).
+   - *Footprint:* ~60 MB download, very fast.
+
+3. **Drum Transcription — ADTOF (Automatic Drum Transcription on the Fly):**
+   - *Role:* Dedicated drum transcription trained on 359 hours of real-world performances.
+   - *Features:* High precision on snare, toms, open/closed hi-hats, crashes, and fills.
+   - *Usage:* Feeds the drummer's prompter view with advance warnings for crashes and breaks. Footprint: ~16 MB.
+
+4. **Lyrics & Vocals — Whisper & wav2vec2 (Forced Alignment):**
+   - *Role:* Word-by-word synchronized scrolling lyrics and automatic draft lyrics generation from audio.
+   - *Usage:* Live vocal prompter. Whisper `large-v3-turbo` + acoustic language alignment models (~1.5 GB).
+
 ---
+
 
 ## 4. Hardware Guide & Optimal Model Matching
 
@@ -286,14 +310,29 @@ ReaCue's automated hardware audit module (`reacue_gpu.py`) detects system capabi
 | **AMD Radeon dedicated** *(Linux ROCm / Windows)* | ROCm / DirectML | **`htdemucs_ft`** or `htdemucs_6s` | 120s / 420s Window | **~ 30 to 90 seconds** |
 | **CPU Only** *(Intel / AMD without dedicated GPU)* | CPU (`cpu`) | **`htdemucs`** *(4 stems standard)* | 120s Window | **~ 5 to 8 minutes** |
 
-### 4.2 AI acceleration: NVIDIA, Apple Silicon, AMD & CPU
+### 4.2 Automatic Installation Mode (Beginner) and Model Selection
+
+ReaCue's unified installer (`Install ReaCue.bat` / `Install ReaCue.command`) includes an **automated hardware audit** paired with a streamlined mode choice on startup:
+
+1. **Option 1: Automatic Mode [Recommended / Beginner]:**
+   - With a single press of **Enter**, ReaCue audits your CPU, GPU, and RAM via `reacue_gpu.py`.
+   - It automatically selects and configures the correct PyTorch wheels (CUDA 12.8 for Blackwell RTX 50, CUDA 12.4 for RTX 20/30/40, Metal MPS for Apple Silicon, or standard CPU).
+   - Installs the optimal AI model suite without any technical questions:
+     - *Powerful machines (GPU $\ge 8\text{ GB}$ or Apple Silicon):* **Studio Pro** profile with `htdemucs_6s`, SongFormer, Chords, ADTOF Drums, and Lyrics.
+     - *Mid-range GPUs (2 to 8 GB):* **Balanced** profile with `htdemucs_ft` and SongFormer 120s.
+     - *CPU-only machines:* **Fast & Lightweight** profile with `htdemucs` (4 fast stems to avoid 15-20 min processing times).
+   - Automatically approves non-commercial research licenses (SongFormer and ADTOF) transparently.
+2. **Option 2: Custom Mode [Advanced / Detailed selection]:**
+   - Allows expert users to pick and validate each AI model individually (Stems, Structure, Chords, Drums, Lyrics, MCP Servers).
+
+### 4.3 AI acceleration: NVIDIA, Apple Silicon, AMD & CPU
 
 - **NVIDIA Blackwell (RTX 50):** Requires Compute Capability 12.0 and CUDA 12.8+. ReaCue automatically downloads `2.8.0+cu128` PyTorch wheels.
 - **NVIDIA RTX 20/30/40:** Runs on CUDA 12.4 (`cu124`) with rock-solid stability.
 - **Apple Silicon:** Hardware-accelerated Metal via MPS. Shared unified memory allows running full 420s SongFormer windows and 6-stem models effortlessly on 16 GB+ systems.
 - **CPU Fallback:** Automatically switches to standard `htdemucs` 4-stem model to keep processing under 6 minutes.
 
-### 4.3 Audio interfaces and physical routing
+### 4.4 Audio interfaces and physical routing
 
 ```mermaid
 flowchart TD
@@ -339,7 +378,7 @@ flowchart TD
   - Outputs 7–8: Dedicated In-Ear click and guide cues bus.
   - Output 9: Physical LTC SMPTE timecode feed to the lighting console.
 
-### 4.4 Network equipment, foot controllers, and stage mounts
+### 4.5 Network equipment, foot controllers, and stage mounts
 
 1. **Dedicated stage router:** Compact USB-C travel router (e.g. GL.iNet Beryl AX) mounted inside your audio interface rack.
 2. **MIDI / USB foot controller:** Assign footswitches to REAPER actions `ReaCue - Next song`, `ReaCue - Previous song`, and `Transport: Play/stop`.

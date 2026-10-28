@@ -167,9 +167,7 @@ Appuie sur Entrée pour fermer la fenêtre.
 
 > L'installateur peut être relancé autant de fois que tu veux : il répare l'installation et garde tes réglages.
 
-**Les autres composants facultatifs** (accords, batterie, paroles mot par mot et automatiques) ne sont pas
-proposés par cet installateur : chacun a le sien (`Install ReaCue Chords`, `Install ReaCue Drums`,
-`Install ReaCue Words`), à lancer quand tu veux, même plus tard. Voir le [chapitre 20](#20-composants-facultatifs).
+**Suite complète de modèles d'IA :** En **Mode Automatique** (choix 1 ou *Entrée*), l'installateur configure automatiquement tous les modèles adaptés à votre machine (Stems Demucs, Structure SongFormer, Accords ISMIR, Batterie ADTOF, et Paroles Whisper). En **Mode Personnalisé**, chaque modèle vous est proposé avec son descriptif détaillé. Chaque composant dispose également de son propre installateur autonome (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), relançable à tout moment.
 
 ---
 

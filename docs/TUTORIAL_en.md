@@ -163,9 +163,7 @@ Press Enter to close the window.
 
 > You can run the installer as many times as you like: it repairs the installation and keeps your settings.
 
-**The other optional components** (chords, drums, word-by-word and automatic lyrics) are not offered by this
-installer: each has its own (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), to run
-whenever you like, even later. See [chapter 20](#20-optional-components).
+**Complete AI Model Suite:** In **Automatic Mode** (choice 1 or *Enter*), the installer automatically installs all models suited for your hardware (Demucs stems, SongFormer structure, ISMIR chords, ADTOF drums, and Whisper lyrics). In **Custom Mode**, each model is presented with full details. Each component also retains its standalone installer (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), which can be rerun at any time.
 
 ---
 

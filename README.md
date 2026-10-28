@@ -157,12 +157,12 @@ for the stage):
      developer”), right-click it → *Open* → *Open*. Alternative in Terminal: `bash "Install ReaCue.command"`.
    - **Windows**: double-click **`Install ReaCue.bat`**. If SmartScreen shows a warning, click
      *More info* → *Run anyway*.
-4. Answer the questions: language (`fr` / `en`), whether to register ReaCue in your AI assistant(s) / MCP server
-   (Claude Desktop, Google Antigravity, Cursor, JSON export — optional) and whether to install **stem separation** (optional,
-   about 1 GB to download, 5 to 15 minutes; see [Stem separation](#stem-separation-optional)).
-   Last question: **SongFormer structure analysis**, offered by default (*Enter* = yes); then type
-   **`I accept`** to accept the models' licences (non-commercial use). Models already on the computer are
-   reused ([details](#structure-analysis-songformer-default)).
+4. Answer the questions:
+   - Language (`fr` / `en`) and AI assistant / MCP server registration (Claude Desktop, Google Antigravity, Cursor, JSON export — optional).
+   - **Installation Mode:**
+     - **Mode 1: Automatic (Recommended / Beginner, press *Enter*):** ReaCue audits your hardware and automatically installs the optimal suite of AI models without technical questions (Demucs `htdemucs_6s` on GPU $\ge 8\text{ GB}$ / Apple Silicon or `htdemucs` on CPU, SongFormer structure analysis, ISMIR 2019 chord model, ADTOF drum transcription, and Whisper lyrics).
+     - **Mode 2: Custom (Advanced):** choose and configure each AI model and option individually.
+   - Existing models already on the machine are automatically reused without redownloading.
 5. Start REAPER. The bridge starts by itself and the actions are available in *Actions → Show action list*
    (on first launch, the ReaCue window opens an assistant that checks the installation):
    - **ReaCue** — the main window (Song, Concert, Stage, Lighting, Settings tabs): **add this one to a toolbar**
