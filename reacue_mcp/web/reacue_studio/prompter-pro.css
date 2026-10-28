@@ -1,0 +1,25 @@
+/* Compact stage composition from the supplied musician reference. */
+body.pr { gap:10px; }
+body.pr .now { border-top-width:4px; box-shadow:inset 0 1px 0 #ffffff04; }
+body.pr .ccard.cur { background:#e6e8eb; border:1px solid #bfc3c8; }
+body.pr .ccard.nx { box-shadow:inset 0 1px 0 #ffffff03; }
+body.pr .snote { border-left-width:4px; }
+body.pr .grid4 div { min-height:38px; }
+body.pr .grid4 div.now { box-shadow:inset 0 0 0 1px #ffb27d; }
+body.pr .focus-toggle { min-height:44px; min-width:44px; padding:0 9px; border:1px solid var(--raise); border-radius:4px; background:var(--well); font-size:11px; font-weight:700; letter-spacing:.06em; }
+body.pr .focus-toggle[aria-pressed="true"] { color:var(--sig); border-color:var(--sig); }
+body.pr.stage-view #langBtn, body.pr.stage-view #fsBtn, body.pr.stage-view #readyBtn, body.pr.stage-view #stemNote { display:none!important; }
+body.pr.stage-view .list { display:none!important; }
+body.pr.stage-view .foot { display:none; }
+body.pr.stage-view .now .label { display:none; }
+body.pr.stage-view .now .name { font-size:clamp(42px,12vw,104px); }
+body.pr.stage-view .now .spos { font-size:14px; }
+body.pr.stage-view .now .progress { display:none; }
+body.pr.stage-view .beats span { height:14px; }
+body.pr.stage-view .chords .cur .v { font-size:clamp(64px,20vw,150px); }
+body.pr.stage-view .grid4 div { font-size:clamp(14px,4vw,24px); }
+body.pr.stage-view .next .box { border-left-width:0; }
+body.pr.stage-view .next .box .v { font-size:clamp(26px,7vw,52px); }
+body.pr.stage-view .next .count { min-width:100px; }
+body.pr.stage-view .rc-lcd .v { font-size:clamp(24px,6vw,40px); }
+@media (max-width:480px) { body.pr .top { gap:5px; } body.pr .title { font-size:21px; } body.pr .role { padding:0 8px; font-size:11px; } }

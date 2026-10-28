@@ -299,8 +299,8 @@
       const col = colorOf(t), me = t.name === meName;
       s.className = "tv-strip" + (me ? " me" : "");
       s.title = t.name;
-      s.innerHTML = `<div class="tv-knob" title="Pan"><span></span></div><div class="tv-fad"><div class="tv-meter"><i></i></div>` +
-        `<div class="tv-rail"><div class="tv-thumb"></div></div></div><div class="val"></div><div class="col" style="background:${col}"></div>` +
+      s.innerHTML = `<div class="tv-knob" title="Pan" tabindex="0" role="slider" aria-label="${esc(t.name)} — pan" aria-valuemin="-100" aria-valuemax="100"><span></span></div><div class="tv-fad"><div class="tv-meter"><i></i></div>` +
+        `<div class="tv-rail" tabindex="0" role="slider" aria-orientation="vertical" aria-label="${esc(t.name)} — dB" aria-valuemin="-60" aria-valuemax="12"><div class="tv-thumb"></div></div></div><div class="val"></div><div class="col" style="background:${col}"></div>` +
         `<div class="sh">${esc(shortName(t, used))}</div>`;
       con.appendChild(s);
       const strip = { name: t.name, el: s, knob: s.querySelector(".tv-knob span"), meter: s.querySelector(".tv-meter i"),
@@ -338,6 +338,14 @@
     };
   }
   function dragFader(strip) {
+    strip.rail.addEventListener("keydown", e => {
+      if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) return;
+      const t = findTrack(strip.name); if (!t) return;
+      e.preventDefault(); e.stopPropagation();
+      const db = RC.volToDb(t.vol), step = e.shiftKey ? 0.1 : 1;
+      const next = e.key === "Home" ? 0 : e.key === "End" ? -60 : RC.clamp(db + (e.key === "ArrowUp" ? step : -step), -60, 12);
+      setVol(t, RC.dbToVol(next));
+    });
     const send = throttle((t, v) => setVol(t, v), 60);
     const at = e => {
       const b = strip.rail.getBoundingClientRect();
@@ -348,22 +356,30 @@
       strip.rail.setPointerCapture(e.pointerId);
       send(t, at(e));
       const mv = ev => send(t, at(ev));
-      const up = () => { strip.rail.removeEventListener("pointermove", mv); strip.rail.removeEventListener("pointerup", up); };
+      const up = () => { strip.rail.removeEventListener("pointermove", mv); strip.rail.removeEventListener("pointerup", up); strip.rail.removeEventListener("pointercancel", up); };
       strip.rail.addEventListener("pointermove", mv);
       strip.rail.addEventListener("pointerup", up);
+      strip.rail.addEventListener("pointercancel", up);
     });
     strip.rail.addEventListener("dblclick", () => { const t = findTrack(strip.name); if (t) setVol(t, 1); });
   }
   function dragKnob(strip, knob) {
+    knob.addEventListener("keydown", e => {
+      if (!["ArrowLeft", "ArrowRight", "Home"].includes(e.key)) return;
+      const t = findTrack(strip.name); if (!t) return;
+      e.preventDefault(); e.stopPropagation();
+      setPan(t, e.key === "Home" ? 0 : RC.clamp(t.pan + (e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 0.01 : 0.05), -1, 1));
+    });
     const send = throttle((t, p) => setPan(t, p), 60);
     knob.addEventListener("pointerdown", e => {
       const t = findTrack(strip.name); if (!t) return;
       knob.setPointerCapture(e.pointerId);
       const y0 = e.clientY, p0 = t.pan;
       const mv = ev => send(t, RC.clamp(p0 + (y0 - ev.clientY) / 100, -1, 1));
-      const up = () => { knob.removeEventListener("pointermove", mv); knob.removeEventListener("pointerup", up); };
+      const up = () => { knob.removeEventListener("pointermove", mv); knob.removeEventListener("pointerup", up); knob.removeEventListener("pointercancel", up); };
       knob.addEventListener("pointermove", mv);
       knob.addEventListener("pointerup", up);
+      knob.addEventListener("pointercancel", up);
     });
     knob.addEventListener("dblclick", () => { const t = findTrack(strip.name); if (t) setPan(t, 0); });
   }
@@ -494,8 +510,10 @@
     if (nx != null) RC.seek(nx);
   };
   document.addEventListener("keydown", e => {
-    if (e.code !== "Space" || /INPUT|SELECT|TEXTAREA|BUTTON/.test((e.target.tagName || ""))) return;
-    e.preventDefault(); $("bPlay").onclick();
+    if (e.code !== "Space" || e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.target.isContentEditable || e.target.closest('[role="slider"]') || /INPUT|SELECT|TEXTAREA|BUTTON/.test((e.target.tagName || "")) || document.querySelector(".rc-veil.show")) return;
+    const id = { travail: "bPlay", concert: "csPlay", groupe: "grPlay" }[RC.mode];
+    if (!id) return;
+    e.preventDefault(); $(id).click();
   });
   function chipToggle(pred, el) {
     const t = RC.state.tracks.find(x => pred(x.name));
@@ -656,6 +674,8 @@
         row.el.classList.toggle("muted", tr.mute);
         row.el.querySelector(".m").classList.toggle("on", tr.mute);
         row.el.querySelector(".s").classList.toggle("on", tr.solo);
+        row.el.querySelector(".m").setAttribute("aria-pressed", String(tr.mute));
+        row.el.querySelector(".s").setAttribute("aria-pressed", String(tr.solo));
         row.el.querySelector(".db").textContent = tr.mute ? T("muted") : RC.fmtDb(RC.volToDb(tr.vol));
       }
       drawRow(row, t, V);
@@ -668,6 +688,12 @@
       const pan = ed && ed.until > now && ed.pan != null ? ed.pan : tr.pan;
       st.thumb.style.bottom = (RC.dbToPos(RC.volToDb(vol)) * 100) + "%";
       st.knob.style.transform = `rotate(${pan * 135}deg)`;
+      const db = RC.volToDb(vol);
+      st.rail.setAttribute("aria-valuenow", String(Math.max(-60, Math.round(db * 10) / 10)));
+      st.rail.setAttribute("aria-valuetext", RC.fmtDb(db));
+      st.knob.parentElement.setAttribute("aria-valuenow", String(Math.round(pan * 100)));
+      st.knob.parentElement.setAttribute("aria-valuetext", pan === 0 ? "C" : Math.abs(Math.round(pan * 100)) + (pan < 0 ? " L" : " R"));
+      st.el.classList.toggle("clipping", !!S.play && tr.peak >= 0);
       st.val.textContent = RC.fmtDb(RC.volToDb(vol)).replace(" dB", "");
       st.el.classList.toggle("muted", tr.mute);
       const target = S.play ? RC.dbToPos(tr.peak) : 0;

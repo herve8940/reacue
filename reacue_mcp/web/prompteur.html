@@ -447,6 +447,7 @@
     body.drummer .devent { grid-row: 1; } body.drummer .dthen { grid-row: 2; } body.drummer .dgrid { grid-row: 3 / span 3; }
   }
 </style>
+<link rel="stylesheet" href="reacue_studio/prompter-pro.css">
 </head>
 <body class="rc pr">
   <div class="top">
@@ -454,6 +455,7 @@
     <span class="stem" id="stemNote"></span>
     <button class="ready" id="readyBtn" hidden></button>
     <button class="role" id="roleBtn">…</button>
+    <button class="focus-toggle" id="focusBtn" aria-pressed="false">SCÈNE</button>
     <button class="iconbtn" id="langBtn" title="Langue / Language">EN</button>
     <button class="iconbtn" id="fsBtn" title="" aria-label="">⛶</button>
     <div class="dot" id="dot" title="" role="img"></div>
@@ -774,6 +776,7 @@ function setLang(l, remember) {
   if (song) { gridKey = ""; dGridKey = ""; dPhraseKey = ""; prepSong(); }
 }
 function applyStatic() {
+  focusLabel();
   $("langBtn").textContent = LANG === "fr" ? "EN" : "FR";
   $("fsBtn").title = S.fullscreen; $("fsBtn").setAttribute("aria-label", S.fullscreen);
   $("dot").title = S.link; $("dot").setAttribute("aria-label", S.link);
@@ -1757,6 +1760,21 @@ loadSong(); setInterval(loadSong, 2000);
 (async function loop() { await poll(); setTimeout(loop, 80); })();
 setInterval(() => { if (!DEMO && !st.ok && song) showMsg(S.noReaper); else if (song) hideMsg(); }, 1000);
 layoutBeats(); requestAnimationFrame(render);
+
+function focusLabel() {
+  const on = document.body.classList.contains("stage-view");
+  const button = $("focusBtn");
+  button.textContent = LANG === "fr" ? (on ? "DÉTAILS" : "SCÈNE") : (on ? "DETAILS" : "STAGE");
+  button.setAttribute("aria-pressed", String(on));
+  button.title = LANG === "fr" ? "Affichage épuré pour la scène / détails" : "Focused stage display / details";
+}
+document.body.classList.toggle("stage-view", load("reacue_prompt_stage") === "1");
+$("focusBtn").onclick = () => {
+  const on = document.body.classList.toggle("stage-view");
+  store("reacue_prompt_stage", on ? "1" : "0");
+  focusLabel(); window.dispatchEvent(new Event("resize"));
+};
+focusLabel();
 </script>
 </body>
 </html>

@@ -1,0 +1,73 @@
+/* Reference-led finish: graphite surfaces, orange cues, condensed titles and quiet chrome.
+   All assets are bundled; live state and transport stay driven by REAPER. */
+:root { --bg:#151719; --panel:#202326; --inset:#101214; --well:#131517; --sig:#ff8737; --led:#30df75; }
+button, [role="slider"], [role="button"], input, select { outline-offset:4px; }
+:focus-visible { outline:2px solid var(--smpte); }
+button { transition:background-color .12s, border-color .12s, color .12s; }
+.rc-top { gap:18px; min-height:64px; }
+.rc-nav button { min-height:34px; }
+.rc-nav button.on { box-shadow:0 1px 4px #0005; }
+.rc-view-tools { display:flex; gap:5px; align-items:center; margin-left:auto; }
+.rc-view-tools button { min-height:34px; padding:5px 10px; background:var(--well); border:1px solid #34383d; border-radius:4px; color:var(--ink2); font-size:10px; font-weight:600; letter-spacing:.1em; }
+.rc-view-tools button[aria-pressed="true"] { color:var(--sig); border-color:var(--sig); background:#34251c; }
+.rc-lcds { margin-left:0; }
+.rc-lcd { padding:6px 12px; }
+.rc-lcd .v { letter-spacing:-.04em; }
+.rc-inset, .cs-panel { box-shadow:inset 0 1px 0 #ffffff03; }
+.tv-head { padding-top:20px; padding-bottom:12px; }
+.tv-title .rc-h1 { font-size:38px; }
+.tv-row { background:#181b1e; }
+.tv-row .hd { width:170px; }
+.tv-row .nm { font-weight:700; letter-spacing:.025em; }
+.tv-row .sw { width:5px; }
+.tv-row .wv { background:linear-gradient(180deg,#ffffff02,transparent); }
+.tv-row:focus-within { box-shadow:inset 0 0 0 1px var(--smpte); }
+.tv-row .rc-ms { min-width:28px; min-height:24px; }
+.tv-console { width:clamp(330px,32vw,470px); }
+.tv-strip { position:relative; padding-top:12px; }
+.tv-strip .val { font-size:10px; height:14px; color:var(--ink2); }
+.tv-strip .sh { font-family:var(--cond); font-size:13px; letter-spacing:.08em; }
+.tv-strip .tv-rail:focus-visible { outline-offset:14px; }
+.tv-strip .tv-knob:focus-visible { outline-offset:3px; }
+.tv-strip.clipping .tv-meter { box-shadow:0 0 0 1px var(--red),0 0 10px #ff4d4d40; }
+.tv-strip.clipping .val { color:var(--red); }
+.tv-strip.clipping::before { content:"CLIP"; position:absolute; top:2px; right:3px; color:var(--red); font:8px var(--mono); }
+.cs-banner { min-height:126px; padding:20px 18px; }
+.cs-h { font-size:64px; letter-spacing:.015em; }
+.cs-lcd .v { font-size:36px; letter-spacing:-.045em; }
+.cs-setlist { min-height:88px; }
+.cs-song { padding:8px 10px; }
+.cs-song .t { font-size:18px; }
+.cs-body { gap:14px; }
+.cs-ph { background:#1c1f22; padding:12px 14px; }
+.cs-sec { min-height:46px; height:46px; }
+.cs-sec.now, .cs-cue.now { background:#3a291d; }
+.cs-trans { padding:10px; gap:6px; }
+.cs-big { min-height:54px; font-family:var(--cond); font-weight:700; font-size:21px; letter-spacing:.04em; }
+.cs-test { min-height:34px; }
+body.stage-view .rc-top { min-height:44px; padding:4px 16px; }
+body.stage-view .rc-top .rc-nav, body.stage-view .rc-top .rc-lcds, body.stage-view .rc-top .rc-lang { display:none; }
+body.stage-view .rc-view-tools { margin-left:auto; }
+body.stage-view .tv-tools, body.stage-view .tv-head .rc-meta { display:none; }
+body.stage-view .cs-h { font-size:clamp(44px,5vw,78px); }
+body.stage-view .cs-sec { height:52px; font-size:15px; }
+body.stage-view .cs-cue { min-height:44px; }
+body.stage-view .tv-head { padding-top:12px; }
+@media (max-width:1270px) { .rc-top { gap:10px; } .rc-lcd { padding:6px 9px; } .rc-nav button { padding:7px 10px; } }
+@media (max-width:1100px) { .tv-console { width:auto; } .rc-lcds { margin-left:auto; } .rc-view-tools { margin-left:0; } .cs-h { font-size:46px; } }
+@media (max-width:640px) { .rc-top { padding:8px 12px; gap:8px; } .rc-brand { flex:1; } .rc-view-tools { margin-left:auto; } .rc-nav { order:3; width:100%; overflow:auto; } .rc-nav button { flex:1; padding:7px 9px; } .rc-lcds { order:4; width:100%; } .rc-lcd { flex:1; min-width:0; padding:5px 7px; } .rc-lcd .v { font-size:15px; } .rc-lcd.tc { display:none; } .tv-title .rc-h1 { font-size:30px; } .tv-row .hd { width:110px; } .cs-banner { min-height:110px; padding:14px 12px; } .cs-h { font-size:38px; } .cs-lcd .v { font-size:22px; } }
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { transition:none!important; scroll-behavior:auto!important; } }
+
+@media (min-width:1200px) {
+  .rc-top { display:grid; grid-template-columns:auto auto auto minmax(0,1fr) auto; gap:12px; }
+  .rc-view-tools { grid-column:5; grid-row:1; margin-left:0; }
+  .rc-lcds { grid-column:4; grid-row:1; justify-self:end; min-width:0; }
+  .rc-view-tools button { min-width:34px; }
+  body.stage-view .rc-top { display:flex; }
+}
+@media (pointer:coarse) {
+  .tv-row .rc-ms { min-width:44px; min-height:44px; }
+  .tv-row { min-height:86px; }
+  .tv-row .db { font-size:9px; }
+  .tv-row .hd { width:150px; }
+}

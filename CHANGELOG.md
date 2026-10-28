@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Studio design and stage controls
+
+- Refine Studio console, concert/lighting and phone prompter to match the supplied Studio Pro references.
+- Add persistent Stage/Details views and a browser fullscreen control.
+- Add accessible keyboard fader/pan adjustment, touch-sized mute/solo targets and a live clipping indicator; correctly parse a 0 dB peak.
+- Route Space to the active screen transport and ignore it in dialogs/editable controls; make concert sections keyboard accessible.
+- Include three demo screenshots and design/use notes in docs/STUDIO_DESIGN.md.
+
 ## Unreleased — lyrics synchronization
 
 - Preserve Whisper line timestamps alongside automatic lyric drafts instead of discarding them and estimating timing again. Repair older auto drafts once when the transcription matches their existing text; never overwrite edits.

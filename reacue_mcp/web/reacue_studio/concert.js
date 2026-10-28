@@ -178,10 +178,15 @@
     secKey = key;
     $("csSecH").textContent = T("secH", String(s.title || "").toUpperCase());
     $("csSecs").innerHTML = (s.sections || []).map((x, i) =>
-      `<div class="cs-sec" data-i="${i}" title="${esc(x.name)} · ${x.start_bar}–${x.end_bar} — ${esc(T("secTip"))}">` +
+      `<div class="cs-sec" role="button" tabindex="0" data-i="${i}" title="${esc(x.name)} · ${x.start_bar}–${x.end_bar} — ${esc(T("secTip"))}">` +
       `<span class="e" style="background:${esc(x.color || "#4A5361")}"></span><span class="b">${String(x.start_bar).padStart(3, "0")}</span>` +
       `<span class="n">${esc(x.name)}</span><span class="s"></span></div>`).join("");
   }
+  $("csSecs").addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const row = e.target.closest(".cs-sec"); if (!row) return;
+    e.preventDefault(); e.stopPropagation(); row.click();
+  });
   $("csSecs").addEventListener("click", e => {
     const r = e.target.closest(".cs-sec"); if (!r) return;
     const songs = songsOf(RC.data), s = songs[songIndex(songs, RC.pos())];
@@ -213,10 +218,7 @@
     if (isConcert(RC.data)) remote("next", "", () => songJump(1)); else sectionJump(1);
   };
   $("csPlay").onclick = () => remote("toggle", "", () => RC.send("" + (RC.state.play ? RC.ACT.pause : RC.ACT.play)));
-  document.addEventListener("keydown", e => {
-    if (RC.mode !== "concert" || e.code !== "Space" || /INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target.tagName || "")) return;
-    e.preventDefault(); e.stopImmediatePropagation(); $("csPlay").onclick();
-  }, true);
+  // Space is dispatched once by the shared active-screen handler in travail.js.
 
   function buildCues(box, d, lg, list, full) {
     const key = (d ? d.id : "") + RC.LANG + ":" + list.length + ":" + (list[0] ? list[0].track + "/" + list[0].n : "") + (full ? "F" : "");
