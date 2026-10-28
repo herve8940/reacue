@@ -163,9 +163,7 @@ Press Enter to close the window.
 
 > You can run the installer as many times as you like: it repairs the installation and keeps your settings.
 
-**The other optional components** (chords, drums, word-by-word and automatic lyrics) are not offered by this
-installer: each has its own (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), to run
-whenever you like, even later. See [chapter 20](#20-optional-components).
+**Complete AI Model Suite:** In **Automatic Mode** (choice 1 or *Enter*), the installer automatically installs all models suited for your hardware (Demucs stems, SongFormer structure, ISMIR chords, ADTOF drums, and Whisper lyrics). In **Custom Mode**, each model is presented with full details. Each component also retains its standalone installer (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), which can be rerun at any time.
 
 ---
 
@@ -329,7 +327,9 @@ entries/rests, less reliable chords and sections). **Better: split it into stems
 aligned exactly like the MP3. The MP3 item was removed from the project (the file itself is still on disk;
 *Edit → Undo* brings it back).
 
-The stem files are stored next to the MP3, in `<song name>-stems/htdemucs_6s/`. If you run the action again
+The stem files are stored next to the MP3, in `<song name>-stems/htdemucs_6s/`.
+> 💡 **Complete Stems & Hardware Guide:** For an in-depth breakdown of Demucs models (`htdemucs_6s`, `htdemucs_ft`, `htdemucs`), hardware performance (NVIDIA RTX 50 Blackwell, Apple Silicon, CPU), and band routing best practices, see the **[Best Practices & Hardware Guide](BEST_PRACTICES_AND_HARDWARE.md)**.
+ If you run the action again
 on the same MP3, the import is immediate (no new separation).
 
 > Listen to the tracks solo (**S** button): vocals, drums and bass are usually very clean; guitar and piano
@@ -549,7 +549,9 @@ comments (ignored).
    control** or **Lighting** (the choice is remembered on this phone; the **Role** button changes it).
 5. Start playback in REAPER: the prompter follows the position (section, bar, beat).
 
-**You should see** a green dot (link with REAPER alive), the current section and the next one.
+**You should see** the green LED at the top right (link with REAPER alive; red = link lost), the three displays
+**BAR · TEMPO · KEY**, the current section (green LEDs = beats of the bar, “3/16” = bar within the section) and,
+at the bottom, **NEXT / IN n bars** above the song's structure strip (tap it to show or hide the section list).
 
 <img src="images/prompter_drums_en.png" width="200"> <img src="images/prompter_vocals_en.png" width="200">
 
@@ -558,12 +560,15 @@ comments (ignored).
 | Role | What it shows |
 |---|---|
 | **Drums** | groove of the section, grid of the current bar (16 steps, or triplets for a shuffle song), fills, crashes, stops and re-entries; one lane per piece: Crash, Ride, Hi-hat, **Open hi-hat**, Snare, Tom 1, Tom 2, Floor tom, Kick |
-| **Bass**, **Rhythm gtr** | current and next chord with a count-down, chord chart of the section, key, entries and exits |
+| **Bass**, **Rhythm gtr** | current chord (light card; Bass: bass note) and next chord with a count-down, chord chart of the section (current bar in orange), key, entries and exits; transposed when the stems are in ReaCue Studio |
 | **Lead gtr** | solos, chords, entries |
 | **Vocals** | scrolling lyrics, next line and count-down before each entry; with word-by-word lyrics, the **current word highlighted** |
 | **Overview** | structure and chords |
 | **Stage control** | concert remote, protected by a PIN code ([16.5](#165-drive-the-concert-from-a-phone-stage-control)) |
 | **Lighting** | grandMA3 cues, current cue, timecode, files to import ([16.9](#169-lighting-grandma3)) |
+
+When a section has a **note** (`notes` field of the published data, editable later in ReaCue Studio), it is
+shown in a pink frame under the chart, for every role.
 
 On a tablet in landscape, the Drums view puts the position (section, bar, coming fill) and the grid of the bar
 side by side; only the lanes of the pieces played are shown:
@@ -965,6 +970,125 @@ Open the song's project; in the ReaCue window, **Stage** tab (“Single song”)
 
 There is no automatic stop and no setlist (a single song). Only REAPER (and the ReaCue window for the loop)
 needs to run during rehearsal: Claude is not needed.
+
+### 17.3 ReaCue Studio: the Practice screen
+
+ReaCue Studio is a web page served by REAPER (like the prompter), made to work on a song on the computer or a
+tablet.
+
+1. Prepare the song (chapter 10): publishing also creates the stems' **waveforms**.
+2. Open the **ReaCue** window in REAPER (it runs the loop, the ramp, transpose and export).
+3. In the browser: **`http://localhost:8080/studio.html`** on the computer, or
+   `http://<computer's IP>:8080/studio.html` on a tablet (the address is shown under the QR code).
+4. The first time you use a loop, a ramp, transpose or export, the page asks for the **PIN** (ReaCue window,
+   **Stage** tab): it is remembered on the device.
+
+![ReaCue Studio, Practice screen](images/studio_en.png)
+
+| Area | What it does |
+|---|---|
+| Displays (top) | POSITION bar.beat.sixteenth · TIME · TEMPO and speed in % · KEY (± transpose) · SMPTE |
+| Structure | click = go to the section; double-click = loop it (with the count-in bar, as in 17.1) |
+| Chords | scroll under the play head; click = go to the chord |
+| Stem rows | waveform (played part in colour), **M** (mute), **S** (solo), volume; click = go there |
+| Console (right) | pan (drag; double-click = centre), meter, fader (double-click = 0 dB), CLICK and VOICE included |
+| Footer | Start, Stop, Play/Pause (space bar), Loop, Next section; LOOP · RAMP · CLICK · VOICE; LEDs |
+| My instrument | the chosen track is muted automatically (you play your part over the rest) |
+| KEY − / + | transposes the stems by a semitone; double-click the KEY display = back to 0 |
+
+**Speed ramp**: put the play head in the section to practise, click **RAMP**, set for example **from 85 % to
+100 % over 8 passes**, then **START**. The section loops; at each repeat the speed goes up one step (pitch
+kept); the counter shows “LOOP CHORUS 1 · 4/8”. After the last pass the loop goes on at the final speed.
+**STOP** (or the Loop button) brings back 100 %.
+
+> The **REAPER** LED is green when REAPER and the ReaCue window answer, orange when the window is closed
+> (mute, volume, transport still work; loop, ramp, transpose and export do not). Transpose stays clean up to
+> about ±2 semitones; beyond that, vocals and drums sound artificial. It changes the stem items: Ctrl/Cmd+Z
+> in REAPER undoes it.
+
+### 17.4 Export stems and ranges (WAV / MP3)
+
+In ReaCue Studio, **EXPORT** button:
+
+1. **Instruments**: tick the ones to export (ALL / NONE), and **with the click** if you want a click
+   synthesised on the song's grid.
+2. **Range**: whole song, a **section** (list), **bars** “from → to”, or **REAPER's time selection**.
+3. **Files**: one file per instrument, or everything **mixed** into one file (brought down to -1 dBFS when it
+   would clip: never any clipping; track volume and pan applied to the mix).
+4. **Format**: **MP3** (128, 192, 256 or 320 kbit/s; 320 by default) or 24-bit **WAV**.
+5. **EXPORT**: progress is shown, then the download links. The files are also in the **`exports/`** folder next
+   to the project, named `<Title> - <Instrument> - <Section>.mp3`.
+
+Examples: the bass alone in the chorus as an MP3 to revise on the bus; “everything but the guitar” mixed with
+the click, bars 33 to 48, to practise your part; every stem as WAV for another program.
+
+
+### 17.5 ReaCue Studio: the Show and Lights screens
+
+On show night, `studio.html` also works as a **control desk** on the computer or a tablet.
+
+1. Open the concert in REAPER (chapter 16) and the **ReaCue** window (it runs the commands).
+2. In ReaCue Studio, click **SHOW** (or open `studio.html#concert` directly). The first time you press a
+   command, enter the **PIN** (ReaCue window, Stage tab).
+
+![ReaCue Studio, Show screen](images/studio_concert_en.png)
+
+| Area | What it does |
+|---|---|
+| Banner | LED + PLAYING / PAUSED / STOPPED, “SONG n / N”, title; LEFT (end of the song), SHOW (elapsed time), SMPTE · LTC |
+| Setlist | one block per song (width = length): played greyed, current in orange; click = go to the song |
+| Sections | start bar, name, PLAYED / NOW 3/16 / NEXT; click = go to the section |
+| ◀ PREV · PLAY · NEXT ▶ | previous song (or start of the song), play / pause (space bar), next song |
+| Lighting | the song's cues (number, timecode, section, effect), current cue highlighted, LTC / MTC / export LEDs, TEST 10 S |
+
+While playing, **PREV**, **NEXT**, a setlist block and **TEST 10 S** need **two taps** (“AGAIN?”), like the
+ReaCue window. With no concert open, the screen shows the single song (PREV / NEXT move between sections) with
+a message.
+
+3. Click **LIGHTS** (`studio.html#lumiere`) for the grandMA3 console:
+
+![ReaCue Studio, Lights screen](images/studio_lumiere_en.png)
+
+- **Current cue** in large type, then every cue (per song): click = go to the cue.
+- **Timecode outputs**: LTC output, MTC device, TC Slot, fps and start (Lighting tab settings at export time);
+  **EXPORT UP TO DATE** LED (otherwise: *Export now* in the Lighting tab).
+- **TEST 10 S**: only the TIMECODE tracks play for 10 s (the audience hears nothing), then everything is
+  restored; the button shows the countdown, a 2nd tap stops. Check on the console that the TC Slot turns green.
+- **grandMA3 files**: download the Sequences, the Timecode and the cue sheet.
+
+> The effects shown are the suggestions per section type (read-only); editing them comes in a later version.
+
+### 17.6 ReaCue Studio: the Library and Band screens
+
+**Library** (`studio.html#biblio`): the list of all your songs (projects folder + shows).
+
+![ReaCue Studio, Library screen](images/studio_biblio_en.png)
+
+1. Open the **ReaCue** window in REAPER (it publishes the library and runs the commands).
+2. In ReaCue Studio, click **LIBRARY**. Filter by stage (counters at the top) or search a title.
+3. Click a song: it opens in REAPER (new tab) and the screen switches to **PRACTICE**. A song “TO PREPARE” also
+   opens, but prepare it first (Song tab of the window).
+4. **STAGE** column: computed by itself (AUTO) from the time played alone or as a band; click a box to set it by
+   hand (MANUAL), “auto” to go back to the computation.
+
+| Stage | Automatic computation |
+|---|---|
+| Discovered | nothing measured |
+| Practised alone | 5 min of playback |
+| Rehearsed as a band | 3 min of playback with at least 2 musicians' prompters connected |
+| Ready for the stage | prepared + rehearsed as a band on 2 days (at least 2 min each day) |
+
+**Band** (`studio.html#groupe`): the rehearsal screen.
+
+![ReaCue Studio, Band screen](images/studio_groupe_en.png)
+
+1. Each musician opens the prompter on their phone, picks their role and may type their first name.
+2. **Notes**: type “stop on 4” next to the section, Enter: the note shows in pink on every prompter (2–3 s).
+3. **Ready**: everyone taps “Ready?” at the top of the prompter; the Band screen shows “READY 3 / 4” and who is
+   missing. **RESET** before the next song.
+4. **Take it from…**: click “Chorus 2”: playback restarts one bar before.
+
+> Connected musicians, notes and manual stage go through the ReaCue window: keep it open.
 
 ---
 

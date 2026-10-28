@@ -5,359 +5,471 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0b0d10">
+<meta name="theme-color" content="#16181B">
+<meta name="color-scheme" content="dark">
 <title>ReaCue Prompteur</title>
+<!-- style « Studio pro » : base commune de ReaCue Studio (polices embarquées, jetons de couleur, afficheurs LCD) -->
+<link rel="stylesheet" href="reacue_studio/base.css">
 <style>
+  /* Prompteur des musiciens, lisible sur scène : très gros caractères, contrastes ≥ 4.5:1, cibles ≥ 44 px.
+     Les jetons (--bg, --panel, --inset, --sig, --led, --lcd…) viennent de base.css ; repli si le fichier manque. */
   :root {
-    --bg: #0b0d10; --panel: #15191f; --line: #262c35; --ink: #f2f4f7; --dim: #8a94a3;
-    --ok: #3ddc84; --warn: #ffb020; --hot: #ff4d4f; --sec: #3c78dc; --next: #888;
+    --bg: #16181B; --panel: #1E2125; --inset: #0F1113; --well: #121417; --edge: #0C0D0F; --raise: #2B2F35;
+    --ink: #E6E8EB; --ink2: #B4BAC2; --mute: #8A9099; --mute2: #9AA0A8;
+    --sig: #FF8A3D; --led: #3BE37A; --lcd: #F2C230; --smpte: #8FD1FF; --red: #FF4D4D; --note: #E58FB5;
+    --cell: #22262B; --cell-past: #1B1E22; --on-sig: #16181B;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --cond: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", var(--sans);
+    color-scheme: dark;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    -webkit-user-select: none; user-select: none; overflow: hidden; }
-  body { display: flex; flex-direction: column; padding: max(10px, env(safe-area-inset-top)) 14px max(10px, env(safe-area-inset-bottom)); gap: 10px; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+  body.pr { font-family: var(--sans); font-size: 16px; -webkit-user-select: none; user-select: none; overflow: hidden;
+    -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; gap: 8px;
+    padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .k, .klab { font-size: 12px; font-weight: 600; letter-spacing: .14em; color: var(--mute); text-transform: uppercase; }
+  .cond { font-family: var(--cond); font-weight: 700; letter-spacing: .02em; }
 
-  /* barre du haut */
-  .top { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--dim); min-height: 34px; }
-  .role { background: var(--panel); border: 1px solid var(--line); color: var(--ink); border-radius: 999px;
-    padding: 6px 14px; font-weight: 700; font-size: 15px; cursor: pointer; }
-  .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .title b { color: var(--ink); font-weight: 600; }
-  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--hot); flex: none; }
-  .dot.on { background: var(--ok); }
-  .iconbtn { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 8px; padding: 5px 9px; font-size: 14px; }
-  .iconbtn.on { color: var(--ok); border-color: var(--ok); }
-
-  /* section en cours */
-  .now { position: relative; border-radius: 18px; background: var(--panel); padding: 14px 18px 16px;
-    border-left: 12px solid var(--sec); overflow: hidden; }
-  .now .label { font-size: 14px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
-  .now .name { font-size: clamp(38px, 11vw, 96px); font-weight: 800; line-height: 1.02; margin-top: 4px;
+  /* en-tête : titre + n° du morceau, état du stem, rôle, langue, plein écran, liaison REAPER ------------------- */
+  .top { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px; }
+  .title { flex: 1; min-width: 0; font-family: var(--cond); font-size: 24px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
+  .title b { font-weight: 700; }
+  .title .rk { color: var(--mute2); font-weight: 600; margin-left: 4px; }
+  .role { min-height: 44px; padding: 0 12px; border-radius: 4px; background: var(--raise); border: 1px solid var(--edge);
+    font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; flex: none; }
+  .iconbtn { width: 44px; height: 44px; flex: none; border-radius: 4px; border: 1px solid var(--edge); background: var(--well);
+    color: var(--ink2); font-size: 13px; font-weight: 600; letter-spacing: .06em; padding: 0; }
+  .iconbtn.on { color: var(--led); border-color: var(--led); }
+  /* « Prêt » (répétition, écran GROUPE de ReaCue Studio) : discret, vert quand il est allumé */
+  .ready { min-height: 44px; padding: 0 10px; border-radius: 4px; background: var(--well); border: 1px solid var(--edge);
+    color: var(--mute2); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; flex: none; }
+  .ready.on { color: var(--edge); background: var(--led); border-color: var(--led); }
+  .ready.wait { color: var(--led); border-color: var(--led); }
+  .pname { font-size: 18px; min-height: 52px; padding: 0 14px; border-radius: 6px; border: 1px solid var(--edge); background: var(--inset);
+    color: var(--ink); margin-bottom: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--red); box-shadow: 0 0 8px var(--red); flex: none; margin: 0 2px; }
+  .dot.on { background: var(--led); box-shadow: 0 0 8px var(--led); }
+  .stem { flex: 0 1 auto; min-width: 0; font-size: 14px; font-weight: 700; border-radius: 4px; padding: 6px 10px; display: none;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .progress { height: 8px; background: var(--line); border-radius: 4px; margin-top: 12px; overflow: hidden; }
-  .progress i { display: block; height: 100%; background: var(--sec); width: 0; }
-  .beats { display: flex; gap: 10px; margin-top: 12px; }
-  .beats span { flex: 1; height: 22px; border-radius: 6px; background: var(--line); }
-  .beats span.on { background: var(--ink); }
-  .beats span.one.on { background: var(--warn); }
+  .stem.show { display: inline-block; }
+  .stem.on { border: 1px solid var(--led); color: var(--led); }
+  .stem.off { background: var(--lcd); color: var(--on-sig); border: 1px solid var(--lcd); }
 
-  /* prochain changement */
-  .next { display: flex; align-items: stretch; gap: 10px; }
-  .next .box { flex: 1; background: var(--panel); border-radius: 16px; padding: 10px 16px; border-left: 8px solid var(--next); min-width: 0; }
-  .next .box .k { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
-  .next .box .v { font-size: clamp(26px, 7vw, 54px); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .next .count { flex: none; width: clamp(110px, 30vw, 220px); background: var(--panel); border-radius: 16px; text-align: center; padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; }
-  .next .count .v { font-size: clamp(44px, 14vw, 110px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-  .next .count .k { font-size: 13px; color: var(--dim); }
-  .next.last .count { background: var(--warn); color: #000; }
-  .next.last .count .k { color: #000; }
+  /* afficheurs LCD : mesure, tempo, ton (reacue_studio/base.css .rc-lcds) ------------------------------------- */
+  body.pr .rc-lcds { margin: 0; width: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex: none;
+    background: var(--edge); border: 1px solid var(--edge); border-radius: 6px; overflow: hidden; gap: 1px; }
+  body.pr .rc-lcd { text-align: left; padding: 6px 12px 7px; min-width: 0; background: var(--inset); }
+  body.pr .rc-lcd .k { font-size: 11px; letter-spacing: .14em; }
+  body.pr .rc-lcd .v { font-family: var(--mono); font-size: clamp(24px, 7vw, 40px); line-height: 1.1; color: var(--lcd);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  body.pr .rc-lcd .v small { display: inline; font-size: .45em; color: var(--mute2); margin-left: 3px; }
 
-  /* alertes du rôle */
-  .side { display: flex; flex-direction: column; gap: 10px; }
-  .alerts { display: flex; flex-direction: column; gap: 8px; }
-  .alert { border-radius: 14px; padding: 10px 16px; font-size: clamp(20px, 5.5vw, 40px); font-weight: 800; background: var(--panel); border: 2px solid var(--line); }
-  .alert small { display: block; font-size: 14px; font-weight: 500; color: var(--dim); }
-  .alert.play { border-color: var(--ok); color: var(--ok); }
-  .alert.rest { border-color: var(--line); color: var(--dim); }
-  .alert.soon { border-color: var(--warn); color: var(--warn); }
-  .alert.now, .alert.imm { background: var(--warn); color: #000; border-color: var(--warn); }
-  .alert.now small, .alert.imm small { color: #000; }
-  .alert.stop { border-color: var(--hot); color: var(--hot); }
-  .alert.info { font-size: 16px; font-weight: 500; color: var(--dim); }
+  /* carte de la section en cours : nom, mesure dans la section, voyants de temps, progression ------------------- */
+  .now { flex: none; background: var(--panel); border: 1px solid var(--edge); border-top: 5px solid var(--sig); border-radius: 6px; padding: 8px 14px 12px; }
+  .now .label { display: flex; justify-content: space-between; gap: 8px; }
+  .now .label span:last-child { font-family: var(--mono); letter-spacing: .04em; text-transform: none; color: var(--mute2); }
+  .now .r2 { display: flex; align-items: baseline; gap: 10px; }
+  .now .name { flex: 1; min-width: 0; font-family: var(--cond); font-weight: 700; letter-spacing: .02em; text-transform: uppercase;
+    font-size: clamp(44px, 13vw, 104px); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .now .spos { flex: none; font-family: var(--mono); font-size: clamp(18px, 5vw, 30px); color: var(--mute2); font-variant-numeric: tabular-nums; }
+  .beats { display: flex; gap: 5px; margin-top: 10px; }
+  .beats span { flex: 1; height: 16px; border-radius: 3px; background: var(--raise); }
+  .beats span.on { background: var(--led); box-shadow: 0 0 8px var(--led); }
+  .progress { height: 4px; background: var(--edge); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .progress i { display: block; height: 100%; background: var(--ink2); width: 0; }
 
-  /* accords */
-  .chords { background: var(--panel); border-radius: 16px; padding: 10px 14px 12px; display: none; }
-  .chords.show { display: block; }
-  .chords .head2 { display: flex; align-items: flex-end; gap: 14px; }
-  .chords .cur { font-size: clamp(56px, 18vw, 130px); font-weight: 900; line-height: 1; letter-spacing: -.02em; }
-  .chords .cur small { font-size: .38em; color: var(--dim); font-weight: 700; margin-left: 8px; letter-spacing: 0; }
-  .chords .nx { margin-left: auto; text-align: right; color: var(--dim); font-size: 14px; }
-  .chords .nx b { display: block; color: var(--ink); font-size: clamp(30px, 9vw, 60px); font-weight: 800; line-height: 1.05; }
-  .chords .nx.soon b { color: var(--warn); }
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
-  .grid4 div { background: var(--bg); border-radius: 7px; padding: 5px 6px; font-size: clamp(15px, 4.2vw, 22px); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 2px solid transparent; }
-  .grid4 div i { font-style: normal; display: block; font-size: 10px; color: var(--dim); font-weight: 500; }
-  .grid4 div.here { border-color: var(--warn); }
-  .grid4 div.past { opacity: .4; }
-  .grid4 div.doubt { color: var(--dim); }
+  /* accord en cours (carte claire) + suivant, grille de la section --------------------------------------------- */
+  .side { display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 0 1 auto; overflow-y: auto; }
+  .sidea, .sideb { display: flex; flex-direction: column; gap: 8px; flex: none; }
+  .chords { display: none; flex-direction: column; gap: 8px; }
+  .chords.show { display: flex; }
+  .head2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }
+  .ccard { border-radius: 6px; padding: 8px 14px 10px; min-width: 0; }
+  .ccard.cur { background: var(--ink); color: var(--bg); }
+  .ccard.cur .k { color: #3F444B; }
+  .ccard.nx { background: var(--panel); border: 1px solid var(--edge); }
+  .chords .cur .v { font-family: var(--cond); font-weight: 700; font-size: clamp(64px, 21vw, 150px); line-height: .95;
+    white-space: nowrap; overflow: hidden; }
+  .chords .cur .v small { font-family: var(--sans); font-size: .26em; font-weight: 600; margin-left: 8px; color: #3F444B; letter-spacing: 0; }
+  .chords .nx b { display: block; font-family: var(--cond); font-weight: 700; font-size: clamp(44px, 13vw, 100px); line-height: 1.05;
+    color: var(--mute2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chords .nx span { display: block; font-family: var(--mono); font-size: 14px; color: var(--ink2); }
+  .chords .nx.soon b { color: var(--sig); }
+  .chords .nx.soon span { color: var(--sig); }
+  .cgrid { background: var(--inset); border: 1px solid var(--edge); border-radius: 6px; padding: 7px 8px 8px; }
+  .cgrid .k { margin: 0 0 5px 2px; display: flex; justify-content: space-between; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; font-family: var(--mono); }
+  .grid4 div { background: var(--cell); color: var(--ink); border-radius: 3px; padding: 4px 7px 6px; font-size: clamp(16px, 4.6vw, 24px);
+    font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .grid4 div i { font-style: normal; display: block; font-size: 11px; color: var(--mute2); font-weight: 500; line-height: 1.2; }
+  .grid4 div.past { background: var(--cell-past); color: var(--mute); }
+  .grid4 div.doubt { color: var(--mute2); font-style: italic; }
+  .grid4 div.here { background: var(--sig); color: var(--on-sig); }
+  .grid4 div.here i { color: var(--on-sig); }
 
-  /* paroles */
-  .lyr { background: var(--panel); border-radius: 16px; padding: 12px 16px 14px; display: none; }
+  /* note de section ---------------------------------------------------------------------------------------- */
+  .snote { display: none; background: var(--panel); border: 1px solid var(--edge); border-left: 5px solid var(--note); border-radius: 6px;
+    padding: 9px 12px; font-size: clamp(17px, 4.6vw, 24px); line-height: 1.35; }
+  .snote.show { display: block; }
+  .snote b { color: var(--note); font-weight: 700; letter-spacing: .06em; }
+
+  /* paroles : ligne en cours (mot surligné), suivante, compte à rebours avant l'entrée ----------------------------- */
+  .lyr { display: none; background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; padding: 10px 14px 12px; }
   .lyr.show { display: block; }
-  .lyr .prev { font-size: clamp(15px, 4vw, 22px); color: var(--dim); opacity: .55; min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lyr .line { font-size: clamp(26px, 7.5vw, 58px); font-weight: 800; line-height: 1.12; margin: 4px 0; }
-  .lyr .line.wait { color: var(--dim); }
-  .lyr .line.ready { color: var(--warn); }
+  .lyr .prev { font-size: clamp(16px, 4.2vw, 24px); color: var(--mute); min-height: 1.3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lyr .line { font-size: clamp(30px, 8.4vw, 64px); font-weight: 700; line-height: 1.12; margin: 4px 0 6px; }
+  .lyr .line.wait { color: var(--ink2); }
+  .lyr .line.ready { color: var(--sig); }
   /* calage mot par mot : mots déjà chantés estompés, mot en cours surligné */
-  .lyr .line .wd.done { color: var(--dim); }
-  .lyr .line .wd.now { color: var(--warn); text-decoration: underline; text-decoration-thickness: .08em; text-underline-offset: .12em; }
-  .lyr .sweep { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
-  .lyr .sweep i { display: block; height: 100%; width: 0; background: var(--ok); }
-  .lyr .nextl { font-size: clamp(18px, 5vw, 32px); font-weight: 600; color: var(--dim); margin-top: 8px; }
-  .lyr .when { font-size: 14px; color: var(--dim); display: flex; justify-content: space-between; margin-top: 2px; }
-  .lyr .when b { color: var(--warn); font-size: 18px; }
+  .lyr .line .wd.done { color: var(--mute2); }
+  .lyr .line .wd.now { color: var(--sig); text-decoration: underline; text-decoration-thickness: .08em; text-underline-offset: .12em; }
+  .lyr .sweep { height: 5px; background: var(--edge); border-radius: 3px; overflow: hidden; }
+  .lyr .sweep i { display: block; height: 100%; width: 0; background: var(--led); }
+  .lyr .nextl { font-size: clamp(19px, 5.2vw, 34px); font-weight: 600; color: var(--ink2); margin-top: 8px; }
+  .lyr .when { font-family: var(--mono); font-size: 14px; color: var(--mute2); display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
+  .lyr .when b { color: var(--sig); font-size: clamp(20px, 5.4vw, 30px); }
 
-  /* vue batteur */
-  #drum { display: none; flex-direction: column; gap: 10px; min-height: 0; }
+  /* alertes du rôle (entrées, sorties, solo, break…) --------------------------------------------------------- */
+  .alerts { display: flex; flex-direction: column; gap: 6px; }
+  .alert { border-radius: 6px; padding: 7px 12px; background: var(--panel); border: 1px solid var(--edge); border-left: 6px solid var(--raise);
+    font-family: var(--cond); font-size: clamp(26px, 7vw, 46px); font-weight: 700; letter-spacing: .02em; line-height: 1.05; }
+  .alert small { display: block; font-family: var(--sans); font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--ink2); margin-top: 2px; }
+  .alert.play { border-left-color: var(--led); color: var(--led); }
+  .alert.rest { color: var(--ink2); }
+  .alert.soon { border-left-color: var(--lcd); color: var(--lcd); }
+  .alert.now, .alert.imm { background: var(--sig); color: var(--on-sig); border-color: var(--sig); }
+  .alert.now small, .alert.imm small { color: var(--on-sig); }
+  .alert.stop { border-left-color: var(--red); color: var(--red); }
+  .alert.info { font-family: var(--sans); font-size: 15px; font-weight: 500; color: var(--ink2); letter-spacing: 0; line-height: 1.35; }
+
+  /* plan : liste des sections, ENSUITE / DANS n mes, mini-structure --------------------------------------------- */
+  .map { display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1 0 auto; justify-content: flex-end; }
+  .list { display: none; flex: 1 1 0; min-height: 0; overflow-y: auto; font-size: 17px; }
+  .list.show { display: block; }
+  .list .row { display: flex; gap: 10px; padding: 6px 8px; border-radius: 4px; align-items: center; color: var(--ink2); }
+  .list .row.cur { background: var(--panel); color: var(--ink); font-weight: 700; }
+  .list .row i { width: 6px; height: 22px; border-radius: 2px; flex: none; }
+  .list .row .b { margin-left: auto; color: var(--mute2); font-family: var(--mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .next { display: flex; align-items: stretch; gap: 1px; background: var(--edge); border: 1px solid var(--edge); border-radius: 6px; overflow: hidden; flex: none; }
+  .next .box { flex: 1; min-width: 0; background: var(--panel); padding: 7px 12px 9px; border-left: 5px solid var(--raise); }
+  .next .box .v { font-family: var(--cond); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; font-size: clamp(30px, 8.6vw, 60px);
+    line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .next .count { flex: none; min-width: clamp(104px, 28vw, 200px); background: var(--inset); padding: 7px 12px 9px; text-align: right; }
+  .next .count .v { font-family: var(--mono); font-size: clamp(34px, 10vw, 72px); line-height: 1.05; color: var(--sig); font-variant-numeric: tabular-nums; }
+  .next .count .v small { font-size: 14px; color: var(--mute2); margin-left: 4px; }
+  .next.last .count { background: var(--sig); }
+  .next.last .count .v, .next.last .count .v small, .next.last .count .k { color: var(--on-sig); }
+  .strip { position: relative; display: flex; gap: 2px; height: 44px; padding: 14px 0; flex: none; cursor: pointer; }
+  .strip div { height: 100%; border-radius: 2px; opacity: .5; min-width: 2px; }
+  .strip div.cur { opacity: 1; box-shadow: inset 0 0 0 2px var(--ink); }
+  .strip .head { position: absolute; top: 9px; bottom: 9px; height: auto; width: 3px; background: var(--ink); border-radius: 1px; padding: 0; opacity: 1; box-shadow: 0 0 6px #000; min-width: 0; }
+  .foot { display: flex; justify-content: space-between; gap: 10px; color: var(--mute2); font-family: var(--mono); font-size: 12px; margin-top: -6px; flex: none; white-space: nowrap; }
+  .foot span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .foot span:last-child { flex: 0 1 auto; }
+
+  /* vue batteur : section, temps, carrures, prochain événement, grille du groove ---------------------------------- */
+  #drum { display: none; flex-direction: column; gap: 8px; min-height: 0; flex: 1 1 auto; overflow-y: auto; }
   body.drummer #drum { display: flex; }
-  body.drummer #now, body.drummer #next, body.drummer .side, body.drummer #list, body.drummer #footR { display: none !important; }
-  .dhead { display: flex; gap: 10px; align-items: stretch; }
-  .dsec { flex: 1; min-width: 0; background: var(--panel); border-radius: 16px; padding: 10px 14px; border-left: 12px solid var(--sec); }
-  .dsec .k { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
-  .dsec .v { font-size: clamp(30px, 9vw, 72px); font-weight: 900; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dsec .g { font-size: 15px; color: var(--dim); margin-top: 2px; }
-  .dcount { flex: none; width: clamp(110px, 30vw, 200px); background: var(--panel); border-radius: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-  .dcount .v { font-size: clamp(44px, 13vw, 100px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-  .dcount .v small { font-size: .45em; color: var(--dim); }
-  .dcount .k { font-size: 13px; color: var(--dim); }
-  .dbeats { display: flex; gap: 8px; }
-  .dbeats span { flex: 1; height: clamp(34px, 9vw, 60px); border-radius: 10px; background: var(--line); display: flex; align-items: center; justify-content: center; font-size: clamp(18px, 5vw, 30px); font-weight: 900; color: #0008; }
-  .dbeats span.on { background: var(--ink); color: #000; }
-  .dbeats span.one.on { background: var(--warn); }
-  .phrase { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
-  .phrase div { height: 30px; border-radius: 6px; background: var(--line); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: var(--dim); border: 2px solid transparent; }
-  .phrase div.past { background: #39414d; color: #9aa3b0; }
-  .phrase div.here { background: var(--ink); color: #000; }
-  .phrase div.fill { border-color: var(--warn); color: var(--warn); }
-  .phrase div.here.fill { background: var(--warn); color: #000; }
-  .phrase div.rest { background: repeating-linear-gradient(45deg, #1b2027 0 6px, #262c35 6px 12px); color: var(--dim); }
-  .phrase div.crash::after { content: "✱"; margin-left: 2px; color: #7fd1ff; }
-  .dgrid { background: var(--panel); border-radius: 16px; padding: 10px 12px 12px; }
-  .dgrid .t { display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; margin-bottom: 6px; }
-  .dgrid .t span:last-child { color: var(--dim); font-weight: 500; }
-  .dgrid.isfill { box-shadow: inset 0 0 0 3px var(--warn); }
-  .dgrid.isfill .t span:first-child { color: var(--warn); }
+  body.drummer #now, body.drummer #next, body.drummer #list, body.drummer #footR,
+  body.drummer .sidea, body.drummer #alerts { display: none !important; }
+  body.drummer .map { flex: none; }
+  .dhead { display: flex; gap: 8px; align-items: stretch; }
+  .dsec { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--edge); border-top: 5px solid var(--sig); border-radius: 6px; padding: 7px 14px 10px; }
+  .dsec .v { font-family: var(--cond); font-weight: 700; letter-spacing: .02em; text-transform: uppercase; font-size: clamp(38px, 11vw, 84px);
+    line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dsec .g { font-size: 15px; color: var(--ink2); margin-top: 3px; }
+  .dcount { flex: none; width: clamp(110px, 30vw, 200px); background: var(--inset); border: 1px solid var(--edge); border-radius: 6px; text-align: right; padding: 7px 12px; display: flex; flex-direction: column; justify-content: center; }
+  .dcount .v { font-family: var(--mono); font-size: clamp(40px, 12vw, 88px); line-height: 1; color: var(--lcd); font-variant-numeric: tabular-nums; }
+  .dcount .v small { font-size: .45em; color: var(--mute2); }
+  .dcount .k { text-transform: none; letter-spacing: .02em; font-weight: 500; margin-top: 4px; }
+  .dbeats { display: flex; gap: 6px; }
+  .dbeats span { flex: 1; height: clamp(44px, 11vw, 64px); border-radius: 4px; background: var(--raise); display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: clamp(20px, 5.6vw, 32px); font-weight: 600; color: var(--mute2); }
+  .dbeats span.on { background: var(--led); color: var(--on-sig); box-shadow: 0 0 10px var(--led); }
+  .dbeats span.one.on { background: var(--sig); box-shadow: 0 0 10px var(--sig); }
+  .phrase { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+  .phrase div { height: 34px; border-radius: 3px; background: var(--cell); font-family: var(--mono); font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; color: var(--ink2); border: 2px solid transparent; }
+  .phrase div.past { background: var(--cell-past); color: var(--mute); }
+  .phrase div.here { background: var(--ink); color: var(--on-sig); }
+  .phrase div.fill { border-color: var(--sig); color: var(--sig); }
+  .phrase div.here.fill { background: var(--sig); color: var(--on-sig); }
+  .phrase div.rest { background: repeating-linear-gradient(45deg, #1B1E22 0 6px, #2B2F35 6px 12px); color: var(--ink2); }
+  .phrase div.crash::after { content: "✱"; margin-left: 2px; color: var(--smpte); }
+  .devent { background: var(--panel); border: 1px solid var(--edge); border-left: 6px solid var(--raise); border-radius: 6px; padding: 7px 14px 9px; }
+  .devent .v { font-family: var(--cond); font-weight: 700; letter-spacing: .02em; font-size: clamp(32px, 9vw, 64px); line-height: 1.05; }
+  .devent .k { text-transform: none; letter-spacing: .02em; font-size: 15px; font-weight: 500; color: var(--ink2); margin-top: 2px; }
+  .devent.soon { border-left-color: var(--lcd); } .devent.soon .v { color: var(--lcd); }
+  .devent.imm { background: var(--sig); border-color: var(--sig); color: var(--on-sig); } .devent.imm .k { color: var(--on-sig); }
+  .devent.stop { border-left-color: var(--red); } .devent.stop .v { color: var(--red); }
+  .dthen { font-size: 15px; color: var(--ink2); padding: 0 4px; }
+  .dgrid { background: var(--inset); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 10px 10px; }
+  .dgrid .t { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .dgrid .t span:last-child { color: var(--mute2); font-weight: 500; font-family: var(--mono); font-size: 13px; }
+  .dgrid.isfill { box-shadow: inset 0 0 0 3px var(--sig); }
+  .dgrid.isfill .t span:first-child { color: var(--sig); }
   .lanes { display: grid; grid-template-columns: 74px repeat(16, 1fr); row-gap: 4px; align-items: center; }
-  .lanes .lb { font-size: 13px; color: var(--dim); font-weight: 700; white-space: nowrap; }
+  .lanes .lb { font-size: 13px; color: var(--ink2); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lanes .c { height: 26px; display: flex; align-items: center; justify-content: center; border-left: 1px solid #ffffff10; }
   .lanes .c.b { border-left: 2px solid #ffffff30; }
   .lanes .c.cur { background: #ffffff1c; }
   .lanes .c i { width: 15px; height: 15px; border-radius: 50%; background: var(--ink); display: block; }
   .lanes .c i.acc { width: 20px; height: 20px; }
-  .lanes .c.cur i { background: var(--warn); }
-  .lanes .c i.cy { background: #7fd1ff; transform: rotate(45deg); border-radius: 3px; }
-  .lanes .c i.cy.op { background: transparent; border: 3px solid #7fd1ff; box-sizing: border-box; }
-  .lanes .c i.bd { background: #ff7a7a; }
+  .lanes .c.cur i { background: var(--sig); }
+  .lanes .c i.cy { background: var(--smpte); transform: rotate(45deg); border-radius: 3px; }
+  .lanes .c i.cy.op { background: transparent; border: 3px solid var(--smpte); box-sizing: border-box; }
+  .lanes .c i.bd { background: #FF7A7A; }
   .lanes .c i.sd { background: #fff; }
-  .lanes .c i.tm { background: #c9a0ff; }
-  .lanes .hd { font-size: 11px; color: var(--dim); text-align: center; height: 16px; }
-  .devent { background: var(--panel); border-radius: 16px; padding: 10px 16px; border: 3px solid var(--line); }
-  .devent .v { font-size: clamp(26px, 7.5vw, 54px); font-weight: 900; line-height: 1.1; }
-  .devent .k { font-size: 15px; color: var(--dim); margin-top: 2px; }
-  .devent.soon { border-color: var(--warn); } .devent.soon .v { color: var(--warn); }
-  .devent.imm { background: var(--warn); border-color: var(--warn); color: #000; } .devent.imm .k { color: #000; }
-  .devent.stop { border-color: var(--hot); } .devent.stop .v { color: var(--hot); }
-  .dthen { font-size: 15px; color: var(--dim); padding: 0 6px; }
-  @media (orientation: landscape) and (min-width: 700px) {
-    body.drummer { grid-template-columns: 1fr 1.15fr; }
-    body.drummer #drum { grid-column: 1 / -1; grid-row: 2 / 4; display: grid; grid-template-columns: 1fr 1.15fr; grid-auto-rows: min-content; column-gap: 14px; }
-    body.drummer .dhead, body.drummer .dbeats, body.drummer .phrase, body.drummer .devent, body.drummer .dthen { grid-column: 1; }
-    body.drummer .dgrid { grid-column: 2; grid-row: 1 / span 5; align-self: start; }
-    .lanes .c { height: 34px; }
-  }
+  .lanes .c i.tm { background: #C9A0FF; }
+  .lanes .hd { font-family: var(--mono); font-size: 11px; color: var(--mute2); text-align: center; height: 16px; }
 
-  /* plan du morceau */
-  .map { margin-top: auto; display: flex; flex-direction: column; min-height: 0; flex: 1; justify-content: flex-end; }
-  .strip { position: relative; display: flex; height: 34px; border-radius: 8px; overflow: hidden; background: var(--line); }
-  .strip div { height: 100%; border-right: 2px solid var(--bg); font-size: 11px; color: #000; font-weight: 700; padding: 2px 3px; overflow: hidden; white-space: nowrap; opacity: .55; }
-  .strip div.cur { opacity: 1; }
-  .strip .head { position: absolute; top: -3px; bottom: -3px; width: 3px; background: #fff; border: none; padding: 0; opacity: 1; box-shadow: 0 0 6px #000; }
-  .list { display: none; order: -1; margin-bottom: 8px; flex: 1 1 0; min-height: 0; overflow-y: auto; font-size: 17px; }
-  .list.show { display: block; }
-  .list .row { display: flex; gap: 10px; padding: 6px 8px; border-radius: 8px; align-items: center; }
-  .list .row.cur { background: var(--panel); font-weight: 800; }
-  .list .row i { width: 10px; height: 22px; border-radius: 3px; flex: none; }
-  .list .row .b { margin-left: auto; color: var(--dim); font-variant-numeric: tabular-nums; }
-  .foot { display: flex; justify-content: space-between; color: var(--dim); font-size: 13px; margin-top: 6px; }
-
-  /* choix du rôle */
-  .picker { position: fixed; inset: 0; background: rgba(5,6,8,.97); display: none; flex-direction: column; justify-content: center; padding: 24px; gap: 12px; z-index: 10; }
+  /* choix du rôle, PIN, messages --------------------------------------------------------------------------------- */
+  .picker { position: fixed; inset: 0; background: rgba(12, 13, 15, .97); display: none; flex-direction: column; justify-content: center;
+    padding: 20px; gap: 8px; z-index: 10; overflow-y: auto; }
   .picker.show { display: flex; }
-  .picker h1 { margin: 0 0 8px; font-size: 26px; }
-  .picker button { font-size: 24px; font-weight: 700; padding: 18px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); text-align: left; }
-  .picker button small { display: block; font-size: 14px; font-weight: 400; color: var(--dim); margin-top: 2px; }
-  .msg { position: fixed; left: 14px; right: 14px; bottom: 14px; background: var(--hot); color: #fff; padding: 10px 14px; border-radius: 12px; font-size: 15px; display: none; z-index: 5; }
+  .picker h1 { margin: 0 0 6px; font-family: var(--cond); font-size: 32px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .picker button { font-size: 22px; font-weight: 700; padding: 12px 16px; min-height: 56px; border-radius: 6px; border: 1px solid var(--edge);
+    background: var(--panel); color: var(--ink); text-align: left; box-shadow: inset 0 1px 0 var(--raise); }
+  .picker button small { display: block; font-size: 14px; font-weight: 400; color: var(--ink2); margin-top: 2px; }
+  .msg { position: fixed; left: 12px; right: 12px; bottom: 12px; background: var(--red); color: #fff; padding: 12px 14px; border-radius: 6px;
+    font-size: 16px; font-weight: 600; display: none; z-index: 5; }
   .msg.show { display: block; }
 
-  /* régie (télécommande du concert) */
-  #regie { display: none; flex-direction: column; gap: 10px; min-height: 0; flex: 1; overflow-y: auto; }
+  /* régie (télécommande du concert) ------------------------------------------------------------------------------- */
+  #regie { display: none; flex-direction: column; gap: 8px; min-height: 0; flex: 1; overflow-y: auto; }
   body.regie #regie { display: flex; }
   body.regie #now, body.regie #next, body.regie .side, body.regie #drum, body.regie .map { display: none !important; }
-  .rhead { background: var(--panel); border-radius: 16px; padding: 10px 14px 12px; border-left: 12px solid var(--sec); }
+  .rhead { background: var(--panel); border: 1px solid var(--edge); border-top: 5px solid var(--sig); border-radius: 6px; padding: 8px 14px 10px; }
   .rhead .r1 { display: flex; align-items: center; gap: 10px; }
-  .rhead .rk { font-size: 14px; color: var(--dim); }
-  .rhead .rt { font-size: clamp(26px, 7.5vw, 48px); font-weight: 900; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
-  .rhead .rs { font-size: 16px; color: var(--dim); margin-top: 4px; }
+  .rhead .rk { font-family: var(--mono); font-size: 15px; color: var(--mute2); }
+  .rhead .rt { font-family: var(--cond); font-size: clamp(30px, 8.4vw, 54px); font-weight: 700; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+  .rhead .rs { font-size: 16px; color: var(--ink2); margin-top: 4px; }
   .rhead .rs b { color: var(--ink); }
-  .rstate { flex: none; font-size: 14px; font-weight: 800; border-radius: 999px; padding: 5px 12px; border: 2px solid #777; color: #bbb; }
-  .rstate.play { border-color: var(--ok); color: var(--ok); }
-  .rstate.pause { border-color: var(--warn); color: var(--warn); }
-  .rprog { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 8px; }
-  .rprog i { display: block; height: 100%; width: 0; background: var(--sec); }
-  .rbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .rbtns button { font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 14px;
-    padding: 12px 4px; font-size: 15px; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
-  .rbtns button .ic { font-size: clamp(26px, 8vw, 40px); line-height: 1; font-weight: 900; }
-  .rbtns button.big { grid-column: span 2; background: #1d9e75; border-color: #1d9e75; color: #fff; }
-  .rbtns button.armed { background: var(--warn); border-color: var(--warn); color: #000; }
+  .rstate { flex: none; font-family: var(--mono); font-size: 14px; font-weight: 600; border-radius: 4px; padding: 6px 10px; border: 1px solid var(--mute); color: var(--ink2); }
+  .rstate.play { border-color: var(--led); color: var(--led); }
+  .rstate.pause { border-color: var(--lcd); color: var(--lcd); }
+  .rprog { height: 5px; background: var(--edge); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+  .rprog i { display: block; height: 100%; width: 0; background: var(--sig); }
+  .rbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .rbtns button { color: var(--ink); background: var(--raise); border: 1px solid var(--edge); border-radius: 6px; min-height: 64px;
+    padding: 8px 4px; font-size: 15px; font-weight: 600; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; box-shadow: inset 0 1px 0 #3A3F46; }
+  .rbtns button .ic { font-size: clamp(26px, 8vw, 40px); line-height: 1; font-weight: 700; }
+  .rbtns button.big { grid-column: span 2; background: var(--led); border-color: var(--led); color: var(--on-sig); box-shadow: none; }
+  .rbtns button.armed { background: var(--sig); border-color: var(--sig); color: var(--on-sig); }
   .rbtns button.sent { opacity: .65; }
-  .rbtns button.done { box-shadow: 0 0 0 3px var(--ok) inset; }
+  .rbtns button.done { box-shadow: 0 0 0 3px var(--led) inset; }
   .rreh { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-  .rreh button { font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px;
-    padding: 8px 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
-  .rreh button.on { background: var(--warn); border-color: var(--warn); color: #000; }
+  .rreh button, .rmixb button { color: var(--ink); background: var(--raise); border: 1px solid var(--edge); border-radius: 6px;
+    min-height: 44px; padding: 6px 14px; font-size: 15px; font-weight: 600; }
+  .rreh button.on, .rmixb button.on { background: var(--lcd); border-color: var(--lcd); color: var(--on-sig); }
   .rreh button.sent { opacity: .65; }
-  .rreh button.done { box-shadow: 0 0 0 3px var(--ok) inset; }
-  .rreh .rate { min-width: 56px; }
-  .rrehb { border-radius: 12px; padding: 8px 12px; font-size: 15px; font-weight: 800; background: var(--warn); color: #000; display: none; }
+  .rreh button.done { box-shadow: 0 0 0 3px var(--led) inset; }
+  .rreh .rate { min-width: 64px; font-family: var(--mono); }
+  .rrehb { border-radius: 6px; padding: 9px 12px; font-size: 15px; font-weight: 700; background: var(--lcd); color: var(--on-sig); display: none; }
   .rrehb.show { display: block; }
-  .rsecs button.inloop { box-shadow: inset 0 -5px 0 var(--warn); }
-  .rmix { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
-  .rmix button { font: inherit; color: #111; border: 3px solid transparent; border-radius: 12px; padding: 8px 6px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 15px; font-weight: 800; }
+  .rsecs button.inloop { box-shadow: inset 0 -5px 0 var(--sig); }
+  .rmix { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+  .rmix button { color: var(--on-sig); border: 3px solid transparent; border-radius: 6px; padding: 7px 6px; min-height: 56px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 15px; font-weight: 700; }
   .rmix button small { font-size: 12px; font-weight: 600; }
-  .rmix button.cut { opacity: .35; text-decoration: line-through; }
-  .rmix button.solo { border-color: #fff; }
+  .rmix button.cut { opacity: .45; text-decoration: line-through; }
+  .rmix button.solo { border-color: var(--ink); }
   .rmix button.sent { filter: brightness(.7); }
-  .rmix button.armed { outline: 4px solid var(--warn); }
-  .rmix button.done { box-shadow: 0 0 0 3px var(--ok); }
+  .rmix button.armed { outline: 4px solid var(--sig); }
+  .rmix button.done { box-shadow: 0 0 0 3px var(--led); }
   .rmixb { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  .rmixb button { font: inherit; color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px;
-    padding: 8px 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
-  .rmixb button.on { background: var(--warn); border-color: var(--warn); color: #000; }
-  .rmixb span { color: var(--dim); font-size: 13px; }
-  .stem { flex: none; font-size: 13px; font-weight: 800; border-radius: 999px; padding: 4px 10px; display: none; }
-  .stem.show { display: inline-block; }
-  .stem.on { border: 2px solid var(--ok); color: var(--ok); }
-  .stem.off { background: var(--warn); color: #000; border: 2px solid var(--warn); }
-  /* téléphone : titre sur deux lignes au besoin, sans la tonalité (affichée dans la page) */
-  @media (max-width: 560px) {
-    .title { white-space: normal; font-size: 13px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical; }
-    .title .tkey { display: none; }
-  }
-  /* téléphone : l'état du stem prend la place du titre, qui passe sur sa propre ligne (pas « 2… ») */
-  @media (max-width: 560px) {
-    .top:has(.stem.show) { flex-wrap: wrap; row-gap: 4px; }
-    .top:has(.stem.show) .stem { margin-right: auto; }
-    .top:has(.stem.show) .title { order: 9; flex-basis: 100%; font-size: 14px; }
-  }
-  .rtitle { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-top: 2px; }
+  .rmixb span { color: var(--ink2); font-size: 13px; }
+  .rtitle { font-size: 12px; font-weight: 600; color: var(--mute2); letter-spacing: .12em; text-transform: uppercase; margin-top: 4px; }
   .rsecs { display: flex; flex-wrap: wrap; gap: 6px; }
-  .rsecs button { font: inherit; font-size: 15px; font-weight: 700; color: #111; border: 3px solid transparent; border-radius: 10px; padding: 8px 10px; cursor: pointer; opacity: .8; }
-  .rsecs button.cur { opacity: 1; border-color: #fff; }
-  .rsecs button.done { box-shadow: 0 0 0 3px var(--ok); }
-  .rlist button { font: inherit; width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: none; color: var(--ink);
-    border: none; border-radius: 10px; padding: 9px 8px; font-size: 17px; cursor: pointer; }
-  .rlist button.cur { background: var(--panel); font-weight: 800; }
-  .rlist button.armed { background: var(--warn); color: #000; }
-  .rlist button i { width: 8px; height: 22px; border-radius: 3px; flex: none; }
-  .rlist button .n { color: var(--dim); width: 22px; font-variant-numeric: tabular-nums; }
-  .rlist button .b { margin-left: auto; color: var(--dim); font-size: 14px; font-variant-numeric: tabular-nums; }
-  .rlist button.armed .n, .rlist button.armed .b { color: #000; }
-  .rwarn { border-radius: 12px; padding: 10px 14px; font-size: 16px; font-weight: 700; background: var(--warn); color: #000; display: none; }
+  .rsecs button { font-size: 15px; font-weight: 700; color: #111; border: 3px solid transparent; border-radius: 6px; min-height: 44px; padding: 6px 12px; }
+  .rsecs button.cur { opacity: 1; border-color: var(--ink); }
+  .rsecs button.done { box-shadow: 0 0 0 3px var(--led); }
+  .rlist button { width: 100%; min-height: 48px; display: flex; align-items: center; gap: 10px; text-align: left; background: none; color: var(--ink);
+    border: none; border-radius: 6px; padding: 8px; font-size: 17px; }
+  .rlist button.cur { background: var(--panel); font-weight: 700; }
+  .rlist button.armed { background: var(--sig); color: var(--on-sig); }
+  .rlist button i { width: 6px; height: 24px; border-radius: 2px; flex: none; }
+  .rlist button .n { color: var(--mute2); width: 24px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .rlist button .b { margin-left: auto; color: var(--mute2); font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .rlist button.armed .n, .rlist button.armed .b { color: var(--on-sig); }
+  .rwarn { border-radius: 6px; padding: 10px 14px; font-size: 16px; font-weight: 700; background: var(--lcd); color: var(--on-sig); display: none; }
   .rwarn.show { display: block; }
-  .rwarn.bad { background: var(--hot); color: #fff; }
-  .rfoot { display: flex; justify-content: space-between; align-items: center; color: var(--dim); font-size: 13px; padding-bottom: 6px; }
-  .rfoot button { background: none; border: 1px solid var(--line); color: var(--dim); border-radius: 8px; padding: 5px 9px; font-size: 13px; }
-  .pinbox { position: fixed; inset: 0; background: rgba(5,6,8,.96); display: none; flex-direction: column; justify-content: center; align-items: stretch; padding: 24px; gap: 14px; z-index: 12; }
+  .rwarn.bad { background: var(--red); color: #fff; }
+  .rfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--ink2); font-family: var(--mono); font-size: 13px; padding-bottom: 6px; }
+  .rfoot button { background: var(--well); border: 1px solid var(--edge); color: var(--ink2); border-radius: 4px; min-height: 44px; padding: 6px 12px; font-family: var(--sans); font-size: 13px; }
+  .pinbox { position: fixed; inset: 0; background: rgba(12, 13, 15, .96); display: none; flex-direction: column; justify-content: center; align-items: stretch; padding: 24px; gap: 14px; z-index: 12; }
   .pinbox.show { display: flex; }
-  .pinbox h2 { margin: 0; font-size: 24px; }
-  .pinbox p { margin: 0; color: var(--dim); font-size: 15px; }
-  .pinbox input { font-size: 40px; font-weight: 800; letter-spacing: .4em; text-align: center; padding: 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--panel); color: var(--ink); }
+  .pinbox h2 { margin: 0; font-family: var(--cond); font-size: 30px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .pinbox p { margin: 0; color: var(--ink2); font-size: 15px; }
+  .pinbox input { font-family: var(--mono); font-size: 44px; font-weight: 600; letter-spacing: .4em; text-align: center; padding: 10px; border-radius: 6px;
+    border: 1px solid var(--edge); background: var(--inset); color: var(--lcd); }
   .pinbox .row { display: flex; gap: 10px; }
-  .pinbox button { flex: 1; font-size: 20px; font-weight: 700; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
-  .pinbox button.ok { background: #1d9e75; border-color: #1d9e75; color: #fff; }
-  .pinbox .err { color: var(--hot); font-weight: 700; min-height: 1.2em; }
+  .pinbox button { flex: 1; font-size: 20px; font-weight: 700; min-height: 56px; border-radius: 6px; border: 1px solid var(--edge); background: var(--raise); color: var(--ink); }
+  .pinbox button.ok { background: var(--led); border-color: var(--led); color: var(--on-sig); }
+  .pinbox .err { color: var(--red); font-weight: 700; min-height: 1.2em; }
 
-  /* lumière (cues grandMA3) */
-  #light { display: none; flex-direction: column; gap: 10px; min-height: 0; flex: 1; overflow: hidden; }
+  /* lumière (cues grandMA3) ----------------------------------------------------------------------------------------- */
+  #light { display: none; flex-direction: column; gap: 8px; min-height: 0; flex: 1; overflow-y: auto; }
   body.light #light { display: flex; }
-  body.light #now, body.light #next, body.light .side, body.light #drum, body.light .map { display: none !important; }
-  .lhead { display: flex; gap: 10px; align-items: stretch; }
-  .lcur { flex: 1; min-width: 0; background: var(--panel); border-radius: 16px; padding: 10px 14px 12px; border-left: 12px solid var(--sec); }
-  .lcur .k { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; gap: 8px; }
-  .lcur .v { font-size: clamp(28px, 8.5vw, 64px); font-weight: 900; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lcur .e { font-size: clamp(16px, 4.5vw, 24px); color: var(--warn); font-weight: 700; margin-top: 4px; }
-  .lcnt { flex: none; width: clamp(110px, 30vw, 200px); background: var(--panel); border-radius: 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; padding: 6px; }
-  .lcnt .v { font-size: clamp(34px, 10vw, 72px); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-  .lcnt .k { font-size: 13px; color: var(--dim); }
-  .lcnt.soon { background: var(--warn); color: #000; } .lcnt.soon .k { color: #000; }
-  .lnext { background: var(--panel); border-radius: 14px; padding: 8px 14px; font-size: clamp(17px, 4.6vw, 26px); font-weight: 700; }
-  .lnext small { display: block; font-size: 14px; font-weight: 500; color: var(--dim); }
-  .ltc { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; color: var(--dim); font-size: 14px; }
-  .ltc b { color: var(--ink); font-size: clamp(22px, 6vw, 34px); font-variant-numeric: tabular-nums; font-weight: 800; }
-  .lcues { display: flex; flex-direction: column; gap: 2px; flex: 1 1 0; min-height: 110px; overflow-y: auto; position: relative; }
-  .lcues .song { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin: 8px 0 2px; }
-  .lcues .row { display: grid; grid-template-columns: 34px 96px 1fr; gap: 2px 10px; padding: 6px 8px; border-radius: 8px; align-items: baseline; }
-  .lcues .row .n { color: var(--dim); font-variant-numeric: tabular-nums; }
-  .lcues .row .tc { font-variant-numeric: tabular-nums; color: var(--dim); font-size: 14px; }
+  body.light #now, body.light #next, body.light .side, body.light #drum, body.light .map, body.light .rc-lcds { display: none !important; }
+  .lhead { display: flex; gap: 8px; align-items: stretch; }
+  .lcur { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--edge); border-top: 5px solid var(--sig); border-radius: 6px; padding: 7px 14px 10px; }
+  .lcur .k { display: flex; justify-content: space-between; gap: 8px; }
+  .lcur .v { font-family: var(--cond); font-size: clamp(34px, 10vw, 72px); font-weight: 700; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lcur .e { font-size: clamp(16px, 4.5vw, 24px); color: var(--lcd); font-weight: 600; margin-top: 4px; }
+  .lcnt { flex: none; width: clamp(110px, 30vw, 200px); background: var(--inset); border: 1px solid var(--edge); border-radius: 6px; text-align: right; display: flex; flex-direction: column; justify-content: center; padding: 6px 12px; }
+  .lcnt .v { font-family: var(--mono); font-size: clamp(32px, 9.4vw, 66px); line-height: 1; color: var(--lcd); font-variant-numeric: tabular-nums; }
+  .lcnt .k { margin-top: 4px; }
+  .lcnt.soon { background: var(--sig); border-color: var(--sig); } .lcnt.soon .k, .lcnt.soon .v { color: var(--on-sig); }
+  .lnext { background: var(--panel); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 14px; font-size: clamp(17px, 4.6vw, 26px); font-weight: 700; }
+  .lnext small { display: block; font-size: 14px; font-weight: 500; color: var(--ink2); font-family: var(--mono); }
+  .ltc { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; color: var(--ink2); font-size: 14px; background: var(--inset);
+    border: 1px solid var(--edge); border-radius: 6px; padding: 6px 12px; }
+  .ltc b { color: var(--smpte); font-family: var(--mono); font-size: clamp(24px, 6.6vw, 36px); font-variant-numeric: tabular-nums; font-weight: 500; }
+  .lcues { display: flex; flex-direction: column; gap: 2px; flex: 1 0 auto; height: 40vh; min-height: 200px; overflow-y: auto; position: relative; }
+  .lcues .song { font-size: 12px; color: var(--mute2); text-transform: uppercase; letter-spacing: .12em; margin: 8px 0 2px; }
+  .lcues .row { display: grid; grid-template-columns: 34px 112px 1fr; gap: 2px 10px; padding: 6px 8px; border-radius: 4px; align-items: baseline; }
+  .lcues .row .n { color: var(--mute2); font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .lcues .row .tc { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--smpte); font-size: 14px; }
   .lcues .row .nm { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lcues .row .ef { grid-column: 3; font-size: 13px; color: var(--dim); }
-  .lcues .row.past { opacity: .5; }
-  .lcues .row.cur { background: var(--panel); box-shadow: inset 4px 0 0 var(--warn); opacity: 1; }
-  .lcues .row.cur .nm { color: var(--warn); }
+  .lcues .row .ef { grid-column: 3; font-size: 13px; color: var(--ink2); }
+  .lcues .row.past { opacity: .6; }
+  .lcues .row.cur { background: var(--panel); box-shadow: inset 4px 0 0 var(--sig); opacity: 1; }
+  .lcues .row.cur .nm { color: var(--sig); }
   .lfiles { display: flex; flex-wrap: wrap; gap: 6px; }
-  .lfiles a { color: var(--ink); background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: 700; text-decoration: none; }
-  .lfiles a small { display: block; font-weight: 500; color: var(--dim); font-size: 12px; }
+  .lfiles a { color: var(--ink); background: var(--raise); border: 1px solid var(--edge); border-radius: 6px; padding: 8px 12px; min-height: 44px; font-size: 14px; font-weight: 700; text-decoration: none; }
+  .lfiles a small { display: block; font-weight: 500; color: var(--ink2); font-size: 12px; font-family: var(--mono); }
   .lout { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
   .lout .o { display: flex; gap: 8px; align-items: baseline; }
-  .lout .o b { font-weight: 700; }
-  .lout .o.off { color: var(--dim); }
-  .lout ol { margin: 6px 0 0; padding-left: 20px; color: var(--dim); font-size: 13px; line-height: 1.35; }
-  .lnote { font-size: 13px; color: var(--dim); line-height: 1.35; }
-  .lnone { border-radius: 12px; padding: 10px 14px; font-size: 16px; font-weight: 700; background: var(--warn); color: #000; }
+  .lout .o b { font-weight: 700; color: var(--led); }
+  .lout .o.off { color: var(--mute2); }
+  .lout ol { margin: 6px 0 0; padding-left: 20px; color: var(--ink2); font-size: 13px; line-height: 1.35; }
+  .lnote { font-size: 13px; color: var(--ink2); line-height: 1.35; }
+  .lnone { border-radius: 6px; padding: 10px 14px; font-size: 16px; font-weight: 700; background: var(--lcd); color: var(--on-sig); }
 
-  @media (orientation: landscape) and (min-width: 700px) {
-    body { display: grid; grid-template-columns: 1.25fr 1fr; grid-template-rows: auto auto minmax(0, 1fr); column-gap: 14px; }
-    .top { grid-column: 1 / -1; }
-    .now { grid-column: 1; grid-row: 2; }
-    .next { grid-column: 1; grid-row: 3; align-self: start; }
-    .side { grid-column: 2; grid-row: 2; }
-    .map { grid-column: 2; grid-row: 3; margin-top: 0; padding-top: 4px; }
-    .strip { display: none; }
-    .foot { display: none; }
-    body.regie, body.light { display: flex; }
+  /* téléphone : l'état du stem prend une ligne avec le titre plutôt que de le couper */
+  @media (max-width: 400px) {
+    .role { padding: 0 9px; font-size: 12px; letter-spacing: .04em; }
+    .top { gap: 6px; }
+  }
+  @media (max-width: 560px) {
+    .top:has(.stem.show) { flex-wrap: wrap; row-gap: 4px; }
+    .top:has(.stem.show) .title { order: -2; flex: 1 1 calc(100% - 40px); }
+    .top:has(.stem.show) .dot { order: -1; }
+    .top:has(.stem.show) .stem { margin-right: auto; }
+  }
+  /* écrans bas (téléphone couché, petits téléphones) : tailles réduites */
+  @media (max-height: 780px) {
+    .now .name { font-size: clamp(36px, 10vh, 80px); }
+    .chords .cur .v { font-size: clamp(52px, 14vh, 120px); }
+    .chords .nx b { font-size: clamp(36px, 10vh, 80px); }
+    .next .box .v { font-size: clamp(26px, 7vh, 50px); }
+    .next .count .v { font-size: clamp(30px, 8vh, 60px); }
+    .alert { font-size: clamp(22px, 6vh, 40px); }
+    .lyr .line { font-size: clamp(26px, 8vh, 56px); }
+    body.pr .rc-lcd .v { font-size: clamp(20px, 6vh, 34px); }
   }
 
+  /* paysage / tablette : deux colonnes (section + accords/paroles à gauche ; afficheurs, alertes, plan à droite) ------ */
+  @media (orientation: landscape) and (min-width: 700px) {
+    body.pr { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; column-gap: 12px; row-gap: 8px; }
+    .top { grid-column: 1 / -1; grid-row: 1; }
+    #now { grid-column: 1; grid-row: 2; }
+    body.pr .rc-lcds { grid-column: 2; grid-row: 2; }
+    .side { display: contents; }
+    .sidea { grid-column: 1; grid-row: 3 / span 2; overflow-y: auto; min-height: 0; }
+    .sideb { grid-column: 2; grid-row: 3; overflow-y: auto; min-height: 0; }
+    .map { grid-column: 2; grid-row: 4; flex: none; }
+    .list { flex: none; max-height: 40vh; }
+    body.pr .rc-lcd { display: flex; flex-direction: column; justify-content: center; }
+    .now .name { font-size: clamp(40px, 7vw, 104px); }
+    .chords .cur .v { font-size: clamp(60px, 11vw, 160px); }
+    .chords .nx b { font-size: clamp(40px, 7vw, 110px); }
+    .lyr .line { font-size: clamp(28px, 4.6vw, 64px); }
+    .alert { font-size: clamp(24px, 3.6vw, 46px); }
+    .next .box .v { font-size: clamp(28px, 4.4vw, 60px); }
+    .next .count .v { font-size: clamp(32px, 5vw, 72px); }
+    .strip { display: flex; }
+    /* batteur : afficheurs sur toute la largeur, bloc batterie en deux colonnes */
+    body.drummer { grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
+    body.drummer .rc-lcds { grid-column: 1 / -1; }
+    body.drummer #drum { grid-column: 1 / -1; grid-row: 3; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-auto-rows: min-content; column-gap: 12px; row-gap: 8px; }
+    body.drummer .dhead, body.drummer .dbeats, body.drummer .phrase, body.drummer .devent, body.drummer .dthen { grid-column: 1; }
+    body.drummer .dgrid { grid-column: 2; grid-row: 1 / span 5; align-self: start; }
+    body.drummer .sideb { grid-column: 1 / -1; grid-row: 4; }
+    body.drummer .map { grid-column: 1 / -1; grid-row: 5; }
+    body.drummer .dsec .v { font-size: clamp(36px, 6vw, 84px); }
+    .lanes .c { height: 34px; }
+    body.regie, body.light { display: flex; }
+  }
+  @media (orientation: landscape) and (min-width: 700px) and (max-height: 600px) {
+    .list { display: none !important; }
+  }
+  /* téléphone couché : version compacte */
+  @media (orientation: landscape) and (max-height: 500px) {
+    body.pr { row-gap: 6px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+    .now { padding: 4px 12px 8px; }
+    .now .label, .progress, .foot { display: none; }
+    .now .name { font-size: clamp(30px, 11vh, 50px); }
+    .now .spos { font-size: 18px; }
+    .beats { margin-top: 6px; } .beats span { height: 10px; }
+    body.pr .rc-lcd { padding: 3px 10px; }
+    body.pr .rc-lcd .k { font-size: 10px; }
+    body.pr .rc-lcd .v { font-size: clamp(20px, 7vh, 30px); }
+    .ccard { padding: 4px 10px 6px; }
+    .chords .cur .v { font-size: clamp(48px, 17vh, 72px); }
+    .chords .nx b { font-size: clamp(34px, 11vh, 52px); }
+    .grid4 div { font-size: 16px; padding: 2px 6px 3px; }
+    .alert { font-size: clamp(20px, 7vh, 30px); padding: 4px 10px; }
+    .alert small { font-size: 13px; }
+    .snote { font-size: 16px; padding: 6px 10px; }
+    .lyr { padding: 6px 12px 8px; }
+    .lyr .line { font-size: clamp(24px, 8vh, 40px); }
+    .lyr .nextl { font-size: 18px; margin-top: 4px; }
+    .next .box, .next .count { padding: 4px 10px 6px; }
+    .next .box .v { font-size: clamp(24px, 8vh, 36px); }
+    .next .count .v { font-size: clamp(26px, 9vh, 40px); }
+    .strip { height: 30px; padding: 9px 0; }
+    .strip .head { top: 5px; bottom: 5px; }
+    .dsec, .dcount { padding: 4px 10px; }
+    .dsec .v { font-size: clamp(30px, 10vh, 46px); }
+    .dcount .v { font-size: clamp(32px, 11vh, 52px); }
+    .dbeats span { height: 38px; font-size: 20px; }
+    .phrase div { height: 26px; }
+    .devent { padding: 4px 12px 6px; } .devent .v { font-size: clamp(24px, 8vh, 38px); }
+    .lanes .c { height: 24px; }
+    /* batteur : prochain événement en haut de la 2e colonne, au-dessus de la grille */
+    body.drummer #drum { grid-auto-flow: row dense; }
+    body.drummer .devent, body.drummer .dthen, body.drummer .dgrid { grid-column: 2; }
+    body.drummer .devent { grid-row: 1; } body.drummer .dthen { grid-row: 2; } body.drummer .dgrid { grid-row: 3 / span 3; }
+  }
 </style>
 </head>
-<body>
+<body class="rc pr">
   <div class="top">
-    <button class="role" id="roleBtn">…</button>
     <div class="title" id="title">ReaCue</div>
     <span class="stem" id="stemNote"></span>
+    <button class="ready" id="readyBtn" hidden></button>
+    <button class="role" id="roleBtn">…</button>
     <button class="iconbtn" id="langBtn" title="Langue / Language">EN</button>
-    <button class="iconbtn" id="fsBtn" title="">⛶</button>
-    <div class="dot" id="dot" title=""></div>
+    <button class="iconbtn" id="fsBtn" title="" aria-label="">⛶</button>
+    <div class="dot" id="dot" title="" role="img"></div>
+  </div>
+
+  <div class="rc-lcds" id="lcds" aria-live="off">
+    <div class="rc-lcd"><div class="k" id="lcdBarK"></div><div class="v" id="lcdBar">—</div></div>
+    <div class="rc-lcd"><div class="k" id="lcdBpmK"></div><div class="v" id="lcdBpm">—</div></div>
+    <div class="rc-lcd"><div class="k" id="lcdKeyK"></div><div class="v" id="lcdKey">—</div></div>
   </div>
 
   <div class="now" id="now">
-    <div class="label"><span id="nowLabel"></span><span id="barNum"></span></div>
-    <div class="name" id="nowName">—</div>
-    <div class="progress"><i id="prog"></i></div>
+    <div class="label k"><span id="nowLabel"></span><span id="barNum"></span></div>
+    <div class="r2"><div class="name" id="nowName">—</div><div class="spos" id="secPos"></div></div>
     <div class="beats" id="beats"></div>
-  </div>
-
-  <div class="next" id="next">
-    <div class="box" id="nextBox"><div class="k" id="nextK"></div><div class="v" id="nextName">—</div></div>
-    <div class="count"><div class="v" id="countV">–</div><div class="k" id="countK"></div></div>
-  </div>
-
-  <div class="side">
-    <div class="lyr" id="lyr">
-      <div class="prev" id="lyPrev"></div>
-      <div class="line" id="lyLine"></div>
-      <div class="sweep"><i id="lySweep"></i></div>
-      <div class="nextl" id="lyNext"></div>
-      <div class="when"><span id="lyWhen"></span><span id="lyNum"></span></div>
-    </div>
-    <div class="chords" id="chords">
-      <div class="head2"><div class="cur" id="chCur">–</div><div class="nx" id="chNx"></div></div>
-      <div class="grid4" id="chGrid"></div>
-    </div>
-    <div class="alerts" id="alerts"></div>
+    <div class="progress"><i id="prog"></i></div>
   </div>
 
   <div id="drum">
@@ -370,6 +482,29 @@
     <div class="devent" id="dEvent"><div class="v" id="dEvV">—</div><div class="k" id="dEvK"></div></div>
     <div class="dthen" id="dThen"></div>
     <div class="dgrid" id="dGrid"><div class="t"><span id="dGridT">Groove</span><span id="dGridK"></span></div><div class="lanes" id="dLanes"></div></div>
+  </div>
+
+  <div class="side">
+   <div class="sidea">
+    <div class="lyr" id="lyr">
+      <div class="prev" id="lyPrev"></div>
+      <div class="line" id="lyLine"></div>
+      <div class="sweep"><i id="lySweep"></i></div>
+      <div class="nextl" id="lyNext"></div>
+      <div class="when"><span id="lyWhen"></span><span id="lyNum"></span></div>
+    </div>
+    <div class="chords" id="chords">
+      <div class="head2">
+        <div class="ccard cur"><div class="k" id="chCurK"></div><div class="v" id="chCur">–</div></div>
+        <div class="ccard nx" id="chNxBox"><div class="k" id="chNxK"></div><div id="chNx"></div></div>
+      </div>
+      <div class="cgrid"><div class="k"><span id="chGridK"></span><span id="chGridN"></span></div><div class="grid4" id="chGrid"></div></div>
+    </div>
+   </div>
+   <div class="sideb">
+    <div class="snote" id="secNote"><b id="secNoteK"></b> · <span id="secNoteV"></span></div>
+    <div class="alerts" id="alerts"></div>
+   </div>
   </div>
 
   <div id="regie">
@@ -421,13 +556,18 @@
   </div>
 
   <div class="map">
-    <div class="strip" id="strip"></div>
     <div class="list show" id="list"></div>
+    <div class="next" id="next">
+      <div class="box" id="nextBox"><div class="k" id="nextK"></div><div class="v" id="nextName">—</div></div>
+      <div class="count"><div class="k" id="countIn"></div><div class="v"><span id="countV">–</span><small id="countK"></small></div></div>
+    </div>
+    <div class="strip" id="strip" role="button"></div>
     <div class="foot"><span id="footL"></span><span id="footR"></span></div>
   </div>
 
   <div class="picker" id="picker">
     <h1 id="pickT"></h1>
+    <input class="pname" id="pickName" type="text" maxlength="24" autocomplete="off" autocapitalize="words">
     <button data-role="drums"></button>
     <button data-role="bass"></button>
     <button data-role="guitars"></button>
@@ -446,6 +586,7 @@
   </div>
   <div class="msg" id="msg"></div>
 
+<script src="reacue_studio/core.js"></script>
 <script>
 "use strict";
 // ---------------------------------------------------------------- langue (fr / en)
@@ -453,13 +594,16 @@ const STR = {
   fr: {
     role: "Rôle", roles: { drums: "Batterie", bass: "Basse", guitars: "Guitare rythm.", lead_guitar: "Guitare solo", vocals: "Chant", all: "Général", regie: "Régie", light: "Lumière" },
     instr: { drums: "batterie", bass: "basse", guitars: "guitare", lead_guitar: "guitare solo", vocals: "chant" },
-    pick: "Je suis…",
+    pick: "Je suis…", namePh: "Ton prénom (facultatif)",
+    readyB: "Prêt ?", readyOn: "Prêt ✓", readyTip: "Répétition : appuie quand tu es prêt (visible dans ReaCue Studio, écran GROUPE). Réappuie pour annuler.",
     pickers: {
       drums: ["Batterie", "groove, fills, crashs, carrures"], bass: ["Basse", "notes de basse, grille, entrées et sorties"],
       guitars: ["Guitare rythmique", "accords, grille, entrées et sorties"], lead_guitar: ["Guitare solo", "solos, accords, entrées"],
       vocals: ["Chant", "paroles défilantes, entrées de voix"], all: ["Vue générale", "structure et accords"], regie: ["Régie", "télécommande du concert (code PIN)"],
       light: ["Lumière", "cues grandMA3, timecode, fichiers à importer"] },
     fullscreen: "Plein écran, écran toujours allumé", link: "Liaison avec REAPER", next: "Ensuite", footR: "touche le plan : liste on/off",
+    lcdBar: "Mesure", lcdBpm: "Tempo", lcdKey: "Ton", chord: "Accord", bassNote: "Basse", nextChord: "Suivant",
+    chart: "Grille", chartBars: (a, b) => `mes. ${a}–${b}`, note: "Note", inK: "Dans", barsAbbr: n => " mes",
     noSong: "Pas de morceau préparé : dans REAPER, fenêtre ReaCue → « Analyser et préparer ».",
     noReaper: "REAPER ne répond pas : vérifie le Wi-Fi et l'interface web de REAPER.",
     bars: n => n > 1 ? `${n} mesures` : "1 mesure", barsWord: n => n > 1 ? "mesures" : "mesure",
@@ -532,13 +676,16 @@ const STR = {
   en: {
     role: "Role", roles: { drums: "Drums", bass: "Bass", guitars: "Rhythm gtr", lead_guitar: "Lead gtr", vocals: "Vocals", all: "Overview", regie: "Stage control", light: "Lighting" },
     instr: { drums: "drums", bass: "bass", guitars: "guitar", lead_guitar: "lead guitar", vocals: "vocals" },
-    pick: "I play…",
+    pick: "I play…", namePh: "Your first name (optional)",
+    readyB: "Ready?", readyOn: "Ready ✓", readyTip: "Rehearsal: tap when you are ready (shown in ReaCue Studio, BAND screen). Tap again to cancel.",
     pickers: {
       drums: ["Drums", "groove, fills, crashes, phrasing"], bass: ["Bass", "bass notes, chart, entries and exits"],
       guitars: ["Rhythm guitar", "chords, chart, entries and exits"], lead_guitar: ["Lead guitar", "solos, chords, entries"],
       vocals: ["Vocals", "scrolling lyrics, vocal entries"], all: ["Overview", "structure and chords"], regie: ["Stage control", "concert remote (PIN code)"],
       light: ["Lighting", "grandMA3 cues, timecode, files to import"] },
     fullscreen: "Full screen, screen kept on", link: "Link to REAPER", next: "Next", footR: "tap the map: list on/off",
+    lcdBar: "Bar", lcdBpm: "Tempo", lcdKey: "Key", chord: "Chord", bassNote: "Bass", nextChord: "Next",
+    chart: "Chart", chartBars: (a, b) => `bars ${a}–${b}`, note: "Note", inK: "In", barsAbbr: n => n > 1 ? " bars" : " bar",
     noSong: "No song prepared: in REAPER, ReaCue window → “Analyse and prepare”.",
     noReaper: "REAPER is not responding: check the Wi-Fi and REAPER's web interface.",
     bars: n => n > 1 ? `${n} bars` : "1 bar", barsWord: n => n > 1 ? "bars" : "bar",
@@ -628,8 +775,15 @@ function setLang(l, remember) {
 }
 function applyStatic() {
   $("langBtn").textContent = LANG === "fr" ? "EN" : "FR";
-  $("fsBtn").title = S.fullscreen; $("dot").title = S.link;
+  $("fsBtn").title = S.fullscreen; $("fsBtn").setAttribute("aria-label", S.fullscreen);
+  $("dot").title = S.link; $("dot").setAttribute("aria-label", S.link);
+  $("lcdBarK").textContent = S.lcdBar; $("lcdBpmK").textContent = S.lcdBpm; $("lcdKeyK").textContent = S.lcdKey;
+  $("chCurK").textContent = role === "bass" ? S.bassNote : S.chord; $("chNxK").textContent = S.nextChord;
+  $("chGridK").textContent = S.chart; $("secNoteK").textContent = S.note.toUpperCase(); $("countIn").textContent = S.inK;
+  lcdKey = "";
   $("nextK").textContent = S.next; $("footR").textContent = S.footR; $("pickT").textContent = S.pick;
+  $("pickName").placeholder = S.namePh; $("readyBtn").title = S.readyTip;
+  if (typeof paintReady === "function") paintReady();
   document.querySelectorAll("#picker button").forEach(b => { const p = S.pickers[b.dataset.role];
     b.innerHTML = `${esc(p[0])}<small>${esc(p[1])}</small>`; });
   $("roleBtn").textContent = S.roles[role] || S.role;
@@ -650,11 +804,79 @@ function applyStatic() {
 let song = null, role = null, lastSi = null;
 let concert = null, cIdx = -1;      // mode concert : plusieurs morceaux sur la même timeline
 let st = { play: 0, ps: 0, pos: 0, at: performance.now(), rtt: 40, ok: false, lastOk: 0 };
+// ReaCue/studio = vitesse|transposition|… (publié par la fenêtre ReaCue, comme pour ReaCue Studio) :
+// tempo affiché × vitesse, accords et tonalité transposés quand les stems sont transposés dans REAPER
+const SP = { rate: 1, tr: 0, raw: null };
+let lcdKey = "";
+function studioReply(txt) {
+  const v = extVal(txt, "studio");
+  if (v == null || v === "" || v === SP.raw) return;
+  SP.raw = v;
+  const [rate, tr] = v.split("|");
+  SP.rate = parseFloat(rate) || 1; SP.tr = parseInt(tr, 10) || 0;
+  if (window.RC && RC.parseStudio) RC.parseStudio(v);
+  gridKey = ""; lcdKey = "";
+}
+// transposition des accords (reacue_studio/core.js ; sans lui, accords d'origine)
+const tc = c => (SP.tr && window.RC && RC.transChord) ? RC.transChord(c, SP.tr) : c;
 
 role = params.get("role") || load("reacue_role");
 if (!STR.fr.roles[role]) { role = null; $("picker").classList.add("show"); }
 document.querySelectorAll("#picker button").forEach(b => b.onclick = () => {
-  role = b.dataset.role; store("reacue_role", role); $("picker").classList.remove("show"); layoutBeats(); });
+  role = b.dataset.role; store("reacue_role", role); $("picker").classList.remove("show"); layoutBeats(); beat(true); });
+$("pickName").value = load("reacue_name") || "";
+$("pickName").addEventListener("change", () => { store("reacue_name", $("pickName").value.trim().slice(0, 24)); beat(true); });
+
+// ---------------------------------------------------------------- présence et « Prêt » (écran GROUPE de ReaCue Studio)
+// Toutes les ~2 s, le prompteur écrit ReaCue/hb<0-7> = id|rôle|nom|prêt|époque (emplacement tiré de son identifiant :
+// plusieurs téléphones n'écrivent presque jamais au même endroit ; un battement perdu est repris au suivant). La
+// fenêtre ReaCue les lit, les oublie après 10 s et publie ReaCue/band = époque|… ; une remise à zéro change
+// d'époque : le « Prêt » de ce téléphone s'éteint.
+var BAND = { cid: load("reacue_cid"), ready: load("reacue_ready") === "1", epoch: load("reacue_ready_epoch") || "",
+  known: "", next: 0, confirmed: false };
+if (!/^[a-z0-9]{6,16}$/.test(BAND.cid || "")) { BAND.cid = Math.random().toString(36).slice(2, 10).padEnd(8, "0"); store("reacue_cid", BAND.cid); }
+BAND.slot = [...BAND.cid].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % 8;
+const isMusician = () => !!role && role !== "regie" && role !== "light";
+function paintReady() {
+  if (typeof BAND === "undefined" || !BAND) return;
+  const b = $("readyBtn"); b.hidden = DEMO || !isMusician();
+  b.textContent = BAND.ready ? S.readyOn : S.readyB;
+  b.classList.toggle("on", BAND.ready && BAND.confirmed); b.classList.toggle("wait", BAND.ready && !BAND.confirmed);
+}
+function beatValue() {
+  const name = encodeURIComponent((load("reacue_name") || "").slice(0, 24));
+  return `${BAND.cid}|${role || ""}|${name}|${BAND.ready && isMusician() ? 1 : 0}|${BAND.ready ? BAND.epoch : ""}`;
+}
+// à ajouter à la prochaine interrogation de REAPER ; now = tout de suite (appui sur « Prêt », changement de rôle)
+function beat(now) { BAND.next = now ? 0 : BAND.next; }
+function beatQuery(t) {
+  let q = "";
+  if (t >= BAND.next) {
+    q += ";SET/EXTSTATE/ReaCue/hb" + BAND.slot + "/" + encodeURIComponent(beatValue());
+    BAND.next = t + 1600 + Math.random() * 800;
+  }
+  if (!BAND.readAt || t - BAND.readAt > 900) { BAND.readAt = t; q += ";GET/EXTSTATE/ReaCue/band"; }
+  return q;
+}
+function bandReply(txt) {
+  const v = extVal(txt, "band");
+  if (v == null) return;
+  const epoch = v.split("|")[0] || "";
+  if (epoch && BAND.known && epoch !== BAND.known && BAND.ready) {     // remise à zéro depuis ReaCue Studio
+    BAND.ready = false; store("reacue_ready", "0");
+  }
+  if (epoch) BAND.known = epoch;
+  if (epoch && BAND.ready && BAND.epoch !== epoch) { BAND.epoch = epoch; store("reacue_ready_epoch", epoch); beat(true); }
+  const me = v.slice(epoch.length + 1).split(";").find(e => e.split(",")[0] === BAND.cid);
+  BAND.confirmed = !!me && me.split(",")[3] === "1";
+  paintReady();
+}
+$("readyBtn").onclick = () => {
+  BAND.ready = !BAND.ready; store("reacue_ready", BAND.ready ? "1" : "0");
+  if (BAND.ready) { BAND.epoch = BAND.known; store("reacue_ready_epoch", BAND.known); }
+  BAND.confirmed = false; paintReady(); beat(true);
+  setTimeout(() => beat(true), 300 + Math.random() * 400);         // second envoi (téléphones simultanés)
+};
 $("roleBtn").onclick = () => $("picker").classList.add("show");
 $("langBtn").onclick = () => setLang(LANG === "fr" ? "en" : "fr", true);
 $("strip").onclick = () => { const l = $("list"); l.classList.toggle("show"); store("reacue_list", l.classList.contains("show") ? "1" : "0"); };
@@ -746,9 +968,10 @@ function pickSong(t) {
 }
 function keyName(k) { return k ? (k[LANG] || k.fr || k.chord) : ""; }
 function prepSong() {
-  const k = song.key ? `<span class="tkey"> · ${esc(keyName(song.key))} (${esc(song.key.chord)})</span>` : "";
-  const rank = concert ? S.rank(cIdx + 1, concert.songs.length) : "";
-  $("title").innerHTML = `${esc(rank)}<b>${esc(song.title)}</b> · ${Math.round(song.bpm * 10) / 10} BPM${k}`;
+  const rank = concert ? `<span class="rk">${cIdx + 1}/${concert.songs.length}</span>` : "";
+  $("title").innerHTML = `<b>${esc(song.title)}</b>${rank}`;
+  $("title").title = song.title;
+  lcdKey = "";
   $("footL").textContent = S.footL(song.n_bars, song.beats_per_bar) +
     (concert ? (song.next_title ? S.thenSong(song.next_title) : S.lastSong) : "");
   // plan proportionnel
@@ -756,7 +979,7 @@ function prepSong() {
   song.sections.forEach((s, i) => {
     const d = document.createElement("div");
     d.style.flex = `${barT(s.end_bar + 1) - barT(s.start_bar)}`; d.style.background = s.color;
-    d.textContent = short(s.name); d.dataset.i = i; strip.appendChild(d);
+    d.title = s.name; d.setAttribute("aria-label", short(s.name)); d.dataset.i = i; strip.appendChild(d);
   });
   const h = document.createElement("div"); h.className = "head"; h.id = "head"; strip.appendChild(h);
   $("list").innerHTML = song.sections.map((s, i) =>
@@ -771,6 +994,8 @@ function layoutBeats() {
   document.body.classList.toggle("drummer", role === "drums");
   document.body.classList.toggle("regie", role === "regie");
   document.body.classList.toggle("light", role === "light");
+  $("chCurK").textContent = role === "bass" ? S.bassNote : S.chord;
+  paintReady();
   if (role === "regie") { rKeySecs = ""; rKeyList = ""; }
   if (role === "light") lKey = "";
 }
@@ -789,6 +1014,8 @@ async function poll() {
   try {
     let q = "/_/TRANSPORT";
     if (role && role !== "all" && role !== "light") q += ";GET/EXTSTATE/ReaCue/mix";
+    if (role && role !== "light" && role !== "regie") q += ";GET/EXTSTATE/ReaCue/studio";
+    if (!DEMO && role) q += beatQuery(t);
     if (role === "regie") {
       q += ";GET/EXTSTATE/ReaCue/remote_alive;GET/EXTSTATE/ReaCue/remote_ack;GET/EXTSTATE/ReaCue/rehearsal";
       if (t - rg.seenAt > 3000) { rg.seenAt = t; q += ";SET/EXTSTATE/ReaCue/remote_seen/" + rg.sid + "-" + (++rg.seenN); }
@@ -798,6 +1025,8 @@ async function poll() {
     const now = performance.now();
     if (role === "regie") regieReply(txt, now);
     mixReply(txt);
+    studioReply(txt);
+    bandReply(txt);
     const f = txt.split("\n").find(l => l.startsWith("TRANSPORT"));
     if (!f) throw new Error("bad answer");
     const p = f.split("\t");
@@ -805,7 +1034,7 @@ async function poll() {
     const rtt = now - t; st.rtt = st.rtt * 0.8 + rtt * 0.2;
     const playing = play === 1 || play === 5;
     const measured = pos + (playing ? st.rtt / 2000 : 0);
-    const predicted = st.play ? st.pos + (now - st.at) / 1000 : st.pos;
+    const predicted = st.play ? st.pos + (now - st.at) / 1000 * SP.rate : st.pos;
     // lissage : petites corrections progressives, grands écarts = saut (déplacement du curseur)
     const target = (playing && Math.abs(measured - predicted) < 0.06) ? predicted + (measured - predicted) * 0.25 : measured;
     st = { ...st, play: playing ? 1 : 0, ps: play, pos: target, at: now, ok: true, lastOk: now };
@@ -813,7 +1042,7 @@ async function poll() {
 }
 let demoT0 = performance.now();
 function demoPos() { return song ? barT(1) - 2 * 60 / song.bpm * song.beats_per_bar * 1 + (performance.now() - demoT0) / 1000 : 0; }
-function curPos() { if (DEMO) return demoPos(); return st.play ? st.pos + (performance.now() - st.at) / 1000 : st.pos; }
+function curPos() { if (DEMO) return demoPos(); return st.play ? st.pos + (performance.now() - st.at) / 1000 * SP.rate : st.pos; }
 
 // ---------------------------------------------------------------- calculs musicaux
 function locate(t) {
@@ -862,36 +1091,38 @@ function nextChord(b, beat) {
   }
   return null;
 }
-const cellTxt = cs => (cs || []).map(c => nice(c.chord)).join(" · ") || "";
+const cellTxt = cs => (cs || []).map(c => nice(tc(c.chord))).join(" · ") || "";
 let gridKey = "";
 function renderChords(L, sec) {
   const box = $("chords");
   const show = !!(song.chords && song.chords.length) && ["bass", "guitars", "lead_guitar", "all"].includes(role);
   box.classList.toggle("show", show); if (!show) return;
+  const tn = n => tc(n);
   const b = Math.max(L.bar, 1), beat = L.bar >= 1 ? Math.max(L.beat, 0) : 0;
   const cur = L.bar >= 1 && !L.end ? chordAt(b, beat) : null;
   const bassRole = role === "bass";
   if (cur) {
-    const bn = cur.bass || rootOf(cur.chord);
+    const ch = tn(cur.chord), bn = cur.bass ? tn(cur.bass) : rootOf(ch);
     const nn = noteName(bn);
-    $("chCur").innerHTML = bassRole ? `${nice(bn)}<small>${nn ? nn + " · " : ""}${nice(cur.chord)}</small>`
-      : `${nice(cur.chord)}<small>${noteName(rootOf(cur.chord))}</small>`;
+    $("chCur").innerHTML = bassRole ? `${nice(bn)}<small>${nn ? nn + " · " : ""}${nice(ch)}</small>`
+      : `${nice(ch)}<small>${noteName(rootOf(ch))}</small>`;
   } else {
-    const f = chordAt(1, 0), fl = f ? (bassRole ? (f.bass || rootOf(f.chord)) : f.chord) : "–";
+    const f = chordAt(1, 0), fl = f ? (bassRole ? tn(f.bass || rootOf(f.chord)) : tn(f.chord)) : "–";
     $("chCur").innerHTML = L.end ? "–" : `${nice(fl)}<small>${S.firstChord}</small>`;
   }
   const nx = !L.end && L.bar >= 1 ? nextChord(b, beat) : null;
   const nxEl = $("chNx");
   if (nx && nx.c) {
     const m = song.beats_per_bar, w = nx.beats <= m ? S.inBeats(nx.beats) : S.inBarsShort(Math.ceil(nx.beats / m));
-    const lbl = bassRole ? nice(nx.c.bass || rootOf(nx.c.chord)) : nice(nx.c.chord);
-    nxEl.innerHTML = `${S.then}<b>${lbl}</b>${w}`; nxEl.classList.toggle("soon", nx.beats <= m);
-  } else nxEl.innerHTML = "";
+    const lbl = bassRole ? nice(tn(nx.c.bass || rootOf(nx.c.chord))) : nice(tn(nx.c.chord));
+    nxEl.innerHTML = `<b>${lbl}</b><span>${esc(w)}</span>`; $("chNxBox").classList.toggle("soon", nx.beats <= m);
+  } else { nxEl.innerHTML = "<b>–</b>"; $("chNxBox").classList.remove("soon"); }
   // grille de la section en cours (ou de la 1re section pendant le décompte)
   const s = sec || song.sections[0];
-  const key = s.start_bar + ":" + s.end_bar;
+  const key = s.start_bar + ":" + s.end_bar + ":" + SP.tr + ":" + LANG;
   if (key !== gridKey) {
     gridKey = key;
+    $("chGridN").textContent = S.chartBars(s.start_bar, s.end_bar);
     const cells = [];
     for (let k = s.start_bar; k <= s.end_bar; k++) {
       const cs = barChords(k) || [], low = cs.some(c => (c.confidence ?? 1) < 0.5);
@@ -900,6 +1131,17 @@ function renderChords(L, sec) {
     $("chGrid").innerHTML = cells.join("");
   }
   document.querySelectorAll("#chGrid div").forEach(d => { const k = +d.dataset.b; d.classList.toggle("here", k === L.bar); d.classList.toggle("past", k < L.bar); });
+  // longue section sur un téléphone : fenêtre de lignes de 4 mesures (ligne en cours + suivante)
+  const cells = $("chGrid").children, rows = Math.ceil(cells.length / 4);
+  const land = innerWidth > innerHeight && innerWidth >= 700;
+  const maxRows = (role === "all" && song.lyrics && song.lyrics.length) ? (innerHeight >= 1000 ? 2 : 1)
+    : (innerHeight >= 1000 || (land && innerHeight >= 760)) ? 4 : innerHeight < 780 && !land ? 1 : 2;
+  let r0 = 0;
+  if (rows > maxRows) r0 = Math.max(0, Math.min(Math.floor(Math.max(0, L.bar - s.start_bar) / 4), rows - maxRows));
+  for (let i = 0; i < cells.length; i++) {
+    const r = Math.floor(i / 4), d = r < r0 || r >= r0 + maxRows ? "none" : "";
+    if (cells[i].style.display !== d) cells[i].style.display = d;
+  }
 }
 
 // ---------------------------------------------------------------- paroles
@@ -986,7 +1228,7 @@ function renderDrums(t, L, si, sec) {
   const m = song.beats_per_bar, b = L.bar, d = song.drums;
   const counting = !L.pre && !L.end && b <= 0;
   // section
-  $("dSec").style.borderLeftColor = sec ? sec.color : "#555";
+  $("dSec").style.borderTopColor = sec ? sec.color : "var(--raise)";
   $("dSecK").textContent = sec ? S.nowK : counting ? S.countIn : L.end ? S.finished : S.ready;
   $("dSecV").textContent = sec ? sec.name : counting ? "Count-in" : L.end ? S.endName : (song.sections[0] || {}).name || "—";
   $("dSecG").textContent = sec ? grooveName(sec) : "";
@@ -1051,7 +1293,7 @@ function renderDrums(t, L, si, sec) {
 
 // ---------------------------------------------------------------- rendu
 // grands titres sur une ligne : police réduite (jusqu'à 60 %) plutôt que « … » quand le nom est long
-const FIT_IDS = ["nowName", "nextName", "dSecV", "rTitle", "lCurV"];
+const FIT_IDS = ["title", "nowName", "nextName", "dSecV", "rTitle", "lCurV", "chCur"];
 function fitText(el) {
   if (!el) return;
   const key = el.textContent + "|" + el.clientWidth;
@@ -1083,30 +1325,36 @@ function render() {
   // section en cours
   const nowEl = $("now");
   if (sec) {
-    $("nowName").textContent = sec.name; nowEl.style.borderLeftColor = sec.color;
+    $("nowName").textContent = sec.name; nowEl.style.borderTopColor = sec.color;
     $("nowLabel").textContent = S.nowK;
     const len = sec.end_bar - sec.start_bar + 1, done = L.bar - sec.start_bar + L.frac;
-    $("prog").style.width = `${100 * done / len}%`; $("prog").style.background = sec.color;
+    $("prog").style.width = `${100 * done / len}%`;
+    $("secPos").textContent = `${L.bar - sec.start_bar + 1}/${len}`;
   } else {
     $("nowName").textContent = counting ? "Count-in" : L.end ? S.endName : S.ready;
     $("nowLabel").textContent = counting ? S.countIn : L.end ? S.songDone : (st.play ? S.beforeCount : S.stopped);
     if (concert && (L.pre || (!counting && !L.end)) && !sec) $("nowName").textContent = `${cIdx + 1} · ${song.title}`;
-    nowEl.style.borderLeftColor = "#555"; $("prog").style.width = "0";
+    nowEl.style.borderTopColor = "var(--raise)"; $("prog").style.width = "0"; $("secPos").textContent = "";
   }
   $("barNum").textContent = L.bar >= 1 && L.bar <= song.n_bars ? S.barOf(L.bar, song.n_bars) : "";
-  document.querySelectorAll("#beats span").forEach((e, i) => e.classList.toggle("on", L.beat >= 0 && i === L.beat));
+  document.querySelectorAll("#beats span").forEach((e, i) => e.classList.toggle("on", L.beat >= 0 && i <= L.beat));
+  renderLcds(L);
+  // note de la section (champ « notes » des données publiées ; pendant le décompte : 1re section)
+  const ns = sec || (counting || L.pre ? song.sections[0] : null), note = ns && ns.notes ? String(ns.notes).trim() : "";
+  if ($("secNoteV").textContent !== note) $("secNoteV").textContent = note;
+  $("secNote").classList.toggle("show", !!note);
 
   // prochain changement
   const endBar = counting ? 0 : sec ? sec.end_bar : null;
   let left = endBar != null ? endBar - L.bar + 1 : null;   // mesures restantes, celle-ci comprise
   const nextEl = $("next");
   $("nextName").textContent = nxt ? "→ " + nxt.name : (concert && song.next_title ? S.nextSong(song.next_title) : S.songEnd);
-  $("nextBox").style.borderLeftColor = nxt ? nxt.color : "#555";
+  $("nextBox").style.borderLeftColor = nxt ? nxt.color : "var(--raise)";
   const last = left === 1;
   nextEl.classList.toggle("last", last);
   if (left == null) { $("countV").textContent = "–"; $("countK").textContent = ""; }
-  else if (last) { $("countV").textContent = Math.max(1, m - L.beat); $("countK").textContent = S.beats; }
-  else { $("countV").textContent = left; $("countK").textContent = S.barsWord(left); }
+  else if (last) { $("countV").textContent = Math.max(1, m - L.beat); $("countK").textContent = " " + S.beats; }
+  else { $("countV").textContent = left; $("countK").textContent = S.barsAbbr(left); }
 
   renderChords(L, sec);
   renderLyrics(t, L);
@@ -1118,7 +1366,9 @@ function render() {
   $("alerts").innerHTML = alerts(L, si, sec, nxt, left).map(a =>
     `<div class="alert ${a[0]}">${esc(a[1])}${a[2] ? `<small>${esc(a[2])}</small>` : ""}</div>`).join("");
 
-  // plan
+  // plan (la liste des sections disparaît quand il ne reste pas la place d'afficher quelques lignes)
+  const lst = $("list");
+  if (lst.classList.contains("show")) { const v = lst.clientHeight < 96 ? "hidden" : ""; if (lst.style.visibility !== v) lst.style.visibility = v; }
   const head = $("head");
   if (head) {
     const a = barT(1), b = barT(song.n_bars + 1);
@@ -1127,6 +1377,23 @@ function render() {
   document.querySelectorAll("#strip div[data-i]").forEach(d => d.classList.toggle("cur", +d.dataset.i === si));
   document.querySelectorAll("#list .row").forEach(d => d.classList.toggle("cur", +d.dataset.i === si));
   if (si !== lastSi) { lastSi = si; const r = document.querySelector(`#list .row[data-i="${si}"]`); if (r) r.scrollIntoView({ block: "center", behavior: "smooth" }); }
+}
+
+// afficheurs : mesure.temps, tempo (× vitesse de lecture), ton (transposé)
+function renderLcds(L) {
+  if (role === "light") return;
+  const m = song.beats_per_bar, bt = song.bar_times;
+  const bar = L.pre ? "—" : L.end ? S.endName.toUpperCase() : `${L.bar >= 1 ? L.bar : L.bar - 1}.${Math.max(L.beat, 0) + 1}`;
+  if ($("lcdBar").textContent !== bar) $("lcdBar").textContent = bar;
+  let bpm = song.bpm;
+  const i = L.bar - 1 + song.count_in_bars;
+  if (song.tempo_mode !== "constant" && !L.pre && !L.end && i >= 0 && i + 1 < bt.length && bt[i + 1] > bt[i]) bpm = 60 * m / (bt[i + 1] - bt[i]);
+  const r = SP.rate || 1, shown = song.tempo_mode === "constant" && Math.abs(r - 1) < 0.001 ? Math.round(bpm * 10) / 10 : Math.round(bpm * r);
+  const k = shown + "|" + r + "|" + SP.tr + "|" + (song.key ? song.key.chord : "") + "|" + LANG;
+  if (k === lcdKey) return;
+  lcdKey = k;
+  $("lcdBpm").innerHTML = `${shown}${Math.abs(r - 1) > 0.001 ? `<small>${Math.round(r * 100)} %</small>` : ""}`;
+  $("lcdKey").innerHTML = song.key ? `${esc(nice(tc(song.key.chord)))}${SP.tr ? `<small>${SP.tr > 0 ? "+" : ""}${SP.tr}</small>` : ""}` : "—";
 }
 
 function alerts(L, si, sec, nxt, left) {
@@ -1175,8 +1442,9 @@ function alerts(L, si, sec, nxt, left) {
   if (!nxt && sec && left != null && left <= 4 && left > 1) out.push(["soon", S.endIn(inBars(left)), ""]);
 
   // infos de fond
-  if ((role === "bass" || role === "guitars" || role === "lead_guitar") && song.key)
-    out.push(["info", S.key(`${keyName(song.key)} (${song.key.chord})`) + (song.chords ? "" : S.noChords), ""]);
+  // tonalité : dans l'afficheur TON ; rappelée ici quand il n'y a pas de grille d'accords
+  if ((role === "bass" || role === "guitars" || role === "lead_guitar") && song.key && !(song.chords && song.chords.length))
+    out.push(["info", S.key(SP.tr ? nice(tc(song.key.chord)) : `${keyName(song.key)} (${song.key.chord})`) + S.noChords, ""]);
   if (role === "vocals" && !(song.lyrics && song.lyrics.length)) out.push(["info", S.noLyrics, ""]);
   if (!has && role !== "vocals" && role !== "all" && Object.keys(song.activity).length === 0)
     out.push(["info", S.noStems, ""]);
@@ -1272,8 +1540,9 @@ function renderMix() {
   $("rHearAll").textContent = S.rHearAll; $("rHearAll").classList.toggle("on", mix.all);
   $("rMixH").textContent = S.rMixH;
 }
-const ROLE_COLORS = { vocals: "#d4537e", drums: "#ba7517", bass: "#185fa5", guitars: "#639922", lead_guitar: "#0f6e56",
-  keys: "#7f77dd", other: "#888780", mix: "#5f5e5a" };
+// couleurs des stems de ReaCue Studio (base.css --c-*), texte foncé lisible dessus
+const ROLE_COLORS = { vocals: "#E58FB5", drums: "#F2A65A", bass: "#6E9BEF", guitars: "#C9A86A", lead_guitar: "#E9D27A",
+  keys: "#A28AE6", other: "#7FB8C9", mix: "#9AA0A8" };
 function demoMix(cmd, arg) {
   const m = mix.roles.find(x => x.role === arg);
   if (cmd === "mute" && m) m.on = !m.on;
@@ -1329,6 +1598,14 @@ document.querySelectorAll(".rbtns button").forEach(b => b.onclick = () => {
 $("rRehBtn").onclick = () => sendCmd("reh", rg.reh.on ? "0" : "1", $("rRehBtn"));
 $("rLoopOff").onclick = () => sendCmd("loopoff", "", $("rLoopOff"));
 document.querySelectorAll("#rReh button.rate").forEach(b => b.onclick = () => sendCmd("rate", b.dataset.rate, b));
+// texte lisible (contraste le plus fort) sur une couleur de section #rrggbb : noir ou blanc
+function inkOn(hex) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || ""));
+  if (!m) return "#000";
+  const lin = v => { v = parseInt(v, 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const L = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+  return (L + 0.05) / 0.05 >= 1.05 / (L + 0.05) ? "#000" : "#fff";
+}
 const mmss = s => { s = Math.max(0, Math.round(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 function renderRegie(t, L, si, sec) {
   if (role !== "regie") return;
@@ -1343,9 +1620,9 @@ function renderRegie(t, L, si, sec) {
   const bar = L.bar >= 1 && L.bar <= song.n_bars ? S.rBar(L.bar, song.n_bars) : "";
   $("rSub").innerHTML = `<b>${esc(where)}</b>${esc(bar + S.rRest(mmss(t1 - Math.max(t, t0))))}` +
     esc(concert ? (song.next_title ? S.thenSong(song.next_title) : S.lastSong) : "");
-  $("rHead").style.borderLeftColor = sec ? sec.color : "#555";
+  $("rHead").style.borderTopColor = sec ? sec.color : "var(--raise)";
   $("rProg").style.width = `${Math.max(0, Math.min(100, 100 * (t - t0) / (t1 - t0)))}%`;
-  $("rProg").style.background = sec ? sec.color : "var(--sec)";
+  $("rProg").style.background = "var(--sig)";
   $("rPlayIc").textContent = state === "play" ? "❚❚" : "▶"; $("rPlayTx").textContent = state === "play" ? S.rPause : S.rPlay;
   // double appui : boutons armés
   if (rg.armed && now - rg.armed.t >= 2000) rg.armed = null;
@@ -1359,7 +1636,7 @@ function renderRegie(t, L, si, sec) {
   const ks = (concert ? concert.id + ":" + cIdx : song.id) + ":" + song.sections.length;
   if (ks !== rKeySecs) {
     rKeySecs = ks;
-    $("rSecs").innerHTML = song.sections.map((s, i) => `<button data-i="${i}" style="background:${s.color}">${esc(s.name)}</button>`).join("");
+    $("rSecs").innerHTML = song.sections.map((s, i) => `<button data-i="${i}" style="background:${s.color};color:${inkOn(s.color)}">${esc(s.name)}</button>`).join("");
     $("rSecs").querySelectorAll("button").forEach(b => b.onclick = () => {
       const s = song.sections[+b.dataset.i];
       sendCmd(rg.reh.on ? "loop" : "seek", barT(s.start_bar).toFixed(3), b);
@@ -1458,7 +1735,7 @@ function renderLight(t) {
   $("lCurN").textContent = cur ? `${concert ? (cur.track + 1) + " · " : ""}cue ${cur.n}` : "";
   $("lCurE").textContent = cur ? cur.effect[LANG] || "" : "";
   const secC = cur && song.sections.find(s => s.name === cur.name);
-  $("lCur").style.borderLeftColor = secC ? secC.color : "#555";
+  $("lCur").style.borderTopColor = secC ? secC.color : "var(--raise)";
   $("lNext").innerHTML = nx ? `${esc(S.lNext(nx.n, nx.name))}<small>${esc(nx.tc)} · ${esc(nx.effect[LANG] || "")}</small>` : (cues.length ? esc(S.lLast) : "");
   const left = nx ? nx.t - t : null;
   $("lCntV").textContent = left == null ? "–" : mmss(left);

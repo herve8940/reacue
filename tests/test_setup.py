@@ -121,8 +121,12 @@ def test_uninstall(reaper, monkeypatch, tmp_path):
     monkeypatch.setattr(S, "claude_config_path", lambda *a, **k: tmp_path / "none.json")
     (reaper / "Scripts" / "__startup.lua").write_text("-- autre\n", encoding="utf-8")
     run_install(reaper)
-    (reaper / "reaper_www_root").mkdir()
-    (reaper / "reaper_www_root" / "prompteur.html").write_text("x")
+    www = reaper / "reaper_www_root"
+    assert (www / "studio.html").exists() and (www / "reacue_studio" / "fonts").is_dir()   # pages copiées
+    (www / "prompteur.html").write_text("x")
+    (www / "reacue_peaks.json").write_text("{}")
+    (www / "reacue_exports").mkdir()
+    (www / "reacue_exports" / "a_x.mp3").write_text("x")
     (reaper / "ReaCueMCP" / "last_session.json").write_text("{}")
     assert S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no"]) == 0
     assert not (reaper / "Scripts" / "ReaCue").exists()
@@ -130,6 +134,8 @@ def test_uninstall(reaper, monkeypatch, tmp_path):
     assert "REACUE_" not in (reaper / "reaper-kb.ini").read_text(encoding="utf-8")
     assert (reaper / "ReaCueMCP" / "last_session.json").exists()            # données conservées
     assert not (reaper / "reaper_www_root" / "prompteur.html").exists()
+    assert not (www / "studio.html").exists() and not (www / "reacue_studio").exists()
+    assert not (www / "reacue_peaks.json").exists() and not (www / "reacue_exports").exists()
     S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no", "--purge"])
     assert not (reaper / "ReaCueMCP").exists()
 
@@ -202,8 +208,9 @@ def test_uninstall_stems_env(reaper, monkeypatch, tmp_path, capsys):
     (inst / "reaper").mkdir(parents=True)
     for f in S.SCRIPT_FILES:
         (inst / "reaper" / f).write_bytes((ROOT / "reaper" / f).read_bytes())
-    (inst / ".venv-demucs" / "bin").mkdir(parents=True)
-    (inst / ".venv-demucs" / "bin" / "python").write_text("")
+    sp = S.stems_python(inst)
+    sp.parent.mkdir(parents=True, exist_ok=True)
+    sp.write_text("")
     run_install(reaper, install_dir=inst)
     capsys.readouterr()
     S.main(["status", "--reaper-dir", str(reaper)])
@@ -232,3 +239,76 @@ def test_all_window_modules_installed():
     assert used <= set(RS.SCRIPT_FILES), used - set(RS.SCRIPT_FILES)
     for f in RS.SCRIPT_FILES:
         assert (root / f).is_file(), f
+
+
+def test_antigravity_mcp_config(tmp_path, monkeypatch):
+    cfg = tmp_path / ".gemini" / "config" / "mcp_config.json"
+    cfg.parent.mkdir(parents=True)
+    cfg.write_text(json.dumps({"mcpServers": {"existing": {"url": "http://127.0.0.1:8080"}}}), encoding="utf-8")
+    monkeypatch.setattr(S, "antigravity_config_path", lambda *a, **k: cfg)
+    reaper = tmp_path / "REAPER"
+    (reaper / "Scripts").mkdir(parents=True)
+    run_install(reaper, mcp="antigravity")
+    d = json.loads(cfg.read_text(encoding="utf-8"))
+    assert "existing" in d["mcpServers"]
+    assert "reacue" in d["mcpServers"]
+    assert d["mcpServers"]["reacue"]["args"] == [str(ROOT / "run_server.py")]
+    # uninstall
+    assert S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no"]) == 0
+    d = json.loads(cfg.read_text(encoding="utf-8"))
+    assert "reacue" not in d["mcpServers"]
+    assert "existing" in d["mcpServers"]
+
+
+def test_cursor_mcp_config(tmp_path, monkeypatch):
+    cfg = tmp_path / ".cursor" / "mcp.json"
+    cfg.parent.mkdir(parents=True)
+    monkeypatch.setattr(S, "cursor_config_path", lambda *a, **k: cfg)
+    reaper = tmp_path / "REAPER"
+    (reaper / "Scripts").mkdir(parents=True)
+    run_install(reaper, mcp="cursor")
+    d = json.loads(cfg.read_text(encoding="utf-8"))
+    assert "reacue" in d["mcpServers"]
+    # uninstall
+    assert S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no"]) == 0
+    d = json.loads(cfg.read_text(encoding="utf-8"))
+    assert "reacue" not in d["mcpServers"]
+
+
+def test_mcp_export_and_multi(tmp_path, monkeypatch):
+    reaper = tmp_path / "REAPER"
+    (reaper / "Scripts").mkdir(parents=True)
+    run_install(reaper, mcp="export")
+    exp = reaper / "ReaCueMCP" / "reacue_mcp_config.json"
+    assert exp.exists()
+    d = json.loads(exp.read_text(encoding="utf-8"))
+    assert "reacue" in d["mcpServers"]
+    # uninstall removes export file
+    assert S.main(["uninstall", "--reaper-dir", str(reaper), "--reaper-running", "no"]) == 0
+    assert not exp.exists()
+
+
+def test_resolve_mcp_targets():
+    assert S.resolve_mcp_targets("no", ["claude"]) == []
+    assert S.resolve_mcp_targets("0", ["claude"]) == []
+    assert S.resolve_mcp_targets("yes", ["claude"]) == ["claude"]
+    assert S.resolve_mcp_targets("claude", []) == ["claude"]
+    assert S.resolve_mcp_targets("antigravity", []) == ["antigravity"]
+    assert S.resolve_mcp_targets("cursor", []) == ["cursor"]
+    assert S.resolve_mcp_targets("export", []) == ["export"]
+    assert S.resolve_mcp_targets("claude,antigravity", []) == ["antigravity", "claude"]
+    assert S.resolve_mcp_targets("all", []) == ["antigravity", "claude", "cursor", "export"]
+
+
+def test_ask_mcp_selection(monkeypatch):
+    monkeypatch.setattr("builtins.input", lambda *a: "1,2")
+    assert S.ask_mcp_selection(["claude", "antigravity"]) == ["antigravity", "claude"]
+
+    monkeypatch.setattr("builtins.input", lambda *a: "0")
+    assert S.ask_mcp_selection(["claude"]) == []
+
+    monkeypatch.setattr("builtins.input", lambda *a: "")
+    assert S.ask_mcp_selection(["antigravity"]) == ["antigravity"]
+
+    monkeypatch.setattr("builtins.input", lambda *a: "5")
+    assert S.ask_mcp_selection([]) == ["export"]

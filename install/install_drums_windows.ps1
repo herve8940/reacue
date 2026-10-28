@@ -5,7 +5,7 @@
 # Internet nécessaire : environ 300 Mo (PyTorch, déjà en cache si Demucs est installé) + 16 Mo (ADTOF),
 # 3 à 10 minutes. Relançable.
 # Fichier enregistré en UTF-8 avec BOM (sinon Windows PowerShell 5.1 lit les accents en ANSI).
-param([string]$Lang = "")
+param([string]$Lang = "", [string]$ExtraIndexUrl = "")
 $ErrorActionPreference = "Stop"
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $env:PYTHONUTF8 = "1"
@@ -13,6 +13,20 @@ $env:PYTHONIOENCODING = "utf-8"
 
 $Here = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $Here
+
+# Cache localisé : évite de remplir le disque système (C:)
+if (-not $env:UV_CACHE_DIR) {
+  $c = [System.Environment]::GetEnvironmentVariable("UV_CACHE_DIR", "User")
+  if ($c) { $env:UV_CACHE_DIR = $c } else { $env:UV_CACHE_DIR = Join-Path $Here ".uv_cache" }
+}
+if (-not $env:TORCH_HOME) {
+  $c = [System.Environment]::GetEnvironmentVariable("TORCH_HOME", "User")
+  if ($c) { $env:TORCH_HOME = $c }
+}
+if (-not $env:HF_HOME) {
+  $c = [System.Environment]::GetEnvironmentVariable("HF_HOME", "User")
+  if ($c) { $env:HF_HOME = $c }
+}
 if (-not $Lang) { $Lang = Read-Host "Langue / Language [fr/en] (fr)" }
 $L = if ($Lang -and $Lang.ToLower().StartsWith("en")) { "en" } else { "fr" }
 function T([string]$fr, [string]$en) { if ($L -eq "en") { $en } else { $fr } }
@@ -51,7 +65,7 @@ if (-not $accepted) {
   } else {
     $Ans = ""
     if (-not [Console]::IsInputRedirected) {
-      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly “I accept” (otherwise Enter)")
+      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly 'I accept' (otherwise Enter)")
     }
     if ($Ans) { $Ans = $Ans.Replace([string][char]0x2019, "'").Trim() }
     if ($Ans -cne $Want) {
@@ -101,7 +115,30 @@ if (-not (Test-Path -LiteralPath $Py)) {
   if ($LASTEXITCODE -ne 0) { Fail "création de .venv-drums impossible." "could not create .venv-drums." }
 }
 Write-Host (T "  installation de PyTorch et des dépendances (plusieurs minutes)…" "  installing PyTorch and the dependencies (several minutes)…")
-& uv pip install --python $Py --only-binary ":all:" -r requirements-drums.txt
+if (-not $ExtraIndexUrl) {
+  if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
+    $ExtraIndexUrl = "https://download.pytorch.org/whl/cu124"
+  } else {
+    try {
+      $adapters = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -ErrorAction SilentlyContinue
+      foreach ($a in $adapters) {
+        $vram = if ($a.'HardwareInformation.qwMemorySize') { [int64]$a.'HardwareInformation.qwMemorySize' } elseif ($a.'HardwareInformation.MemorySize') { [int64]$a.'HardwareInformation.MemorySize' } else { 0 }
+        $prov = [string]$a.ProviderName
+        $desc = [string]$a.DriverDesc
+        if ($vram -ge 2147483648 -and ($prov -match "NVIDIA" -or $desc -match "GeForce|RTX|GTX")) {
+          $ExtraIndexUrl = "https://download.pytorch.org/whl/cu124"
+          break
+        }
+      }
+    } catch { }
+  }
+}
+$indexArgs = @()
+if ($ExtraIndexUrl) {
+  Write-Host (T "  accélération matérielle : index PyTorch GPU ($ExtraIndexUrl)" "  hardware acceleration: PyTorch GPU index ($ExtraIndexUrl)")
+  $indexArgs = @("--extra-index-url", $ExtraIndexUrl)
+}
+& uv pip install --python $Py @indexArgs --only-binary ":all:" -r requirements-drums.txt
 if ($LASTEXITCODE -ne 0) { Fail "installation des dépendances impossible (voir ci-dessus)." "could not install the dependencies (see above)." }
 Write-Host (T "  test sur une batterie synthétique…" "  testing on synthetic drums…")
 & $Py (Join-Path $Here "reacue_drums.py") check --lang $L

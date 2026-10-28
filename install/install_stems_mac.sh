@@ -21,6 +21,10 @@ command -v uv >/dev/null 2>&1 || fail "uv introuvable : installe d'abord ReaCue 
                                       "uv not found: install ReaCue first (Install ReaCue.command)."
 t "  Machine : $(uname -m) — séparation de stems (Demucs) dans $HERE/.venv-demucs" \
   "  Machine: $(uname -m) — stem separation (Demucs) in $HERE/.venv-demucs"
+if [ "$(uname -m)" = "arm64" ]; then
+  t "  Accélération matérielle : Apple Silicon Metal (MPS)" \
+    "  Hardware acceleration: Apple Silicon Metal (MPS)"
+fi
 
 t "  Licence : Demucs (Meta / A. Défossez) est sous licence MIT ; ses modèles sont téléchargés depuis Meta. Détails : THIRD_PARTY_NOTICES.md" \
   "  Licence: Demucs (Meta / A. Défossez) is MIT-licensed; its models are downloaded from Meta. Details: THIRD_PARTY_NOTICES.md"
@@ -31,6 +35,11 @@ t "  téléchargement et installation de PyTorch et Demucs (plusieurs minutes)�
   "  downloading and installing PyTorch and Demucs (several minutes)…"
 uv pip install --python .venv-demucs/bin/python --only-binary :all: --no-binary demucs -r requirements-stems.txt \
   || fail "installation de Demucs impossible (voir ci-dessus)." "could not install Demucs (see above)."
+reaper_dir="${REAPER_RESOURCE_PATH:-$HOME/Library/Application Support/REAPER}"
+settings_file="$reaper_dir/ReaCueMCP/reacue_settings.json"
+if [ -d "$(dirname "$settings_file")" ]; then
+  .venv-demucs/bin/python reacue_gpu.py sync-settings "$settings_file" >/dev/null 2>&1 || true
+fi
 t "  téléchargement des modèles et test de vitesse…" "  downloading the models and measuring the speed…"
 .venv-demucs/bin/python reacue_stems.py check --lang "$L" || fail "Demucs ne fonctionne pas (voir ci-dessus)." \
                                                                   "Demucs does not work (see above)."

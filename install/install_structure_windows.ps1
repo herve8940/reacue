@@ -4,7 +4,7 @@
 # Environnement séparé .venv-structure + sources figées dans structure\ (n'abîme pas le .venv de ReaCue).
 # Internet nécessaire : environ 3 Go (PyTorch, SongFormer, MuQ, MusicFM), 10 à 40 minutes. Relançable.
 # Fichier enregistré en UTF-8 avec BOM (sinon Windows PowerShell 5.1 lit les accents en ANSI).
-param([string]$Lang = "")
+param([string]$Lang = "", [string]$ExtraIndexUrl = "")
 $ErrorActionPreference = "Stop"
 try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch { }
 $env:PYTHONUTF8 = "1"
@@ -12,6 +12,20 @@ $env:PYTHONIOENCODING = "utf-8"
 
 $Here = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $Here
+
+# Cache localisé : évite de remplir le disque système (C:)
+if (-not $env:UV_CACHE_DIR) {
+  $c = [System.Environment]::GetEnvironmentVariable("UV_CACHE_DIR", "User")
+  if ($c) { $env:UV_CACHE_DIR = $c } else { $env:UV_CACHE_DIR = Join-Path $Here ".uv_cache" }
+}
+if (-not $env:TORCH_HOME) {
+  $c = [System.Environment]::GetEnvironmentVariable("TORCH_HOME", "User")
+  if ($c) { $env:TORCH_HOME = $c }
+}
+if (-not $env:HF_HOME) {
+  $c = [System.Environment]::GetEnvironmentVariable("HF_HOME", "User")
+  if ($c) { $env:HF_HOME = $c }
+}
 if (-not $Lang) { $Lang = Read-Host "Langue / Language [fr/en] (fr)" }
 $L = if ($Lang -and $Lang.ToLower().StartsWith("en")) { "en" } else { "fr" }
 function T([string]$fr, [string]$en) { if ($L -eq "en") { $en } else { $fr } }
@@ -53,7 +67,7 @@ if (-not $accepted) {
   } else {
     $Ans = ""
     if (-not [Console]::IsInputRedirected) {
-      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly “I accept” (otherwise Enter)")
+      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly 'I accept' (otherwise Enter)")
     }
     if ($Ans) { $Ans = $Ans.Replace([string][char]0x2019, "'").Trim() }
     if ($Ans -cne $Want) {
@@ -105,7 +119,71 @@ if (-not (Test-Path -LiteralPath $Py)) {
   if ($LASTEXITCODE -ne 0) { Fail "création de .venv-structure impossible." "could not create .venv-structure." }
 }
 Write-Host (T "  installation de PyTorch et des dépendances (plusieurs minutes)…" "  installing PyTorch and the dependencies (several minutes)…")
-& uv pip install --python $Py --only-binary ":all:" --no-binary "nnaudio,easydict,antlr4-python3-runtime" -r requirements-structure.txt
+if (-not $ExtraIndexUrl) {
+  if (Get-Command nvidia-smi -ErrorAction SilentlyContinue) {
+    $ExtraIndexUrl = "https://download.pytorch.org/whl/cu124"
+  } else {
+    try {
+      $adapters = Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -ErrorAction SilentlyContinue
+      foreach ($a in $adapters) {
+        $vram = if ($a.'HardwareInformation.qwMemorySize') { [int64]$a.'HardwareInformation.qwMemorySize' } elseif ($a.'HardwareInformation.MemorySize') { [int64]$a.'HardwareInformation.MemorySize' } else { 0 }
+        $prov = [string]$a.ProviderName
+        $desc = [string]$a.DriverDesc
+        if ($vram -ge 2147483648 -and ($prov -match "NVIDIA" -or $desc -match "GeForce|RTX|GTX")) {
+          $ExtraIndexUrl = "https://download.pytorch.org/whl/cu124"
+          break
+        }
+      }
+    } catch { }
+  }
+}
+# Audit matériel de l'environnement virtuel .venv-structure
+$audit = $null
+$mainPy = Join-Path $Here ".venv\Scripts\python.exe"
+if (Test-Path -LiteralPath $mainPy) {
+  try {
+    $auditJson = & $mainPy (Join-Path $Here "reacue_gpu.py") audit $Py 2>$null
+    if ($LASTEXITCODE -eq 0 -and $auditJson) {
+      $audit = $auditJson | ConvertFrom-Json
+    }
+  } catch { }
+}
+
+if ($audit -and $audit.action -eq "reinstall") {
+  Write-Host (T "  ! Réalignement matériel requis dans .venv-structure : $($audit.reason_fr)" `
+                "  ! Hardware realignment needed in .venv-structure: $($audit.reason)") -ForegroundColor Yellow
+  & uv pip uninstall --python $Py torch torchaudio torchvision 2>$null | Out-Null
+  $torchVer = if ($audit.target_version) { $audit.target_version } else { if ($ExtraIndexUrl -match "cu128") { "2.8.0" } else { "2.4.1" } }
+  $visionVer = if ($audit.target_vision_version) { $audit.target_vision_version } else { if ($torchVer -eq "2.8.0") { "0.23.0" } else { "0.19.1" } }
+  Write-Host (T "  installation de PyTorch $torchVer avec accélération matérielle ($ExtraIndexUrl)…" `
+                "  installing PyTorch $torchVer with hardware acceleration ($ExtraIndexUrl)…")
+  if ($ExtraIndexUrl) {
+    & uv pip install --python $Py "torch==$torchVer" "torchaudio==$torchVer" "torchvision==$visionVer" --index $ExtraIndexUrl --reinstall
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host (T "  ! repli sur le mode standard" "  ! fallback to standard mode") -ForegroundColor Yellow
+    }
+  }
+} elseif ($audit -and $audit.status -eq "optimal") {
+  Write-Host (T "  accélération matérielle déjà optimale ($($audit.torch_version)) : aucun téléchargement nécessaire." `
+                "  hardware acceleration already optimal ($($audit.torch_version)): no download needed.") -ForegroundColor Green
+} else {
+  # Premier install ou audit non disponible
+  $torchVer = if ($ExtraIndexUrl -match "cu128") { "2.8.0" } else { "2.4.1" }
+  $visionVer = if ($ExtraIndexUrl -match "cu128") { "0.23.0" } else { "0.19.1" }
+  if ($ExtraIndexUrl) {
+    Write-Host (T "  installation de PyTorch $torchVer avec accélération NVIDIA CUDA ($ExtraIndexUrl)…" `
+                  "  installing PyTorch $torchVer with NVIDIA CUDA acceleration ($ExtraIndexUrl)…")
+    & uv pip install --python $Py "torch==$torchVer" "torchaudio==$torchVer" "torchvision==$visionVer" --index $ExtraIndexUrl --reinstall
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host (T "  ! repli sur le mode standard" "  ! fallback to standard mode") -ForegroundColor Yellow
+    }
+  }
+}
+$indexArgs = @()
+if ($ExtraIndexUrl) {
+  $indexArgs = @("--extra-index-url", $ExtraIndexUrl)
+}
+& uv pip install --python $Py @indexArgs --only-binary ":all:" --no-binary "nnaudio,easydict,antlr4-python3-runtime" -r requirements-structure.txt
 if ($LASTEXITCODE -ne 0) { Fail "installation des dépendances impossible (voir ci-dessus)." "could not install the dependencies (see above)." }
 & uv pip install --python $Py --no-deps (Join-Path $TP "MuQ")
 if ($LASTEXITCODE -ne 0) { Fail "installation de MuQ impossible." "could not install MuQ." }
@@ -114,5 +192,5 @@ Write-Host (T "  recherche de modèles déjà téléchargés (ReaCue-labo, cache
 Write-Host (T "  téléchargement des modèles manquants (jusqu'à 2 Go) et test…" "  downloading the missing models (up to 2 GB) and testing…")
 & $Py (Join-Path $Here "reacue_structure.py") check --lang $L
 if ($LASTEXITCODE -ne 0) { Fail "SongFormer ne fonctionne pas (voir ci-dessus)." "SongFormer does not work (see above)." }
-Write-Host (T "  Analyse de structure installée : utilisée automatiquement par « Analyser et préparer » (réglage « Détection de structure »)." "  Structure analysis installed: used automatically by “Analyse and prepare” (“Structure detection” setting).")
+Write-Host (T "  Analyse de structure installée : utilisée automatiquement par « Analyser et préparer » (réglage « Détection de structure »)." "  Structure analysis installed: used automatically by 'Analyse and prepare' ('Structure detection' setting).")
 exit 0

@@ -1,0 +1,178 @@
+/* ReaCue Studio — base commune (style « Studio pro ») pour tous les écrans : Biblio, Travail, Groupe,
+   Concert, Lumière, version mobile et scène. Jetons de couleur, polices embarquées (OFL, voir fonts/),
+   en-tête, navigation, afficheurs LCD, boutons, pastilles, voyants, panneaux, fenêtres.
+   Aucune ressource externe : la page doit marcher sans internet (REAPER sert ce dossier). */
+
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 600; font-display: swap; src: url("fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/ibm-plex-sans-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 600; font-display: swap; src: url("fonts/ibm-plex-mono-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  /* surfaces */
+  --bg: #16181B;          /* fond */
+  --panel: #1E2125;       /* panneaux, en-tête, pied */
+  --inset: #0F1113;       /* zones encastrées (afficheurs, pistes) */
+  --well: #121417;        /* creux (navigation, pastilles) */
+  --row: #181B1F;         /* ligne de piste */
+  --edge: #0C0D0F;        /* bordures sombres */
+  --raise: #2B2F35;       /* boutons, reliefs */
+  --track-off: #3A3F46;   /* forme d'onde non jouée */
+  /* texte */
+  --ink: #E6E8EB;
+  --ink2: #B4BAC2;
+  --mute: #8A9099;
+  --mute2: #9AA0A8;
+  --dim: #5E646C;
+  /* signaux */
+  --sig: #FF8A3D;         /* orange : tête de lecture, boucle, sélection */
+  --led: #3BE37A;         /* vert : lecture, voyants OK */
+  --lcd: #F2C230;         /* jaune : afficheurs, muet */
+  --smpte: #8FD1FF;       /* bleu : timecode */
+  --red: #FF4D4D;
+  /* stems (par rôle) */
+  --c-vocals: #E58FB5;
+  --c-drums: #F2A65A;
+  --c-bass: #6E9BEF;
+  --c-guitars: #C9A86A;
+  --c-lead_guitar: #E9D27A;
+  --c-keys: #A28AE6;
+  --c-other: #7FB8C9;
+  --c-mix: #9AA0A8;
+  --c-click: #8A9099;
+  --c-voice: #5FC9B4;
+  /* polices (repli système propre si les fichiers manquent) */
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --cond: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", var(--sans);
+  --r: 6px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body.rc {
+  background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 13px;
+  -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; overflow: hidden;
+}
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--sig); }
+a:hover { color: #FFAB73; }
+.mono { font-family: var(--mono); }
+[hidden] { display: none !important; }
+
+.rc-app { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+
+/* en-tête ------------------------------------------------------------------------------- */
+.rc-top {
+  min-height: 64px; display: flex; align-items: center; gap: 22px; padding: 0 20px; flex-wrap: wrap;
+  background: var(--panel); border-bottom: 1px solid var(--edge); box-shadow: inset 0 -1px 0 var(--raise);
+}
+.rc-brand { display: flex; align-items: center; gap: 10px; }
+.rc-logo { width: 28px; height: 28px; border-radius: 6px; background: var(--sig); display: flex; align-items: center; justify-content: center; }
+.rc-word { font-family: var(--cond); font-size: 22px; font-weight: 700; letter-spacing: .06em; }
+.rc-nav { display: flex; gap: 2px; background: var(--well); border: 1px solid var(--edge); border-radius: var(--r); padding: 3px; }
+.rc-nav button {
+  padding: 7px 14px; border-radius: 4px; border: 0; background: none; font-size: 12px; font-weight: 600;
+  letter-spacing: .08em; color: var(--mute2);
+}
+.rc-nav button:hover { color: var(--ink); }
+.rc-nav button.on { color: var(--bg); background: var(--ink); }
+.rc-nav button.soon { opacity: .55; }
+.rc-lang { border: 1px solid var(--edge); background: var(--well); color: var(--mute2); border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 600; letter-spacing: .08em; }
+
+/* afficheurs LCD ------------------------------------------------------------------------- */
+.rc-lcds { margin-left: auto; display: flex; align-items: stretch; gap: 1px; background: var(--edge); border: 1px solid var(--edge); border-radius: var(--r); overflow: hidden; }
+.rc-lcd { background: var(--inset); padding: 6px 16px; text-align: right; min-width: 74px; }
+.rc-lcd .k { font-size: 9px; letter-spacing: .14em; color: var(--mute); text-transform: uppercase; }
+.rc-lcd .v { font-family: var(--mono); font-size: 20px; color: var(--lcd); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rc-lcd .v small { font-size: 12px; color: var(--mute); }
+.rc-lcd.tc .v { color: var(--smpte); }
+
+/* panneaux -------------------------------------------------------------------------------- */
+.rc-inset { background: var(--inset); border: 1px solid var(--edge); border-radius: var(--r); }
+.rc-panel { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r); }
+.rc-h1 { margin: 0; font-family: var(--cond); font-size: 34px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; line-height: 1; }
+.rc-meta { font-family: var(--mono); font-size: 12px; color: var(--mute); text-transform: uppercase; }
+.rc-label { font-size: 11px; letter-spacing: .12em; color: var(--mute); text-transform: uppercase; }
+
+/* boutons, pastilles, voyants -------------------------------------------------------------- */
+.rc-btn {
+  height: 44px; min-width: 52px; border-radius: 5px; border: 1px solid var(--edge); background: var(--raise);
+  color: var(--ink); display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 10px;
+}
+.rc-btn:hover { filter: brightness(1.12); }
+.rc-btn:active { transform: translateY(1px); }
+.rc-btn.play { width: 76px; background: var(--led); color: var(--edge); }
+.rc-btn.play.paused { background: var(--lcd); }
+.rc-btn.sig { background: var(--sig); color: var(--bg); }
+.rc-btn.sm { height: 28px; min-width: 0; font-size: 11px; font-weight: 600; letter-spacing: .06em; padding: 0 10px; }
+.rc-btn:disabled { opacity: .4; cursor: not-allowed; filter: none; }
+.rc-chip {
+  padding: 6px 10px; border-radius: 4px; background: var(--well); border: 1px solid var(--edge);
+  font-family: var(--mono); font-size: 11px; color: var(--mute); white-space: nowrap; text-transform: uppercase;
+}
+button.rc-chip:hover { color: var(--ink); }
+.rc-chip.sig { color: var(--sig); }
+.rc-chip.ok { color: var(--led); }
+.rc-chip.warn { color: var(--lcd); }
+.rc-leds { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 11px; color: var(--mute); }
+.rc-led { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.rc-led i { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+.rc-led.ok i { background: var(--led); box-shadow: 0 0 6px var(--led); }
+.rc-led.warn i { background: var(--lcd); box-shadow: 0 0 6px var(--lcd); }
+.rc-led.bad i { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.rc-ms { width: 26px; height: 20px; border-radius: 3px; border: 1px solid var(--edge); background: var(--raise); color: var(--mute2); font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 0; }
+.rc-ms.m.on { background: var(--lcd); color: var(--bg); }
+.rc-ms.s.on { background: var(--smpte); color: var(--bg); }
+
+/* pied ---------------------------------------------------------------------------------------- */
+.rc-foot {
+  min-height: 76px; display: flex; align-items: center; gap: 14px; padding: 8px 20px; flex-wrap: wrap;
+  background: var(--panel); border-top: 1px solid var(--edge); box-shadow: inset 0 1px 0 var(--raise);
+}
+.rc-group { display: flex; gap: 4px; }
+
+/* fenêtres (export, PIN…), formulaires, messages ------------------------------------------------- */
+.rc-veil { position: fixed; inset: 0; background: rgba(8, 9, 10, .66); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.rc-veil.show { display: flex; }
+.rc-pop { background: var(--panel); border: 1px solid var(--edge); border-radius: 8px; box-shadow: 0 18px 60px rgba(0, 0, 0, .55), inset 0 1px 0 var(--raise); width: min(560px, 100%); max-height: calc(100% - 32px); overflow: auto; padding: 18px 20px; }
+.rc-pop h2 { margin: 0 0 12px; font-family: var(--cond); font-size: 24px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.rc-pop h3 { margin: 14px 0 6px; font-size: 10px; letter-spacing: .14em; color: var(--mute); text-transform: uppercase; font-weight: 600; }
+.rc-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rc-input, .rc-select { height: 30px; background: var(--inset); border: 1px solid var(--edge); border-radius: 4px; padding: 0 8px; color: var(--ink); }
+.rc-input.num { width: 70px; font-family: var(--mono); }
+.rc-check { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 4px; background: var(--well); border: 1px solid var(--edge); cursor: pointer; user-select: none; }
+.rc-check input { accent-color: var(--sig); margin: 0; }
+.rc-check i { width: 8px; height: 8px; border-radius: 2px; }
+.rc-bar { height: 6px; border-radius: 3px; background: var(--edge); overflow: hidden; }
+.rc-bar > i { display: block; height: 100%; width: 0; background: var(--sig); transition: width .25s; }
+.rc-note { font-size: 12px; color: var(--mute); line-height: 1.45; }
+.rc-note.bad { color: var(--red); }
+.rc-files { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.rc-files a { display: flex; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 4px; background: var(--inset); border: 1px solid var(--edge); text-decoration: none; color: var(--ink); font-size: 12px; }
+.rc-files a small { font-family: var(--mono); color: var(--mute); }
+.rc-toast { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--raise); color: var(--ink); border: 1px solid var(--edge); border-radius: 6px; padding: 9px 14px; font-size: 12px; z-index: 60; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); }
+.rc-toast.show { opacity: 1; }
+.rc-toast.bad { color: var(--red); }
+.rc-empty { display: flex; align-items: center; justify-content: center; color: var(--mute); font-size: 13px; text-align: center; padding: 30px; }
+
+@media (max-width: 1100px) {
+  .rc-top { gap: 12px; padding: 8px 12px; }
+  .rc-lcds { margin-left: 0; width: 100%; }
+  .rc-lcd { flex: 1; padding: 5px 8px; min-width: 0; }
+  .rc-lcd .v { font-size: 16px; }
+}
+@media (max-width: 640px) {
+  .rc-nav button { padding: 6px 8px; font-size: 10px; }
+  .rc-lcd .v { font-size: 13px; }
+  .rc-lcd .v small { display: none; }
+  .rc-foot { padding: 8px 12px; gap: 8px; }
+  .rc-leds { gap: 10px; }
+}

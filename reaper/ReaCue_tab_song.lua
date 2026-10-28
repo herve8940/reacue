@@ -259,6 +259,7 @@ return function(ctx)
     local regs = list_regions()
     local names, dirs, seen_d, titles = {}, {}, {}, {}
     local has_click = false
+    local audio_tracks, seen_tr = 0, {}
     for i = 0, (reaper.CountTracks and reaper.CountTracks(0) or 0) - 1 do
       if track_name(reaper.GetTrack(0, i)) == "CLICK" then has_click = true end
     end
@@ -266,6 +267,10 @@ return function(ctx)
       local it = reaper.GetMediaItem(0, i)
       local tr = reaper.GetMediaItem_Track and reaper.GetMediaItem_Track(it)
       if not (tr and GEN[track_name(tr)]) then
+        if tr and not seen_tr[tr] then
+          seen_tr[tr] = true
+          audio_tracks = audio_tracks + 1
+        end
         local fn = source_file(it)
         if fn then
           local d, base = fn:match("^(.*)[/\\]([^/\\]+)$")
@@ -296,8 +301,8 @@ return function(ctx)
     info = {
       regions = regs, bpm = bpm, bars = bars, key = key_from(names), prepared = (#regs > 0 and has_click),
       dirs = dirs, titles = titles, has_audio = #names > 0, m0 = m0,
-      single_mix = (#names == 1 and roles == 0),        -- un MP3 / WAV seul : séparer d'abord
-      stems_ok = (#names > 1 or roles > 0),
+      single_mix = (#names == 1 or audio_tracks == 1),        -- un seul mix / une seule piste audio : séparer d'abord
+      stems_ok = (audio_tracks > 1 or #names > 1),
       engine = M.proj_get("structure_engine"), doubts = {},
     }
     for b, why in (M.proj_get("doubts") or ""):gmatch("(%d+):(%a+)") do info.doubts[tonumber(b)] = why end
@@ -770,10 +775,10 @@ return function(ctx)
       U.set(col, over and 0.95 or 0.72); gfx.rect(bx, y, bw - 2, H, 1)
       if dt then
         U.set(U.WARN); gfx.rect(bx, y, bw - 2, 5, 1)
-        U.set(U.WARN); gfx.roundrect(bx, y, bw - 3, H - 1, 4, 1)
+        U.frame(bx, y, bw - 2, H, U.WARN)
       end
       if sel == k then
-        U.set(U.INK); gfx.roundrect(bx, y, bw - 3, H - 1, 4, 1); gfx.roundrect(bx + 1, y + 1, bw - 5, H - 3, 4, 1)
+        U.frame(bx, y, bw - 2, H, U.INK); U.frame(bx + 1, y + 1, bw - 4, H - 2, U.INK)
       end
       if bw > 22 then
         local nm = U.fit(r.name, bw - 8, 11, true)
@@ -951,7 +956,7 @@ return function(ctx)
       local rw = U.text_w(right, 12)
       local name_w = w - tools_w - rw - 24
       local over = U.over(x, y, name_w, rh)
-      U.text(U.fit(r.name, name_w, 14, inside), x + 6, y + 4, 14, over and U.INK or { 220, 220, 224 }, inside)
+      U.text(U.fit(r.name, name_w, 14, inside), x + 6, y + 4, 14, over and U.INK or U.INK2, inside)
       if over then U.hover_tip = string.format(t("sel_line"), r.name, r.bar, r.len) .. (dt and ("  —  " .. dt) or "") end
       if over and U.clicked then sel = k; listen(r) end
       U.text(right, x + w - tools_w - rw - 10, y + 5, 12, dt and U.WARN or U.MUTED)

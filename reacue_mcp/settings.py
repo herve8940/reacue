@@ -28,7 +28,7 @@ DEFAULTS: dict = {
     "click_hw_output": None,     # sortie physique (0 = 1/2, 2 = 3/4…) ; None = aucune
     "tempo_mode": "auto",        # auto | constant | beatmap
     "count_rate": 240,           # débit du décompte (mots/min)
-    "stems_model": "htdemucs_6s",  # séparation de stems (action REAPER) : htdemucs_6s (6 stems) | htdemucs (4)
+    "stems_model": "htdemucs_6s",  # séparation de stems (action REAPER) : htdemucs_6s (6 stems) | htdemucs_ft (4 HQ) | htdemucs (4)
     "structure_engine": "auto",  # sections : "auto" (SongFormer s'il est installé, sinon ReaCue) | "reacue"
     "chords_engine": "auto",     # accords : "auto" (modèle entraîné s'il est installé, sinon ReaCue) | "reacue"
     "drums_engine": "auto",      # batterie : "auto" (ADTOF s'il est installé, sinon règles ReaCue) | "reacue"

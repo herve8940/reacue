@@ -167,9 +167,7 @@ Appuie sur Entrée pour fermer la fenêtre.
 
 > L'installateur peut être relancé autant de fois que tu veux : il répare l'installation et garde tes réglages.
 
-**Les autres composants facultatifs** (accords, batterie, paroles mot par mot et automatiques) ne sont pas
-proposés par cet installateur : chacun a le sien (`Install ReaCue Chords`, `Install ReaCue Drums`,
-`Install ReaCue Words`), à lancer quand tu veux, même plus tard. Voir le [chapitre 20](#20-composants-facultatifs).
+**Suite complète de modèles d'IA :** En **Mode Automatique** (choix 1 ou *Entrée*), l'installateur configure automatiquement tous les modèles adaptés à votre machine (Stems Demucs, Structure SongFormer, Accords ISMIR, Batterie ADTOF, et Paroles Whisper). En **Mode Personnalisé**, chaque modèle vous est proposé avec son descriptif détaillé. Chaque composant dispose également de son propre installateur autonome (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), relançable à tout moment.
 
 ---
 
@@ -338,7 +336,9 @@ d'entrées/sorties par instrument, accords et sections moins sûrs). **Mieux : s
 Autres**, calées exactement comme le MP3. L'item du MP3 a été retiré du projet (le fichier, lui, est toujours
 sur le disque ; *Edit → Undo* le remet).
 
-Les fichiers des stems sont rangés à côté du MP3, dans `<nom du morceau>-stems/htdemucs_6s/`. Si tu relances
+Les fichiers des stems sont rangés à côté du MP3, dans `<nom du morceau>-stems/htdemucs_6s/`.
+> 💡 **Guide complet Stems & Matériel :** Pour comprendre en détail les différences entre les modèles Demucs (`htdemucs_6s`, `htdemucs_ft`, `htdemucs`), les exigences matérielles (GPU NVIDIA RTX 50 Blackwell, Apple Silicon, CPU) et les bonnes pratiques de découpe, consultez le **[Guide Bonnes Pratiques & Matériel](BONNES_PRATIQUES_ET_MATERIEL.md)**.
+ Si tu relances
 l'action sur le même MP3, l'import est immédiat (pas de nouvelle séparation).
 
 > Écoute les pistes en solo (bouton **S**) : voix, batterie et basse sont en général très propres ; guitare
@@ -571,7 +571,10 @@ commentaires (ignorés).
    **Régie** ou **Lumière** (le choix est mémorisé sur ce téléphone ; le bouton **Rôle** permet d'en changer).
 5. Lance la lecture dans REAPER : le prompteur suit la position (section, mesure, temps).
 
-**Tu dois voir** un point vert (liaison avec REAPER active), la section en cours et la suivante.
+**Tu dois voir** le voyant vert en haut à droite (liaison avec REAPER active ; rouge = liaison perdue), les trois
+afficheurs **MESURE · TEMPO · TON**, la section en cours (voyants verts = temps de la mesure, « 3/16 » = mesure
+dans la section) et, en bas, **ENSUITE / DANS n mes** au-dessus de la mini-structure du morceau (touche-la pour
+afficher ou masquer la liste des sections).
 
 <img src="images/prompter_drums_fr.png" width="200"> <img src="images/prompter_vocals_fr.png" width="200">
 
@@ -580,12 +583,15 @@ commentaires (ignorés).
 | Rôle | Ce qu'il montre |
 |---|---|
 | **Batterie** | groove de la section, grille de la mesure en cours (16 pas, ou triolets pour un morceau shuffle), fills, crashs, arrêts et reprises ; une ligne par élément : Crash, Ride, Charley, **Charley ouv.**, Caisse cl., Tom 1, Tom 2, Tom bas, Gr. caisse |
-| **Basse**, **Guitare rythm.** | accord en cours et suivant avec décompte, grille de la section, tonalité, entrées et sorties |
+| **Basse**, **Guitare rythm.** | accord en cours (carte claire ; Basse : note de basse) et suivant avec décompte, grille de la section (mesure en cours en orange), tonalité, entrées et sorties ; transposés si les stems le sont dans ReaCue Studio |
 | **Guitare solo** | solos, accords, entrées |
 | **Chant** | paroles défilantes, ligne suivante et décompte avant chaque entrée ; avec les paroles mot par mot, le **mot en cours surligné** |
 | **Général** | structure et accords |
 | **Régie** | télécommande du concert, protégée par un code PIN ([16.5](#165-piloter-depuis-un-téléphone-régie)) |
 | **Lumière** | cues grandMA3, cue en cours, timecode, fichiers à importer ([16.9](#169-lumière--grandma3)) |
+
+Quand une section a une **note** (champ `notes` des données publiées, modifiable plus tard dans ReaCue Studio),
+elle s'affiche dans un cadre rose sous la grille, pour tous les rôles.
 
 Sur une tablette à l'horizontale, la vue Batterie met la position (section, mesure, fill à venir) et la grille de la mesure côte à côte ; seules les lignes des éléments joués s'affichent :
 
@@ -992,6 +998,129 @@ Ouvre le projet du morceau ; dans la fenêtre ReaCue, onglet **Scène** (« Morc
 
 Il n'y a pas d'arrêt automatique ni de setlist (un seul morceau). Seul REAPER (et la fenêtre ReaCue pour la
 boucle) doit tourner pendant la répétition : Claude n'est pas nécessaire.
+
+### 17.3 ReaCue Studio : l'écran Travail
+
+ReaCue Studio est une page web servie par REAPER (comme le prompteur), faite pour travailler un morceau sur
+l'ordinateur ou une tablette.
+
+1. Prépare le morceau (chapitre 10) : la publication crée aussi les **formes d'onde** des stems.
+2. Ouvre la fenêtre **ReaCue** dans REAPER (elle exécute la boucle, la rampe, la transposition et l'export).
+3. Dans le navigateur : **`http://localhost:8080/studio.html`** sur l'ordinateur, ou
+   `http://<IP de l'ordinateur>:8080/studio.html` sur une tablette (l'adresse est affichée sous le QR code).
+4. Au premier usage d'une boucle, d'une rampe, de la transposition ou d'un export, la page demande le **PIN**
+   (fenêtre ReaCue, onglet **Scène**) : il est mémorisé sur l'appareil.
+
+![ReaCue Studio, écran Travail](images/studio_fr.png)
+
+| Zone | Ce qu'elle fait |
+|---|---|
+| Afficheurs (en haut) | POSITION mesure.temps.double-croche · TEMPS · TEMPO et vitesse en % · TON (± transposition) · SMPTE |
+| Structure | clic = aller à la section ; double-clic = la boucler (avec la mesure de décompte, comme en 17.1) |
+| Accords | défilent sous la tête de lecture ; clic = aller à l'accord |
+| Lignes des stems | forme d'onde (partie jouée en couleur), **M** (muet), **S** (solo), volume ; clic = aller à cet endroit |
+| Console (à droite) | pan (glisser ; double-clic = centre), vumètre, fader (double-clic = 0 dB), CLICK et VOIX compris |
+| Pied de page | Début, Stop, Lecture/Pause (barre d'espace), Boucle, Section suivante ; BOUCLE · RAMPE · CLICK · VOIX ; voyants |
+| Mon instrument | la piste choisie est coupée automatiquement (tu joues ta partie par-dessus) |
+| TON − / + | transpose les stems d'un demi-ton ; double-clic sur l'afficheur TON = revenir à 0 |
+
+**Rampe de vitesse** : place la lecture dans la section à travailler, clique sur **RAMPE**, règle par exemple
+**de 85 % à 100 % en 8 passages**, puis **LANCER**. La section tourne en boucle ; à chaque reprise la vitesse
+monte d'un palier (hauteur conservée) ; le compteur affiche « BOUCLE REFRAIN 1 · 4/8 ». Après le dernier
+passage, la boucle continue à la vitesse finale. **ARRÊTER** (ou le bouton Boucle) remet 100 %.
+
+> Le voyant **REAPER** est vert quand REAPER et la fenêtre ReaCue répondent, orange quand la fenêtre est
+> fermée (mute, volume, transport marchent encore ; pas la boucle, la rampe, la transposition ni l'export).
+> La transposition reste propre jusqu'à ±2 demi-tons environ ; au-delà, la voix et la batterie sonnent
+> artificiellement. Elle modifie les items des stems : Ctrl/Cmd+Z dans REAPER l'annule.
+
+### 17.4 Exporter des stems et des régions (WAV / MP3)
+
+Dans ReaCue Studio, bouton **EXPORTER** :
+
+1. **Instruments** : coche ceux à exporter (TOUS / AUCUN), et **avec le click** si tu veux un click synthétisé
+   sur la grille du morceau.
+2. **Région** : morceau entier, une **section** (liste), des **mesures** « de → à », ou la **sélection
+   REAPER** (sélection temporelle du projet).
+3. **Fichiers** : un fichier par instrument, ou tout **mixé** en un seul fichier (ramené à -1 dBFS s'il
+   dépasse : jamais d'écrêtage ; volume et pan des pistes appliqués au mix).
+4. **Format** : **MP3** (128, 192, 256 ou 320 kbit/s ; 320 par défaut) ou **WAV** 24 bits.
+5. **EXPORTER** : la progression s'affiche, puis les liens de téléchargement. Les fichiers sont aussi dans le
+   dossier **`exports/`** à côté du projet, nommés `<Titre> - <Instrument> - <Section>.mp3`.
+
+Exemples : la basse seule du refrain en MP3 pour la réviser dans le métro ; « tout sauf la guitare » mixé avec
+le click, mesures 33 à 48, pour travailler ta partie ; chaque stem en WAV pour un autre logiciel.
+
+### 17.5 ReaCue Studio : écrans Concert et Lumière
+
+Le soir du concert, la page `studio.html` sert aussi de **poste de régie** sur l'ordinateur ou une tablette.
+
+1. Ouvre le concert dans REAPER (chapitre 16) et la fenêtre **ReaCue** (elle exécute les commandes).
+2. Dans ReaCue Studio, clique sur **CONCERT** (ou ouvre directement `studio.html#concert`). Au premier
+   appui sur une commande, saisis le **PIN** (fenêtre ReaCue, onglet Scène).
+
+![ReaCue Studio, écran Concert](images/studio_concert_fr.png)
+
+| Zone | Ce qu'elle fait |
+|---|---|
+| Bandeau | voyant + LECTURE / PAUSE / ARRÊT, « MORCEAU n / N », titre ; RESTE (fin du morceau), CONCERT (temps écoulé), SMPTE · LTC |
+| Setlist | un bloc par morceau (largeur = durée) : joué grisé, en cours en orange ; clic = aller au morceau |
+| Sections | mesure de départ, nom, JOUÉ / EN COURS 3/16 / À VENIR ; clic = aller à la section |
+| ◀ PRÉC. · LECTURE · SUIV. ▶ | morceau précédent (ou début du morceau), lecture / pause (barre d'espace), morceau suivant |
+| Lumière | cues du morceau (n°, timecode, section, effet), cue en cours surligné, voyants LTC / MTC / export, TEST 10 S |
+
+Pendant la lecture, **PRÉC.**, **SUIV.**, un bloc de la setlist et **TEST 10 S** demandent **deux appuis**
+(« ENCORE ? »), comme dans la fenêtre ReaCue. Sans concert ouvert, l'écran montre le morceau seul (PRÉC. /
+SUIV. passent d'une section à l'autre) avec un message.
+
+3. Clique sur **LUMIÈRE** (`studio.html#lumiere`) pour la console grandMA3 :
+
+![ReaCue Studio, écran Lumière](images/studio_lumiere_fr.png)
+
+- **Cue en cours** en grand, puis tous les cues (par morceau) : clic = aller au cue.
+- **Sorties timecode** : sortie LTC, périphérique MTC, TC Slot, images/s et départ (réglages de l'onglet
+  Lumière au moment de l'export) ; voyant **EXPORT À JOUR** (sinon : *Exporter maintenant* dans l'onglet
+  Lumière).
+- **TEST 10 S** : seules les pistes TIMECODE jouent pendant 10 s (le public n'entend rien), puis tout est
+  rétabli ; le bouton affiche le compte à rebours, un 2e appui arrête. Regarde sur la console que le TC Slot
+  passe au vert.
+- **Fichiers grandMA3** : téléchargement des Sequences, du Timecode et de la fiche de conduite.
+
+> Les effets affichés sont les suggestions par type de section (lecture seule) ; leur modification viendra
+> dans une prochaine version.
+
+### 17.6 ReaCue Studio : écrans Biblio et Groupe
+
+**Biblio** (`studio.html#biblio`) : la liste de tous tes morceaux (dossier des projets + concerts).
+
+![ReaCue Studio, écran Biblio](images/studio_biblio_fr.png)
+
+1. Ouvre la fenêtre **ReaCue** dans REAPER (elle publie la bibliothèque et exécute les commandes).
+2. Dans ReaCue Studio, clique sur **BIBLIO**. Filtre par étape (compteurs du haut) ou cherche un titre.
+3. Clic sur un morceau : il s'ouvre dans REAPER (nouvel onglet) et l'écran passe sur **TRAVAIL**. Un morceau
+   « À PRÉPARER » s'ouvre aussi, mais prépare-le d'abord (onglet Morceau de la fenêtre).
+4. Colonne **ÉTAPE** : calculée toute seule (AUTO) à partir du temps joué seul ou en groupe ; clique une case
+   pour la régler à la main (MANUEL), « auto » pour revenir au calcul.
+
+| Étape | Calcul automatique |
+|---|---|
+| Découvert | rien de mesuré |
+| Travaillé seul | 5 min de lecture |
+| Répété en groupe | 3 min de lecture avec au moins 2 prompteurs de musiciens connectés |
+| Prêt pour la scène | préparé + répété en groupe sur 2 jours (2 min minimum chaque jour) |
+
+**Groupe** (`studio.html#groupe`) : l'écran de la répétition.
+
+![ReaCue Studio, écran Groupe](images/studio_groupe_fr.png)
+
+1. Chaque musicien ouvre le prompteur sur son téléphone, choisit son rôle et peut taper son prénom.
+2. **Notes** : écris « on coupe sur le 4 » à côté de la section, Entrée : la note apparaît en rose sur tous
+   les prompteurs (2 à 3 s).
+3. **Prêt** : chacun appuie sur « Prêt ? » en haut du prompteur ; l'écran Groupe affiche « PRÊTS 3 / 4 » et
+   qui manque. **REMISE À ZÉRO** avant le morceau suivant.
+4. **On reprend à…** : clic sur « Refrain 2 » : la lecture repart une mesure avant.
+
+> Les musiciens connectés, les notes et l'étape manuelle passent par la fenêtre ReaCue : garde-la ouverte.
 
 ---
 

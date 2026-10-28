@@ -34,6 +34,7 @@ local TXT = {
     launch_failed = "Impossible de lancer la séparation :\n%s",
     no_start = "La séparation n'a pas démarré. Voir le journal :\n%s",
     failed = "La séparation a échoué :\n%s\n\nFin du journal :\n%s\n\n(%s)",
+    crashed = "Le processus de séparation s'est arrêté de façon inattendue.\n\nFin du journal :\n%s\n\n(%s)",
     progress = "Séparation des stems : %d %%",
     starting = "Séparation des stems : démarrage…",
     hint = "%d min %02d s  ·  tu peux fermer cette fenêtre, l'import se fera à la fin",
@@ -51,6 +52,7 @@ local TXT = {
     launch_failed = "Could not start the separation:\n%s",
     no_start = "The separation did not start. See the log:\n%s",
     failed = "The separation failed:\n%s\n\nEnd of the log:\n%s\n\n(%s)",
+    crashed = "The stem separation process terminated unexpectedly.\n\nEnd of the log:\n%s\n\n(%s)",
     progress = "Separating stems: %d %%",
     starting = "Separating stems: starting…",
     hint = "%d min %02d s  ·  you can close this window, the import will happen at the end",
@@ -133,7 +135,10 @@ end
 -- item à séparer : sélectionné, sinon le seul item audio hors pistes générées
 function S.pick_item()
   local it = reaper.GetSelectedMediaItem(0, 0)
-  if it then return it end
+  if it then
+    local tr = reaper.GetMediaItem_Track(it)
+    if not (tr and S.GENERATED[track_name(tr)]) then return it end
+  end
   local cands = {}
   for i = 0, reaper.CountMediaItems(0) - 1 do
     local x = reaper.GetMediaItem(0, i)
@@ -212,11 +217,30 @@ function S.start(R, script_dir, item)
   return job
 end
 
+local function pid_alive(pid, windows)
+  if not pid or pid == 0 then return true end
+  if not reaper.ExecProcess then return true end
+  if windows then
+    local out = reaper.ExecProcess('tasklist /FI "PID eq ' .. tostring(pid) .. '" /NH', 1000)
+    if not out then return true end
+    if out:find("aucun") or out:find("No tasks") or out:find("INFO:") then return false end
+    return out:find(tostring(pid)) ~= nil
+  else
+    local r = reaper.ExecProcess('/bin/kill -0 ' .. tostring(pid), 500)
+    if not r then return true end
+    local code = tonumber(r:match("^(%-?%d+)"))
+    if code == nil then return true end
+    return code == 0
+  end
+end
+S.pid_alive = pid_alive
+
 -- état du job : "running", pct | "ready" | "error", message
 function S.poll(R, job)
   local p = job.p
   if job.ready then return "ready" end
-  local el = reaper.time_precise() - job.t0
+  local now = reaper.time_precise and reaper.time_precise() or os.clock()
+  local el = now - job.t0
   local s = read(p.status)
   local state = s and R.jfield(s, "state")
   if state == "done" and S.ready(p) then job.ready = true return "ready" end
@@ -226,6 +250,20 @@ function S.poll(R, job)
   end
   if not s and el > 90 then return "error", string.format(S.tr(R, "no_start"), p.log) end
   if el > 3600 then return "error", string.format(S.tr(R, "timeout"), p.log) end
+
+  local pid = s and tonumber(R.jfield(s, "pid"))
+  job.last_alive_check = job.last_alive_check or now
+  if pid and (now - job.last_alive_check >= 3) then
+    job.last_alive_check = now
+    if not pid_alive(pid, R.is_windows()) then
+      s = read(p.status)
+      state = s and R.jfield(s, "state")
+      if state == "done" and S.ready(p) then job.ready = true return "ready" end
+      local lg = read(p.log) or ""
+      return "error", string.format(S.tr(R, "crashed"), lg:sub(-700), p.log)
+    end
+  end
+
   return "running", S.progress(read(p.log))
 end
 

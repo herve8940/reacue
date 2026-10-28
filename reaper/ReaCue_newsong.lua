@@ -123,13 +123,13 @@ return function(ctx)
 
   -- piste : nom du rôle (« Bass » → Basse / Bass) ou nom d'origine
   local ROLE_WORDS = {
-    { "vocals", { "vocal", "voice", "voix", "chant", "vox" } },
-    { "drums", { "drum", "batterie", "perc", "kick" } },
+    { "vocals", { "vocals", "vocal", "voice", "voices", "voix", "chant", "vox", "backing vocals", "choeurs", "chœurs" } },
+    { "drums", { "drums", "drum", "batterie", "percussion", "percussions", "perc", "kick", "batt" } },
     { "bass", { "bass", "basse" } },
-    { "lead_guitar", { "lead guitar", "lead gtr", "guitare solo", "solo guitar" } },
-    { "guitars", { "guitar", "guitare", "gtr" } },
-    { "keys", { "piano", "keys", "clavier", "synth", "organ", "orgue" } },
-    { "other", { "other", "autre" } },
+    { "lead_guitar", { "lead guitar", "lead guitars", "lead gtr", "guitare solo", "solo guitar" } },
+    { "guitars", { "guitars", "guitar", "guitares", "guitare", "gtr", "rhythm guitar" } },
+    { "keys", { "piano", "keys", "clavier", "claviers", "synth", "synthesizer", "organ", "orgue" } },
+    { "other", { "other", "others", "autre", "autres" } },
   }
   local ROLE_NAMES = {
     fr = { vocals = "Chant", drums = "Batterie", bass = "Basse", lead_guitar = "Guitare solo", guitars = "Guitares",
@@ -139,8 +139,11 @@ return function(ctx)
   }
   function N.role_of(file)
     local n = tostring(file):gsub("^.*[/\\]", ""):gsub("%.[%w]+$", ""):lower()
+    local norm = " " .. n:gsub("[^%w\128-\255]+", " ") .. " "
     for _, rw in ipairs(ROLE_WORDS) do
-      for _, w in ipairs(rw[2]) do if n:find(w, 1, true) then return rw[1] end end
+      for _, w in ipairs(rw[2]) do
+        if norm:find(" " .. w .. " ", 1, true) then return rw[1] end
+      end
     end
     return nil
   end

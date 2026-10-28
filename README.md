@@ -53,11 +53,13 @@ language with Claude (MCP server).
 - [The ReaCue window](#the-reacue-window)
 - [Usage](#usage)
 - [Concert mode](#concert-mode)
+- [ReaCue Studio: practise and export](#reacue-studio-practise-and-export)
 - [Lyrics](#lyrics)
 - [PDF chart](#pdf-chart)
 - [Lighting: grandMA3 export](#lighting-grandma3-export)
+- [Team Guide, REAPER Project Organization, Stems & Hardware](#team-guide-reaper-project-organization-stems--hardware)
 - [Settings](#settings)
-- [Optional: drive ReaCue with Claude (MCP)](#optional-drive-reacue-with-claude-mcp)
+- [Optional: drive ReaCue with an AI assistant (MCP)](#optional-drive-reacue-with-an-ai-assistant-mcp-claude-antigravity-cursor-etc)
 - [Known limitations](#known-limitations)
 - [Troubleshooting / FAQ](#troubleshooting--faq)
 - [Uninstall](#uninstall)
@@ -98,10 +100,19 @@ In REAPER, from the audio already in your project — everything from **one wind
   **“Played live”** profile saved with the concert (the band plays drums and bass for real → those stems are
   muted on every song, with per-song exceptions). From the window, the Stage control phone or Claude.
 
-On the musicians' phones and tablets (web prompter):
+- **ReaCue Studio** (web page, computer or tablet): **Practice** screen with position, tempo and speed, key,
+  SMPTE, clickable structure and chords, stem waveforms, a console (mute, solo, volume, pan, meters) acting on
+  REAPER's real tracks, section loop with a **speed ramp**, “my instrument” muted, transpose, and **WAV / MP3
+  exports** of each stem, a section or chosen bars, separate or mixed.
 
-- current section, bar and beat, bars left, next section, count-down on the last bar;
-- **Bass / guitars**: current and next chord with a count-down, chord chart of the section, key;
+On the musicians' phones and tablets (web prompter, same “Studio pro” style as ReaCue Studio, very large type
+for the stage):
+
+- three displays **bar · tempo · key**, current section with beat LEDs and bar within the section,
+  **NEXT / IN n bars** block, count-down on the last bar, colour structure strip;
+- **Bass / guitars**: current chord (light card) and next chord with a count-down, chord chart of the section
+  (current bar in orange), key; chords and key **transposed** when the stems are (ReaCue Studio);
+- **section note** shown under the chart when there is one;
 - **Vocals**: scrolling lyrics in time with the song, next line and count-down before each entry (current
   word highlighted with word-by-word lyrics);
 - **Drums**: groove of the section, 16-step (or triplet) grid of the current bar, open hi-hat, fills,
@@ -146,12 +157,12 @@ On the musicians' phones and tablets (web prompter):
      developer”), right-click it → *Open* → *Open*. Alternative in Terminal: `bash "Install ReaCue.command"`.
    - **Windows**: double-click **`Install ReaCue.bat`**. If SmartScreen shows a warning, click
      *More info* → *Run anyway*.
-4. Answer the questions: language (`fr` / `en`), whether to register ReaCue in Claude Desktop
-   (optional, answer *no* if you don't use Claude) and whether to install **stem separation** (optional,
-   about 1 GB to download, 5 to 15 minutes; see [Stem separation](#stem-separation-optional)).
-   Last question: **SongFormer structure analysis**, offered by default (*Enter* = yes); then type
-   **`I accept`** to accept the models' licences (non-commercial use). Models already on the computer are
-   reused ([details](#structure-analysis-songformer-default)).
+4. Answer the questions:
+   - Language (`fr` / `en`) and AI assistant / MCP server registration (Claude Desktop, Google Antigravity, Cursor, JSON export — optional).
+   - **Installation Mode:**
+     - **Mode 1: Automatic (Recommended / Beginner, press *Enter*):** ReaCue audits your hardware and automatically installs the optimal suite of AI models without technical questions (Demucs `htdemucs_6s` on GPU $\ge 8\text{ GB}$ / Apple Silicon or `htdemucs` on CPU, SongFormer structure analysis, ISMIR 2019 chord model, ADTOF drum transcription, and Whisper lyrics).
+     - **Mode 2: Custom (Advanced):** choose and configure each AI model and option individually.
+   - Existing models already on the machine are automatically reused without redownloading.
 5. Start REAPER. The bridge starts by itself and the actions are available in *Actions → Show action list*
    (on first launch, the ReaCue window opens an assistant that checks the installation):
    - **ReaCue** — the main window (Song, Concert, Stage, Lighting, Settings tabs): **add this one to a toolbar**
@@ -198,6 +209,7 @@ This is done once, by hand (REAPER does not offer a safe way to do it from a scr
 3. OK, OK.
 
 On each phone or tablet, open: **`http://<computer IP>:8080/prompteur.html`**, then pick your role.
+ReaCue Studio (practice and exports, see below): **`http://<computer IP>:8080/studio.html`**.
 
 Finding the computer's IP address:
 
@@ -214,7 +226,7 @@ Tips:
 - Add the page to the home screen (iOS: *Share → Add to Home Screen*; Android: *⋮ → Add to Home screen*)
   for a full-screen app-like view. The ⛶ button also switches to full screen.
 - The **FR/EN** button switches the prompter language on that phone (remembered).
-- The green dot means the link with REAPER is alive.
+- The green LED (top right) means the link with REAPER is alive; red = link lost.
 
 ## Stem separation (optional)
 
@@ -237,13 +249,15 @@ models and measures the speed of your computer. ReaCue's own environment is not 
 
 Details:
 
-- Duration: about **5 to 8 minutes for a 4-minute song** on a recent Intel Mac (4 cores), faster on Apple
-  Silicon. The computer's processor does the work (no graphics card needed).
+- Duration: **5 to 20 seconds** with a dedicated GPU (NVIDIA GeForce/RTX with CUDA, Apple Silicon Metal/MPS); about **5 to 8 minutes** in CPU processor mode.
+- **Automatic hardware audit and realignment**: every time `Install ReaCue.bat` (or `installation.bat`) or `Install ReaCue Stems.bat` is run, the installer analyzes your machine (detecting dedicated GPU, VRAM, Blackwell architecture/RTX 50-series requiring CUDA 12.8, Apple Silicon or CPU). If a hardware change or mismatched dependencies are detected (e.g. CPU PyTorch installed on a machine with a dedicated GPU, or outdated CUDA versions), it automatically uninstalls the mismatched packages, installs the optimal hardware-accelerated PyTorch wheel, and configures the recommended model in `reacue_settings.json` (`htdemucs_6s` on GPU $\ge 8\text{ GB}$, `htdemucs` on CPU). If the environment is already optimal, no unnecessary download is performed.
+
 - The stems are written next to the original file, in `<song name>-stems/htdemucs_6s/`, and keep the
   original file name (key and tempo in the name are still read by ReaCue). Running the action again on the
   same file imports them immediately, without separating again.
-- `stems_model` in the settings: `"htdemucs_6s"` (6 stems, default) or `"htdemucs"` (4 stems: vocals,
+- `stems_model` in the settings: `"htdemucs_6s"` (6 stems, default), `"htdemucs_ft"` (4 stems HQ fine-tuned, recommended with GPU) or `"htdemucs"` (4 stems: vocals,
   drums, bass, other — guitar and keys stay together in “other”).
+- **Comprehensive Guide:** For an in-depth comparison of Demucs models (`htdemucs_6s`, `htdemucs_ft`, `htdemucs`), hardware performance benchmarks (RTX 50 Blackwell, Apple Silicon, CPU), and band workflows, see the dedicated guide: **[ReaCue Guide: Team Best Practices, REAPER Project Organization, Stem Separation Models & Hardware Guide](docs/BEST_PRACTICES_AND_HARDWARE.md)**.
 - Quality: vocals, drums and bass are very good; guitar and especially piano are less clean than with
   commercial services (some bleed). Lead and rhythm guitars are not separated, so the solo detection
   that relies on a lead-guitar stem is not available.
@@ -268,6 +282,8 @@ It creates a separate Python environment `.venv-structure` in the ReaCue folder,
 its two dependencies (MuQ, MusicFM) at fixed versions into `structure/`, downloads the models once (into
 `structure/hf` and SongFormer's own folder), runs a short test and shows `STRUCTURE_OK` with the speed of
 your computer. About **3 GB** to download, 10 to 40 minutes. ReaCue's own environment is not touched.
+
+- **Hardware acceleration and automatic audit**: as with Demucs, the installer audits `.venv-structure` and installs the optimal PyTorch build for your machine (CUDA 12.8 for Blackwell / RTX 50 series, CUDA 12.4 for other NVIDIA GPUs, Metal MPS for Apple Silicon, or standard CPU). On a dedicated GPU, analyzing a full 4-minute song takes only about **1 minute** (compared to 3 to 5 minutes on CPU). If the environment is already optimal, no redownload is performed.
 
 **Models already downloaded**: before downloading, the installer looks for models already on the computer —
 another copy of SongFormer (for example `~/Documents/ReaCue-labo/SongFormer/src/SongFormer/ckpts`, files
@@ -363,6 +379,13 @@ Action **ReaCue** (put it on a toolbar). One window, five tabs; it opens on the 
 (a concert project → **Stage**, a song project → **Song**, otherwise the last tab used). Right-click: dock /
 undock — docked low, it becomes a compact transport bar. While it is open, on any tab, it also runs the
 concert's automatic stop, the rehearsal loop, the Stage control remote and the “played live” profile.
+
+**“Studio pro” look** (the same as ReaCue Studio): dark background, sharp panels, LCD readouts in a monospace
+font (Menlo / Monaco on Mac, Consolas on Windows), titles in condensed capitals (Avenir Next Condensed or
+Helvetica Neue Condensed on Mac, Arial Narrow or Bahnschrift SemiCondensed on Windows, otherwise Arial Bold),
+green / yellow LEDs. **Stage** tab: playback banner with LED, title, LEFT / SHOW / SMPTE readouts, big transport
+buttons (play in green), sections and setlist as **blocks with a coloured top edge** (played / current / next).
+Functions and their place are unchanged.
 
 At the bottom, a **help line** explains the element under the mouse. An error shows its **cause**, **what to
 do** and a button that does it (*Start the bridge*, *Fix* for an offline file, *Install*, *Save*, *Open the
@@ -565,6 +588,114 @@ REAPER's repeat and time selection as they were.
 
 Step by step: [tutorial, concert chapter](docs/TUTORIAL_en.md#16-concert-mode-several-songs-in-one-project).
 
+## ReaCue Studio: practise and export
+
+A web page served by REAPER, like the prompter, to work on a song on the computer or a tablet:
+**`http://<computer's IP>:8080/studio.html`** (on the computer itself: `http://localhost:8080/studio.html`).
+The address is also shown under the QR code of the ReaCue window. **Practice**, **Show** and **Lights**
+screens (Library and Band come in the next versions; `studio.html#concert` and `studio.html#lumiere` open a
+screen directly):
+
+![ReaCue Studio, Practice screen](docs/images/studio_en.png)
+
+- **Displays**: position bar.beat.sixteenth, time, tempo (× playback speed, in %), key (with transposition),
+  SMPTE (`gma3_tc_start` + `gma3_fps`).
+- **Structure and chords**: click = go to the section or chord; **double-click** = loop the section. Chords
+  scroll under the play head (16 bars visible).
+- **One row per stem**: waveform (computed when publishing: `reacue_peaks.json`), played part in colour,
+  **M** / **S**, volume. Click in the waveform = go there.
+- **Console**: pan (drag up / down, double-click = centre), meter (track's real peak), fader (double-click =
+  0 dB), for each stem, the **CLICK** and the **VOICE** track.
+- **Transport**: start, stop, play / pause (space bar), loop the current section, next section; LEDs for
+  REAPER (green: the ReaCue window answers too), prompter, LTC.
+- **Speed ramp**: the current section loops and speeds up at each pass (e.g. 85 → 100 % over 8 passes, pitch
+  kept); counter “LOOP CHORUS 1 · 4/8”.
+- **CLICK ON/OFF**, **VOICE ON/OFF**; **My instrument**: your track is muted automatically (remembered in the
+  browser).
+- **KEY − / +**: transpose the stems by a semitone (double-click the KEY display = back to 0).
+
+Mute, solo, volume, pan, position and transport use **REAPER's native web API** (nothing to set up); loop,
+ramp, transpose and export are run by the **ReaCue window** (it must be open) and need the Stage control
+**PIN** (Stage tab), entered once on the device.
+
+**Export** (top-right button): tick one or more instruments (and the click if needed), choose the range (whole
+song, a section, bars “from → to”, or REAPER's time selection), one file per instrument or everything mixed
+into one file, **MP3** (128 to 320 kbit/s, 320 by default) or 24-bit **WAV**. Files are written to the
+**`exports/`** folder next to the project, named `<Title> - <Instrument> - <Section>.mp3`, and offered for
+download right in the page (the last 5 exports stay on REAPER's web server). The mix is brought down to
+-1 dBFS when it would clip; track volume and pan apply to the mix, not to stems exported alone. The exported
+click is synthesised on ReaCue's grid (REAPER's click is not a file). Also from the command line
+(`reacue_cli.py export --request '{"stems": ["Bass"], "format": "mp3"}'`) and with Claude (`set_sections`
+with an `{"export": {…}}` element).
+
+Step by step: [tutorial, ReaCue Studio](docs/TUTORIAL_en.md#173-reacue-studio-the-practice-screen).
+
+### Show screen
+
+![ReaCue Studio, Show screen](docs/images/studio_concert_en.png)
+
+To run the show from the computer or a tablet: **PLAYING / PAUSED / STOPPED** banner (LED), “SONG n / N”,
+title, **LEFT** (end of the song), **SHOW** (time since the first song) and **SMPTE · LTC** readouts; **setlist
+blocks** (played greyed, current in orange, next; click = go to the song); **sections of the song** (start bar,
+name, PLAYED / NOW 3/16 / NEXT; click = go there); big **◀ PREV**, **PLAY / PAUSE** (green, space bar),
+**NEXT ▶** buttons; on the right, the song's **lighting** (grandMA3 cues: number, timecode, section, effect;
+current cue highlighted), the **REAPER → LTC**, **MTC → console**, **EXPORT UP TO DATE** LEDs and the
+**TEST 10 S** button. While playing, PREV, NEXT, a setlist song and TEST need **two taps** (like the ReaCue
+window).
+
+Commands go through the ReaCue window's remote control (same protocol and **PIN** as Stage control: `song`,
+`prev`, `next`, `toggle`, `seek`, `tctest`). With the window closed, play / pause and jumps use REAPER's web
+API; the timecode test asks you to open the window. **With no concert open**, the screen shows the single song
+with its sections (PREV / NEXT = previous / next section) and a message says so.
+
+### Lights screen
+
+![ReaCue Studio, Lights screen](docs/images/studio_lumiere_en.png)
+
+**Current cue** (number, timecode, song · section, effect), **full cue list** (per song in a concert; click =
+go to the cue), **timecode outputs** as exported (LTC output, MTC device, TC Slot, fps, start), LEDs, **TEST
+10 S** (only the TIMECODE tracks play for 10 s, then everything is restored — the same function as the ReaCue
+window's Lighting tab; the page shows the countdown) and **download links** for the grandMA3 files
+(Sequences, Timecode, cue sheet). **Effects** are the suggestions per section type, read-only for now (editing
+comes later). Settings (outputs, slot, fps, start): Lighting tab of the ReaCue window.
+
+### Library screen
+
+![ReaCue Studio, Library screen](docs/images/studio_biblio_en.png)
+
+Every known song: the projects of the projects folder (and its subfolders, like the window's Concert tab) and
+those of the shows. For each: **title**, tempo, key, length, **coloured mini-structure**, **components** (stems,
+chords, lyrics, drums, lights) and **stage of the journey**: *Discovered → Practised alone → Rehearsed as a band
+→ Ready for the stage*. The four counters at the top (and the chips) filter the list; search covers title,
+folder, show and key. **Click a song** = it opens in REAPER (new project tab, as in the Concert tab; nothing if it
+is already the current project), its prompter is published, then the screen switches to PRACTICE. Click a built
+show = it opens.
+
+The stage is **computed** from the playback time counted by the ReaCue window: *practised alone* = 5 min of
+playback, *rehearsed as a band* = 3 min with at least 2 musicians' prompters connected, *ready for the stage* =
+prepared song rehearsed as a band on 2 different days (at least 2 min a day). The four boxes of the STAGE
+column set it **by hand** (MANUAL; “auto” goes back to the computation). Manual stage, notes and playback time
+are kept in `ReaCueMCP/reacue_state.json` (not only in the browser); the library is published as
+`reacue_library.json` at every prompter publication, show build and opening of the ReaCue window.
+
+### Band screen (rehearsal)
+
+![ReaCue Studio, Band screen](docs/images/studio_groupe_en.png)
+
+- **Notes per section** of the current song (show: the one under the play head): type a short note, Enter (or
+  click elsewhere) saves it; it shows within 2–3 seconds in the **pink frame** of every prompter. It is kept in
+  ReaCue's state and used again at every preparation / show build.
+- **Take it from…**: click a section = playback restarts **one bar before** (a running loop stops); STOP and
+  PLAY / PAUSE next to it.
+- **Musicians connected**: every open prompter (role, optional first name typed on the phone when picking the
+  role) shows while it gives a sign of life (10 s). On the prompter, musicians tap **“Ready?”** (at the top,
+  discreet): it turns green “Ready ✓” once ReaCue got it. The **READY 3 / 4** counter and **RESET** are on this
+  screen. The number of prompters also shows at the bottom of the Practice screen (“PROMPTER · 5”).
+
+New remote commands (ReaCue window, PIN): `open`, `libstage`, `note`, `resume`, `readyreset`. Prompters write
+`ReaCue/hb0` … `hb7` (one slot per phone, from its id; a lost sign is taken up by the next one); the window
+publishes `ReaCue/band`. With the window closed: no musicians, no notes nor manual stage (the screen says so).
+
 ## Lighting: grandMA3 export
 
 Every preparation (and every concert build) also writes a **grandMA3 lighting show**: one cue per section
@@ -709,6 +840,18 @@ prompter data: what the PDF shows is what the phones show.
   No chart for a concert (the songs' charts stay in their folders).
 - No dependency: the PDF is written by ReaCue itself (`reacue_mcp/sheet.py`, standard fonts).
 
+## Team Guide, REAPER Project Organization, Stems & Hardware
+
+A complete reference guide is available in the `docs/` folder to help your band structure projects, optimize stage routing, and select optimal AI models:
+
+👉 **[Read the Best Practices and Hardware Guide (docs/BEST_PRACTICES_AND_HARDWARE.md)](docs/BEST_PRACTICES_AND_HARDWARE.md)**
+
+This guide covers:
+- **REAPER Organization:** Single project per song rule, media isolation ("Copy all media into project directory"), avoiding OFFLINE items, guide track routing, and recommended audio buffers (48 kHz, 128 to 256 samples).
+- **Team Workflows:** Musician roles on the web prompter (Vocals with Whisper, Bass/Guitars with live transposition, Drums with ADTOF), using ReaCue Studio for rehearsals (loop practice and progressive Tempo Ramp), "Played Live" stage mute matrix, and PIN protection with anti-panic double-tap.
+- **Stem Separation Models:** Technical comparison between `htdemucs_6s` (6 stems isolating guitar & keys), `htdemucs_ft` (4 stems fine-tuned high fidelity), and `htdemucs` (4 stems standard CPU-optimized).
+- **Hardware Guide:** Hardware matching matrix (NVIDIA CUDA 12.8 Blackwell RTX 50 support, Apple Silicon Metal/MPS, CPU fallback), audio interface output routing (FOH vs In-Ears vs LTC timecode), and dedicated 5 GHz stage Wi-Fi router setup with static DHCP leases.
+
 ## Settings
 
 Easiest: the **Settings** tab of the ReaCue window (written at once, other keys of the file kept).
@@ -731,7 +874,7 @@ newly analysed songs; section names you validated yourself are kept as they are.
 | `click_to_master` | `true` | `false` = click and voice only on `click_hw_output` (in-ears) |
 | `click_hw_output` | `null` | hardware output index (0 = outputs 1/2, 2 = 3/4…) |
 | `tempo_mode` | `"auto"` | `auto`, `constant` (one tempo) or `beatmap` (one tempo per bar) |
-| `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems) or `"htdemucs"` (4 stems) |
+| `stems_model` | `"htdemucs_6s"` | stem separation model: `"htdemucs_6s"` (6 stems), `"htdemucs_ft"` (4 stems HQ) or `"htdemucs"` (4 stems) |
 | `structure_engine` | `"auto"` | sections: `"auto"` (SongFormer when installed) or `"reacue"` (ReaCue's own detection) |
 | `words_engine` | `"auto"` | lyrics: `"auto"` (word by word when the component is installed) or `"off"` (lines only) |
 | `words_language` | `"auto"` | sung language for word timing: `"auto"` (guessed from the text), `"fr"` or `"en"` |
@@ -753,11 +896,15 @@ Voices: on Windows, extra voices (e.g. French) are added in *Settings → Time &
 voices visible to SAPI (“Desktop” voices) are used. If no voice is available, everything works except the
 spoken cues (a warning is shown).
 
-## Optional: drive ReaCue with Claude (MCP)
+## Optional: drive ReaCue with an AI assistant (MCP: Claude, Antigravity, Cursor, etc.)
 
-If you use [Claude Desktop](https://claude.ai/download), answer *yes* during installation (or run the
-installer again). The `reacue` server is added to Claude Desktop's configuration (a backup is kept as
-`claude_desktop_config.json.bak-reacue`). Restart Claude Desktop, then ask for example:
+ReaCue includes a local server compatible with the open **MCP (Model Context Protocol)** standard. During installation, you can automatically register it in:
+- **Claude Desktop** (`claude_desktop_config.json`)
+- **Google Antigravity** (`~/.gemini/config/mcp_config.json`)
+- **Cursor** (`~/.cursor/mcp.json` — supports OpenAI / ChatGPT / Codex models)
+- **Generic JSON export** (`ReaCueMCP/reacue_mcp_config.json` for ChatGPT via MCP bridge, VS Code / Cline, etc.)
+
+A backup of your previous configuration is always kept (e.g. `.bak-reacue`). Restart your assistant, then ask for example:
 
 - “Prepare the song in REAPER.”
 - “The chorus starts at bar 29, not 25.” → `set_sections`
@@ -814,6 +961,11 @@ tools are loaded when a conversation starts: after updating ReaCue, start a new 
   REAPER's usual seek latency (a few milliseconds); the instrument tracks are muted during the count-in bar
   by the window (if REAPER quits during that bar, unmute them by hand). Speeds below 100 % use REAPER's
   playrate with pitch preservation (quality depends on the stretch mode of the project).
+- **ReaCue Studio**: waveforms only for a prepared song (not yet for a concert project); transpose uses
+  REAPER's pitch engine (project default mode): fine up to ±2 semitones, audible artefacts beyond (vocals,
+  drums); it changes the stem items (undo with Ctrl/Cmd+Z). Export: item fades ignored, item rate ≠ 1
+  resampled simply (fine for practice, not for a master), bundled fonts limited to the Latin alphabet. In a
+  concert, a mute made from the page may be replaced by the “played live” profile when the song changes.
 - **Check**: “concert up to date” compares each song project with the fingerprint taken when the concert
   was built — saving a song project without musical changes can still mark it as changed; offline media are
   detected from the file and its sample rate (REAPER does not expose the OFFLINE flag directly).

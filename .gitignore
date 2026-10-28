@@ -10,6 +10,7 @@ __pycache__/
 
 # Caches et journaux / Caches and logs
 .cache/
+.uv_cache/
 *.log
 *.npy
 *.pkl
@@ -79,3 +80,59 @@ demucs_status.json
 *.th
 ckpts/
 huggingface/
+
+# --------------------------------------------------------------------------- #
+# Instructions IA, agents, compétences et contextes personnels /
+# AI instructions, agents, skills and personal context
+# --------------------------------------------------------------------------- #
+# Google Antigravity / Gemini
+.gemini/
+.agents/
+.agent/
+_agents/
+_agent/
+GEMINI.md
+AGENTS.md
+skills/
+.skills/
+hooks.json
+mcp_config.json
+reacue_mcp_config.json
+reacue_mcp.json
+
+# Claude / Anthropic
+CLAUDE.md
+.claude/
+claude_desktop_config.json
+
+# Cursor / Windsurf / Copilot / Cline / Roo
+.cursor/
+.cursorrules
+.codeium/
+.windsurfrules
+.cline/
+cline_mcp_settings.json
+copilot-instructions.md
+.github/copilot-instructions.md
+
+# OpenAI / ChatGPT / Codex
+.codex/
+.openai/
+chatgpt/
+.chatgpt/
+
+# Brouillons, prompts et contextes IA / AI scratchpads and prompt files
+scratch/
+.scratch/
+prompts/
+*.prompt
+*.prompt.md
+*.instructions.md
+
+# Documentation personnelle et dossiers locaux (jamais dans le dépôt public) /
+# Personal documentation and local folders (never in the public repo)
+docs-perso/
+.perso/
+perso/
+notes/
+/tests
