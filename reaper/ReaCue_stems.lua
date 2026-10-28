@@ -135,7 +135,10 @@ end
 -- item à séparer : sélectionné, sinon le seul item audio hors pistes générées
 function S.pick_item()
   local it = reaper.GetSelectedMediaItem(0, 0)
-  if it then return it end
+  if it then
+    local tr = reaper.GetMediaItem_Track(it)
+    if not (tr and S.GENERATED[track_name(tr)]) then return it end
+  end
   local cands = {}
   for i = 0, reaper.CountMediaItems(0) - 1 do
     local x = reaper.GetMediaItem(0, i)

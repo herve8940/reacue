@@ -1,4 +1,4 @@
-﻿# Paroles calées mot par mot (alignement forcé wav2vec2) et paroles automatiques (Whisper) pour ReaCue, en local - Windows.
+# Paroles calées mot par mot (alignement forcé wav2vec2) et paroles automatiques (Whisper) pour ReaCue, en local - Windows.
 # Word-by-word lyrics timing (wav2vec2 forced alignment) and automatic lyrics (Whisper) for ReaCue, local - Windows.
 # Lancé par « Install ReaCue Words.bat » ; ou :
 #   powershell -ExecutionPolicy Bypass -File install\install_words_windows.ps1 [-Lang fr|en] [-ExtraIndexUrl <url>]
@@ -100,5 +100,17 @@ if ($Whisper) {
 Write-Host (T "  téléchargement des modèles de calage et test sur un audio synthétique…" "  downloading the timing models and testing on synthetic audio…")
 & $Py (Join-Path $Here "reacue_words.py") check --langs $Langs --lang $L
 if ($LASTEXITCODE -ne 0) { Fail "le calage de paroles ne fonctionne pas (voir ci-dessus)." "lyrics timing does not work (see above)." }
-Write-Host (T "  Paroles mot par mot installées : actions « ReaCue - Caler les paroles » et « ReaCue - Paroles automatiques (Whisper) » dans REAPER." "  Word-by-word lyrics installed: 'ReaCue - Time lyrics' and 'ReaCue - Automatic lyrics (Whisper)' actions in REAPER.")
+if ($Whisper) {
+  Write-Host (T "  Licence : openai-whisper et modèle Whisper large-v3-turbo d'OpenAI (MIT). Détails : THIRD_PARTY_NOTICES.md" `
+                "  Licence: OpenAI's openai-whisper and Whisper large-v3-turbo model (MIT). Details: THIRD_PARTY_NOTICES.md")
+  Write-Host (T "  modèle Whisper (environ 1,6 Go la première fois) et test…" `
+                "  Whisper model (about 1.6 GB the first time) and test…")
+  & $Py (Join-Path $Here "reacue_transcribe.py") check --download --lang $L
+  if ($LASTEXITCODE -ne 0) { Fail "les paroles automatiques (Whisper) ne fonctionnent pas (voir ci-dessus)." "automatic lyrics (Whisper) do not work (see above)." }
+  Write-Host (T "  Paroles automatiques installées : sans paroles.txt, ReaCue écrit un brouillon 'paroles (auto).txt' à corriger (réglage 'lyrics_auto')." `
+                "  Automatic lyrics installed: without lyrics.txt, ReaCue writes a draft 'paroles (auto).txt' to correct ('lyrics_auto' setting).")
+}
+
+Write-Host (T "  Paroles mot par mot installées : actions 'ReaCue - Caler les paroles' et 'ReaCue - Paroles automatiques (Whisper)' dans REAPER." `
+              "  Word-by-word lyrics installed: 'ReaCue - Time lyrics' and 'ReaCue - Automatic lyrics (Whisper)' actions in REAPER.")
 exit 0

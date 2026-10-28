@@ -1133,21 +1133,23 @@ def analyze(path: str, beats_per_bar: int | None = None, denominator: int = 4,
 # Plusieurs stems (un fichier par instrument)
 # --------------------------------------------------------------------------- #
 _ROLE_WORDS = (       # ordre = priorité (le chant avant la guitare : « lead vox » n'est pas une guitare)
-    ("vocals", ("vocal", "voice", "voix", "chant", "lead vox", "leadvox", "vox")),
-    ("drums", ("drum", "batterie", "batt", "perc", "kick")),
+    ("vocals", ("vocals", "vocal", "voice", "voices", "voix", "chant", "lead vox", "leadvox", "vox")),
+    ("drums", ("drums", "drum", "batterie", "batt", "percussion", "percussions", "perc", "kick")),
     ("bass", ("bass", "basse")),
-    ("guitars", ("guitar", "guitare", "gtr", "guit")),
+    ("guitars", ("guitars", "guitar", "guitares", "guitare", "gtr", "guit")),
 )
 
 
 def classify_stem(path: str) -> str:
     """Rôle d'un stem d'après son nom de fichier : drums, vocals, bass, lead_guitar, guitars, other."""
     name = os.path.splitext(os.path.basename(str(path)))[0].lower()
+    norm = re.sub(r"[^a-zA-Z0-9\u00C0-\u017F]+", " ", name).strip()
     for role, words in _ROLE_WORDS:
-        if any(w in name for w in words):
-            if role == "guitars" and ("lead" in name or "solo" in name):
-                return "lead_guitar"
-            return role
+        for w in words:
+            if re.search(rf"\b{re.escape(w)}\b", norm, re.IGNORECASE):
+                if role == "guitars" and ("lead" in norm or "solo" in norm):
+                    return "lead_guitar"
+                return role
     return "other"
 
 
