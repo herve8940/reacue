@@ -9,10 +9,10 @@ local U = {}
 -- Toutes les couleurs de la fenêtre viennent d'ici : les onglets n'utilisent que U.<NOM> (pas de RVB en dur).
 -- Les fenêtres gfx n'ont ni ombres ni arrondis fins : bords nets (rectangles, filets de 1 px).
 U.THEME = {
-  bg = { 0x16, 0x18, 0x1B },      -- fond
-  panel = { 0x1E, 0x21, 0x25 },   -- panneaux, en-tête, ligne d'aide
-  inset = { 0x0F, 0x11, 0x13 },   -- zones encastrées (afficheurs LCD, bandeau, listes)
-  well = { 0x12, 0x14, 0x17 },    -- creux (barre d'onglets, pastilles)
+  bg = { 0x15, 0x17, 0x19 },      -- fond
+  panel = { 0x20, 0x23, 0x26 },   -- panneaux, en-tête, ligne d'aide
+  inset = { 0x10, 0x12, 0x14 },   -- zones encastrées (afficheurs LCD, bandeau, listes)
+  well = { 0x13, 0x15, 0x17 },    -- creux (barre d'onglets, pastilles)
   edge = { 0x0C, 0x0D, 0x0F },    -- bordures sombres
   raise = { 0x2B, 0x2F, 0x35 },   -- boutons, reliefs
   row = { 0x22, 0x26, 0x2B },     -- blocs à venir (setlist, sections)
@@ -23,8 +23,8 @@ U.THEME = {
   ink2 = { 0xB4, 0xBA, 0xC2 },    -- texte secondaire clair
   mute = { 0x8A, 0x90, 0x99 },    -- gris (étiquettes)
   dim = { 0x5E, 0x64, 0x6C },     -- gris sombre (éteint)
-  sig = { 0xFF, 0x8A, 0x3D },     -- orange : action principale, sélection, en cours
-  led = { 0x3B, 0xE3, 0x7A },     -- vert LED : lecture, OK
+  sig = { 0xFF, 0x87, 0x37 },     -- orange : action principale, sélection, en cours
+  led = { 0x30, 0xDF, 0x75 },     -- vert LED : lecture, OK
   lcd = { 0xF2, 0xC2, 0x30 },     -- jaune LCD : afficheurs, attention
   smpte = { 0x8F, 0xD1, 0xFF },   -- bleu : timecode, bascule active
   red = { 0xFF, 0x4D, 0x4D },     -- erreur
@@ -45,10 +45,10 @@ U.DARK = TH.bg                  -- texte sur fond clair ou coloré
 -- polices : texte (système), afficheurs LCD (monospace), titres (condensée grasse) -----------------------------
 -- La première police installée de la liste est retenue ; sinon la dernière (repli toujours présent).
 U.FONTS = {
-  mac = { sans = { "Helvetica" }, mono = { "Menlo", "Monaco", "Courier New" },
-          cond = { "Avenir Next Condensed", "Helvetica Neue Condensed Bold", "Arial Narrow", "Arial" } },
-  win = { sans = { "Arial" }, mono = { "Consolas", "Lucida Console", "Courier New" },
-          cond = { "Arial Narrow", "Bahnschrift SemiCondensed", "Arial" } },
+  mac = { sans = { "IBM Plex Sans", "Helvetica" }, mono = { "IBM Plex Mono", "Menlo", "Monaco", "Courier New" },
+          cond = { "Barlow Condensed", "Avenir Next Condensed", "Helvetica Neue Condensed Bold", "Arial Narrow", "Arial" } },
+  win = { sans = { "IBM Plex Sans", "Arial" }, mono = { "IBM Plex Mono", "Consolas", "Lucida Console", "Courier New" },
+          cond = { "Barlow Condensed", "Arial Narrow", "Bahnschrift SemiCondensed", "Arial" } },
 }
 local SLOT = { sans = 1, mono = 2, cond = 3 }
 U.FONT = "Helvetica"
@@ -127,6 +127,7 @@ end
 function U.panel(x, y, w, h, fill)
   U.set(fill or U.PANEL2); gfx.rect(x, y, w, h, 1)
   U.frame(x, y, w, h)
+  U.set(U.INK, 0.025); gfx.line(x + 1, y + 1, x + w - 2, y + 1)
 end
 
 -- afficheur LCD : étiquette en petites capitales, valeur monospace (jaune ; bleu pour le timecode)
@@ -138,7 +139,8 @@ function U.lcd(label, value, x, y, w, h, col, vsize)
   U.set(U.INSET); gfx.rect(x, y, w, h, 1)
   U.frame(x, y, w, h)
   U.text(U.upper(label), x + 10, y + 5, 9, U.MUTED)
-  U.text(value, x + 10, y + h - vsize - 6, vsize, col or U.LCD, false, "mono")
+  local shown = U.fit(tostring(value), math.max(1, w - 20), vsize, false, "mono")
+  U.text(shown, x + 10, y + h - vsize - 6, vsize, col or U.LCD, false, "mono")
   return w
 end
 
@@ -224,9 +226,10 @@ function U.button(id, label, x, y, w, h, style, size)
   U.frame(x, y, w, h, over and U.MUTED or U.EDGE, over and 0.7 or 1)
   size = size or (h <= 28 and 13 or 15)
   local bold = style == "primary" or style == true or style == "on"
-  label = U.fit(label, w - 10, size, bold)
-  local tw = U.text_w(label, size, bold)
-  U.text(label, x + (w - tw) / 2, y + (h - size) / 2 - 1, size, ink, bold)
+  local face = h >= 38 and "cond" or "sans"
+  label = U.fit(label, w - 10, size, bold, face)
+  local tw = U.text_w(label, size, bold, face)
+  U.text(label, x + (w - tw) / 2, y + (h - size) / 2 - 1, size, ink, bold, face)
   return over and U.clicked
 end
 

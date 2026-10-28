@@ -29,8 +29,8 @@ LBL = {
 
 
 # ------------------------------------------------------------------------------------- rendu PNG ×2
-MONO = {"Menlo", "Monaco", "Consolas", "Lucida Console", "Courier New"}
-COND = {"Avenir Next Condensed", "Helvetica Neue Condensed Bold", "Arial Narrow", "Bahnschrift SemiCondensed"}
+MONO = {"IBM Plex Mono", "Menlo", "Monaco", "Consolas", "Lucida Console", "Courier New"}
+COND = {"Barlow Condensed", "Avenir Next Condensed", "Helvetica Neue Condensed Bold", "Arial Narrow", "Bahnschrift SemiCondensed"}
 
 
 def _font(cache, size, bold, face=None):
@@ -45,7 +45,12 @@ def _font(cache, size, bold, face=None):
         try:
             cache[k] = ImageFont.truetype(FONT_DIR + name, int(round(size * 0.9 * SCALE)))
         except OSError:
-            cache[k] = ImageFont.load_default()
+            # Some Linux images omit DejaVu Condensed; retain the requested text size.
+            alternate = "/usr/share/fonts/opentype/urw-base35/NimbusSansNarrow-Bold.otf" if kind == "cond" else FONT_DIR + "DejaVuSans.ttf"
+            try:
+                cache[k] = ImageFont.truetype(alternate, int(round(size * 0.9 * SCALE)))
+            except OSError:
+                cache[k] = ImageFont.load_default()
     return cache[k]
 
 
@@ -239,7 +244,7 @@ def test_concert_compose(concert, tmp_path, lang):
     L.execute('REACUE_CTX.goto_tab("concert")'); W.frame(L, g)
     for name in ("Second Demo", "Demo Song"):
         x, y = W.text_xy(g, name)
-        TL.frame(L, g, (x + 230, y + 4)); W.frame(L, g)
+        TL.frame(L, g, (x + int((L.globals().gfx.w - 44) / 2) - 20, y + 4)); W.frame(L, g)
     g.state.inputs = "Samedi" if lang == "fr" else "Saturday"
     W.press_text(L, g, "Renommer" if lang == "fr" else "Rename"); W.frame(L, g)
     T = snap(L, g, "concert", lang)

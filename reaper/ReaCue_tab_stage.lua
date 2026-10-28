@@ -242,7 +242,7 @@ return function(ctx)
     local tot = 0
     for k, l in ipairs(lcds) do lw[k] = U.text_w(l[2], VS, false, "mono") + 22; tot = tot + lw[k] end
     local wide = w >= 600 and w - tot - 24 >= 300
-    local hb = wide and 92 or 136
+    local hb = wide and 106 or 136
     U.panel(x, y, w, hb, U.INSET)
     U.set(scol); gfx.rect(x, y, w, 3, 1)                              -- couleur du morceau
     -- état
@@ -260,7 +260,8 @@ return function(ctx)
     local stw = U.text_w(slab, 17, true, "cond")
     U.text(rank, x + 30 + stw + 16, y + 19, 10, U.MUTED)
     local avail = (wide and (w - tot - 30) or (w - 24))
-    U.text(U.fit(U.upper(s.title or ""), avail, 30, true, "cond"), tx, ty, 30, U.INK, true, "cond")
+    local title_size = wide and 38 or 30
+    U.text(U.fit(U.upper(s.title or ""), avail, title_size, true, "cond"), tx, ty, title_size, U.INK, true, "cond")
     -- afficheurs
     local lx, ly, lh
     if wide then

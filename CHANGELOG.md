@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — native REAPER Studio styling
+
+- Apply the effective Studio graphite/orange/green palette to the native Lua window; prefer Studio font families with system fallbacks.
+- Open at 920 px and add a project/playback/time/tempo banner with a narrow-window fallback; retain the dedicated Stage banner and compact dock.
+- Refine large actions, panels and Stage titles; preserve existing commands and confirmation paths.
+- Add bilingual native-window previews and installation instructions in docs/NATIVE_STUDIO.md.
+
 ## Unreleased — Studio design and stage controls
 
 - Refine Studio console, concert/lighting and phone prompter to match the supplied Studio Pro references.

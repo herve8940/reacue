@@ -42,11 +42,13 @@ local SEP = package.config:sub(1, 1)
 local TXT = {
   fr = {
     title = "ReaCue", tabs = { song = "Morceau", concert = "Concert", stage = "Scène", lighting = "Lumière", settings = "Réglages" },
+    clock = "Temps", tempo = "Tempo", project = "Aucun projet",
     bridge = "pont", web = "web", close = "Fermer", ok = "OK", running = "%s… %d s", again = "encore ?",
     working = "en cours", done_title = "Terminé", error_title = "Erreur",
   },
   en = {
     title = "ReaCue", tabs = { song = "Song", concert = "Concert", stage = "Stage", lighting = "Lighting", settings = "Settings" },
+    clock = "Time", tempo = "Tempo", project = "No project",
     bridge = "bridge", web = "web", close = "Close", ok = "OK", running = "%s… %d s", again = "again?",
     working = "running", done_title = "Done", error_title = "Error",
   },
@@ -63,7 +65,7 @@ local ctx = {
   L = L, U = U, R = R, S = S, T = T, dir = script_dir, SEP = SEP,
   tab = nil, overlay = nil, job = nil, result = nil,
   c = nil, is_concert = false, proj_key = nil, proj_file = "", proj_name = "",
-  layout_h = nil, W = 560, overlays = {},
+  layout_h = nil, W = 920, overlays = {},
 }
 REACUE_CTX = ctx                       -- tests (état partagé de la fenêtre)
 function ctx.lang() return L.lang() end
@@ -467,7 +469,27 @@ local function draw_header(w)
     if over and U.clicked then ctx.goto_tab(k) end
     x = x + ws[i] + gap
   end
-  return 45
+  if ctx.tab == "stage" then return 45 end -- Stage already has its own live banner.
+  -- Studio-style project/readout strip; it reports state without changing transport.
+  local by, bh = 54, 64
+  local available = w - 28
+  U.panel(14, by, available, bh, U.INSET)
+  local state = L.play_state()
+  local statecol = state == "play" and U.LED or (state == "pause" and U.LCD or U.MUTED)
+  local caption = U.upper(L.tr("state")[state] or state)
+  U.led(30, by + 17, 4, statecol, true)
+  U.text(caption, 42, by + 10, 10, statecol, true)
+  local pos = math.max(0, L.pos())
+  local bpm = reaper.TimeMap2_GetDividedBpmAtTime and reaper.TimeMap2_GetDividedBpmAtTime(0, pos)
+  local readouts = available >= 600 and 240 or 0
+  local title = ctx.proj_name ~= "" and ctx.proj_name or T("project")
+  U.title(U.fit(U.upper(title), math.max(40, available - readouts - 32), 24, true, "cond"), 28, by + 30, 24)
+  if readouts > 0 then
+    local lx = w - 14 - readouts
+    U.lcd(T("clock"), L.fmt_time(pos), lx, by + 1, 130, bh - 2, U.LCD, 24)
+    U.lcd(T("tempo"), bpm and string.format("%.1f", bpm) or "—", lx + 130, by + 1, 110, bh - 2, U.LCD, 24)
+  end
+  return by + bh
 end
 
 -- fenêtre ancrée basse : barre compacte ------------------------------------------------------

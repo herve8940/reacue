@@ -29,6 +29,7 @@ def test_theme_matches_studio_web_palette():
     theme = dict((k, "#%02X%02X%02X" % tuple(int(v, 16) for v in rgb))
                  for k, *rgb in re.findall(r"(\w+) = \{ 0x(\w\w), 0x(\w\w), 0x(\w\w) \}", ui))
     css = (ROOT / "reacue_mcp" / "web" / "reacue_studio" / "base.css").read_text(encoding="utf-8")
+    css += (ROOT / "reacue_mcp" / "web" / "reacue_studio" / "studio-pro.css").read_text(encoding="utf-8")
     tokens = {k: v.upper() for k, v in re.findall(r"--([\w-]+):\s*(#[0-9A-Fa-f]{6})", css)}
     pairs = {"bg": "bg", "panel": "panel", "inset": "inset", "edge": "edge", "raise": "raise", "ink": "ink",
              "mute": "mute", "dim": "dim", "sig": "sig", "led": "led", "lcd": "lcd", "smpte": "smpte", "red": "red"}
@@ -36,8 +37,8 @@ def test_theme_matches_studio_web_palette():
         assert theme[lua_k] == tokens[css_k], (lua_k, theme[lua_k], tokens[css_k])
     # valeurs demandées pour la fenêtre
     assert (theme["bg"], theme["panel"], theme["inset"], theme["edge"], theme["ink"], theme["mute"]) == \
-        ("#16181B", "#1E2125", "#0F1113", "#0C0D0F", "#E6E8EB", "#8A9099")
-    assert (theme["sig"], theme["led"], theme["lcd"], theme["smpte"]) == ("#FF8A3D", "#3BE37A", "#F2C230", "#8FD1FF")
+        ("#151719", "#202326", "#101214", "#0C0D0F", "#E6E8EB", "#8A9099")
+    assert (theme["sig"], theme["led"], theme["lcd"], theme["smpte"]) == ("#FF8737", "#30DF75", "#F2C230", "#8FD1FF")
 
 
 # --------------------------------------------------------------------------------------- Lua

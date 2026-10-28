@@ -644,7 +644,7 @@ def test_concert_tab_compose_build_open(concert, tmp_path):
 
     def add(name):
         x, y = text_xy(g, name)
-        TL.frame(L, g, (x + 230, y + 4))       # bouton « + » au bout de la ligne
+        TL.frame(L, g, (x + int((L.globals().gfx.w - 44) / 2) - 20, y + 4))       # bouton « + » au bout de la ligne
         frame(L, g)
     add("Second Demo"); add("Demo Song")
     T = TL.texts(g)
@@ -702,7 +702,7 @@ def test_settings_tab_writes_json(concert, tmp_path):
     press_text(L, g, "fixe", exact=True)
     assert json.loads(sp.read_text(encoding="utf-8"))["tempo_mode"] == "constant"
     frame(L, g)
-    press_text(L, g, "4 stems", exact=True)
+    press_text(L, g, "4 stems (rap", exact=False)
     assert json.loads(sp.read_text(encoding="utf-8"))["stems_model"] == "htdemucs"
     # sortie click + voix : menu (aucune, 1/2, 3/4)
     L.execute("NOUT = 4")
@@ -748,7 +748,7 @@ def test_window_english_views(concert, tmp_path):
     press_text(L, g, "Concert", exact=True); frame(L, g)
     for name in ("Second Demo", "Demo Song"):
         x, y = text_xy(g, name)
-        TL.frame(L, g, (x + 230, y + 4)); frame(L, g)
+        TL.frame(L, g, (x + int((L.globals().gfx.w - 44) / 2) - 20, y + 4)); frame(L, g)
     T = TL.texts(g)
     assert "1. Second Demo" in T and "Build" in T, T
     press_text(L, g, "Settings", exact=True); frame(L, g)
@@ -903,3 +903,21 @@ def test_performance_controls_keep_other_settings(concert, tmp_path):
     frame(L, g)
     press_text(L, g, "Standard", exact=True)
     assert json.loads(sp.read_text())["performance_profile"] == "standard"
+
+
+def test_native_studio_header_and_narrow_docking(concert, tmp_path):
+    L, g, _ = song_runtime(concert, tmp_path)
+    gx = open_window(L, g)
+    frame(L, g)
+    assert gx.w == 920
+    assert "TEMPS" in TL.texts(g) and "TEMPO" in TL.texts(g)
+    # Readouts must reflect REAPER's cursor and playback, without sending commands.
+    before = len(g.state.cmds)
+    g.state.cursor = 75
+    frame(L, g)
+    assert "1:15" in TL.texts(g)
+    assert len(g.state.cmds) == before
+    gx.w = 560
+    frame(L, g)
+    assert "REACUE" in TL.texts(g) and "Song One" in TL.texts(g)
+    assert "TEMPO" not in TL.texts(g)  # Preserve the project title instead of squeezing LCDs.
