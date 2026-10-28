@@ -111,6 +111,16 @@ def test_cli_flags(capsys):
     assert reacue_gpu.main(["--index-url"]) == 0
     capsys.readouterr()  # consomme la sortie (peut être vide ou URL)
 
+    # --suite-json
+    assert reacue_gpu.main(["--suite-json"]) == 0
+    suite = json.loads(capsys.readouterr().out)
+    assert "profile" in suite and "stems_model" in suite and "models" in suite
+
+    # --suite
+    assert reacue_gpu.main(["--suite"]) == 0
+    txt = capsys.readouterr().out
+    assert "Demucs" in txt and "SongFormer" in txt
+
 
 def test_mock_nvidia_smi(monkeypatch):
     class FakeProcess:
@@ -161,6 +171,27 @@ def test_recommended_stems_model():
     assert reacue_gpu.recommended_stems_model({"has_gpu": False, "is_dedicated": False}) == "htdemucs"
     # iGPU 512 Mo -> htdemucs
     assert reacue_gpu.recommended_stems_model({"has_gpu": True, "is_dedicated": False, "vram_mb": 512}) == "htdemucs"
+
+    # Suite complète IA :
+    suite_high = reacue_gpu.recommend_ai_suite({"vendor": "nvidia", "is_dedicated": True, "vram_mb": 16384, "has_gpu": True})
+    assert suite_high["profile"] == "expert_gpu"
+    assert suite_high["stems_model"] == "htdemucs_6s"
+    assert suite_high["install_words"] is True
+    assert suite_high["structure_window"] == 420
+
+    suite_mid = reacue_gpu.recommend_ai_suite({"vendor": "nvidia", "is_dedicated": True, "vram_mb": 4096, "has_gpu": True})
+    assert suite_mid["profile"] == "mid_gpu"
+    assert suite_mid["stems_model"] == "htdemucs_ft"
+    assert suite_mid["structure_window"] == 120
+
+    suite_apple = reacue_gpu.recommend_ai_suite({"vendor": "apple", "is_dedicated": True, "has_gpu": True})
+    assert suite_apple["profile"] == "apple_silicon"
+    assert suite_apple["stems_model"] == "htdemucs_6s"
+
+    suite_cpu = reacue_gpu.recommend_ai_suite({"vendor": "cpu", "is_dedicated": False, "has_gpu": False})
+    assert suite_cpu["profile"] == "standard_cpu"
+    assert suite_cpu["stems_model"] == "htdemucs"
+    assert suite_cpu["install_words"] is False
 
 
 def test_audit_venv_missing(tmp_path):

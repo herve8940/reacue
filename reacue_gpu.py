@@ -49,6 +49,143 @@ def recommended_stems_model(info: dict) -> str:
     return "htdemucs"
 
 
+def recommend_ai_suite(info: dict | None = None) -> dict:
+    """Détermine la suite complète de modèles d'IA préconisée selon le matériel détecté.
+
+    Propose les meilleurs modèles adaptés à la machine pour les novices, et détaille
+    l'ensemble des capacités IA disponibles dans ReaCue :
+      - Découpe de stems (Demucs : htdemucs_6s, htdemucs_ft, htdemucs)
+      - Analyse de structure (SongFormer : MuQ + MusicFM)
+      - Reconnaissance d'accords (Modèle entraîné ISMIR 2019)
+      - Transcription de batterie (ADTOF)
+      - Paroles et chant (Whisper + calage mot-à-mot wav2vec2)
+    """
+    if info is None:
+        info = detect_gpu()
+
+    vendor = info.get("vendor", "cpu")
+    is_dedicated = bool(info.get("is_dedicated"))
+    vram_mb = info.get("vram_mb", 0)
+    has_gpu = bool(info.get("has_gpu"))
+
+    stems_model = recommended_stems_model(info)
+
+    if vendor == "nvidia" and is_dedicated and vram_mb >= 7500:
+        profile = "expert_gpu"
+        title_fr = "Studio Pro / Performance Maximale"
+        title_en = "Studio Pro / Maximum Performance"
+        desc_fr = "GPU NVIDIA haute performance : tous les modèles IA complets activés à pleine vitesse"
+        desc_en = "High-performance NVIDIA GPU: all full AI models enabled at max speed"
+        words = True
+        structure_window = 420
+    elif vendor == "apple" and has_gpu:
+        profile = "apple_silicon"
+        title_fr = "Apple Silicon (Metal MPS) / Optimal"
+        title_en = "Apple Silicon (Metal MPS) / Optimal"
+        desc_fr = "Puce Apple avec mémoire unifiée : modèles 6 stems et analyse haute précision"
+        desc_en = "Apple Silicon with unified memory: 6 stems and high-precision analysis"
+        words = True
+        structure_window = 420
+    elif is_dedicated and (vram_mb >= 2048 or vendor in ("nvidia", "amd")):
+        profile = "mid_gpu"
+        title_fr = "GPU Dédié / Équilibré"
+        title_en = "Dedicated GPU / Balanced"
+        desc_fr = "Accélération GPU dédiée : modèles haute fidélité optimisés pour la VRAM disponible"
+        desc_en = "Dedicated GPU acceleration: high-fidelity models optimized for available VRAM"
+        words = True
+        structure_window = 120
+    else:
+        profile = "standard_cpu"
+        title_fr = "Processeur Standard (CPU) / Léger & Rapide"
+        title_en = "Standard Processor (CPU) / Fast & Lightweight"
+        desc_fr = "Mode processeur sans GPU dédié : modèles 4 stems et analyse rapide pour éviter les attentes"
+        desc_en = "CPU mode without dedicated GPU: fast 4-stem and quick analysis to avoid long waits"
+        words = False
+        structure_window = 120
+
+    models = [
+        {
+            "id": "stems",
+            "name": "Demucs v4",
+            "selected_model": stems_model,
+            "role_fr": "Séparation d'un MP3/WAV en stems (voix, batterie, basse, guitare, piano, autres)",
+            "role_en": "Splits an MP3/WAV into stems (vocals, drums, bass, guitar, piano, other)",
+            "why_fr": "Isole chaque instrument pour le prompteur, le mix de répétition et les mutes live",
+            "why_en": "Isolates each instrument for the prompter, rehearsal mix, and live mutes",
+        },
+        {
+            "id": "structure",
+            "name": "SongFormer (MuQ + MusicFM)",
+            "selected_model": f"Fenêtre {structure_window}s",
+            "role_fr": "Découpage intelligent en sections (Intro, Couplets, Refrains, Ponts, Solos)",
+            "role_en": "Intelligent section detection (Intro, Verses, Choruses, Bridges, Solos)",
+            "why_fr": "Place automatiquement les marqueurs et les carrures sans découpe manuelle",
+            "why_en": "Automatically places markers and bars without manual editing",
+        },
+        {
+            "id": "chords",
+            "name": "Modèle ISMIR 2019 (Chord Structure Decomposition)",
+            "selected_model": "Large-Vocabulary CNN (~60 Mo)",
+            "role_fr": "Reconnaissance précise des accords enrichis (7e, m7, maj7, dim, aug, sus, renversements D/F#)",
+            "role_en": "Accurate recognition of extended chords (7th, m7, maj7, dim, aug, sus, D/F# inversions)",
+            "why_fr": "Fournit les bonnes grilles d'accords pour le bassiste, le guitariste et le clavier",
+            "why_en": "Provides accurate chord charts for bassist, guitarist, and keyboardist",
+        },
+        {
+            "id": "drums",
+            "name": "ADTOF (Automatic Drum Transcription on the Fly)",
+            "selected_model": "ADTOF-PyTorch (359h audio, ~16 Mo)",
+            "role_fr": "Transcription dynamique de batterie (kick, snare, toms, charley ouvert/fermé, crashs)",
+            "role_en": "Dynamic drum transcription (kick, snare, toms, open/closed hi-hat, crashes)",
+            "why_fr": "Alimente la vue du batteur avec alertes de fills, breaks et crashs",
+            "why_en": "Feeds drummer prompter with fills, breaks, and crash cues",
+        },
+        {
+            "id": "words",
+            "name": "Whisper & wav2vec2 (Forced Alignment)",
+            "selected_model": "Whisper large-v3-turbo + CTC (~1 à 2 Go)",
+            "role_fr": "Transcription automatique des paroles et calage mot-à-mot synchronisé",
+            "role_en": "Automatic lyrics transcription and synchronized word-by-word timing",
+            "why_fr": "Prompteur paroles défilantes synchronisé en direct sur la voix du chanteur",
+            "why_en": "Real-time scrolling lyrics prompter following the singer's vocals",
+        },
+    ]
+
+    return {
+        "profile": profile,
+        "title_fr": title_fr,
+        "title_en": title_en,
+        "desc_fr": desc_fr,
+        "desc_en": desc_en,
+        "stems_model": stems_model,
+        "install_stems": True,
+        "install_structure": True,
+        "structure_window": structure_window,
+        "install_chords": True,
+        "install_drums": True,
+        "install_words": words,
+        "models": models,
+    }
+
+
+def suite_summary(suite: dict, lang: str = "fr") -> str:
+    """Formate un résumé lisible de la suite IA recommandée."""
+    is_fr = lang == "fr"
+    title = suite["title_fr"] if is_fr else suite["title_en"]
+    desc = suite["desc_fr"] if is_fr else suite["desc_en"]
+    lines = [
+        f"  Profil recommandé : {title}" if is_fr else f"  Recommended profile: {title}",
+        f"  {desc}",
+        "  Modèles IA recommandés :" if is_fr else "  Recommended AI models:",
+    ]
+    for m in suite["models"]:
+        name = m["name"]
+        role = m["role_fr"] if is_fr else m["role_en"]
+        sel = m["selected_model"]
+        lines.append(f"    • {name} [{sel}] : {role}")
+    return "\n".join(lines)
+
+
 def _detect_nvidia_smi() -> dict | None:
     """Détection via nvidia-smi (rapide et fiable pour NVIDIA)."""
     if not shutil.which("nvidia-smi"):
@@ -596,6 +733,8 @@ def main(argv=None) -> int:
     ap.add_argument("--backend", action="store_true", help="Afficher le backend (cuda, rocm, mps, cpu)")
     ap.add_argument("--model", action="store_true", help="Afficher le modèle de stems recommandé")
     ap.add_argument("--target-torch-version", action="store_true", help="Afficher la version PyTorch cible (2.8.0 ou 2.5.1)")
+    ap.add_argument("--suite", action="store_true", help="Afficher la suite IA recommandée en texte clair")
+    ap.add_argument("--suite-json", action="store_true", help="Afficher la suite IA recommandée au format JSON")
     ap.add_argument("--lang", default="fr", choices=["fr", "en"], help="Langue du résumé")
 
     args = ap.parse_args(argv)
@@ -627,6 +766,12 @@ def main(argv=None) -> int:
     if args.target_torch_version:
         is_bw = bool(info.get("vendor") == "nvidia" and any(k in info.get("name", "").lower() for k in ("rtx 50", "5070", "5080", "5090", "blackwell")))
         print("2.8.0" if is_bw else "2.5.1")
+        return 0
+    if args.suite_json:
+        print(json.dumps(recommend_ai_suite(info), ensure_ascii=False, indent=2))
+        return 0
+    if args.suite:
+        print(suite_summary(recommend_ai_suite(info), args.lang))
         return 0
 
     print(summary(info, args.lang))

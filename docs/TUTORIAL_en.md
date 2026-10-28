@@ -163,9 +163,7 @@ Press Enter to close the window.
 
 > You can run the installer as many times as you like: it repairs the installation and keeps your settings.
 
-**The other optional components** (chords, drums, word-by-word and automatic lyrics) are not offered by this
-installer: each has its own (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), to run
-whenever you like, even later. See [chapter 20](#20-optional-components).
+**Complete AI Model Suite:** In **Automatic Mode** (choice 1 or *Enter*), the installer automatically installs all models suited for your hardware (Demucs stems, SongFormer structure, ISMIR chords, ADTOF drums, and Whisper lyrics). In **Custom Mode**, each model is presented with full details. Each component also retains its standalone installer (`Install ReaCue Chords`, `Install ReaCue Drums`, `Install ReaCue Words`), which can be rerun at any time.
 
 ---
 
@@ -329,7 +327,9 @@ entries/rests, less reliable chords and sections). **Better: split it into stems
 aligned exactly like the MP3. The MP3 item was removed from the project (the file itself is still on disk;
 *Edit → Undo* brings it back).
 
-The stem files are stored next to the MP3, in `<song name>-stems/htdemucs_6s/`. If you run the action again
+The stem files are stored next to the MP3, in `<song name>-stems/htdemucs_6s/`.
+> 💡 **Complete Stems & Hardware Guide:** For an in-depth breakdown of Demucs models (`htdemucs_6s`, `htdemucs_ft`, `htdemucs`), hardware performance (NVIDIA RTX 50 Blackwell, Apple Silicon, CPU), and band routing best practices, see the **[Best Practices & Hardware Guide](BEST_PRACTICES_AND_HARDWARE.md)**.
+ If you run the action again
 on the same MP3, the import is immediate (no new separation).
 
 > Listen to the tracks solo (**S** button): vocals, drums and bass are usually very clean; guitar and piano

@@ -57,6 +57,7 @@ language with Claude (MCP server).
 - [Lyrics](#lyrics)
 - [PDF chart](#pdf-chart)
 - [Lighting: grandMA3 export](#lighting-grandma3-export)
+- [Team Guide, REAPER Project Organization, Stems & Hardware](#team-guide-reaper-project-organization-stems--hardware)
 - [Settings](#settings)
 - [Optional: drive ReaCue with an AI assistant (MCP)](#optional-drive-reacue-with-an-ai-assistant-mcp-claude-antigravity-cursor-etc)
 - [Known limitations](#known-limitations)
@@ -156,12 +157,12 @@ for the stage):
      developer”), right-click it → *Open* → *Open*. Alternative in Terminal: `bash "Install ReaCue.command"`.
    - **Windows**: double-click **`Install ReaCue.bat`**. If SmartScreen shows a warning, click
      *More info* → *Run anyway*.
-4. Answer the questions: language (`fr` / `en`), whether to register ReaCue in your AI assistant(s) / MCP server
-   (Claude Desktop, Google Antigravity, Cursor, JSON export — optional) and whether to install **stem separation** (optional,
-   about 1 GB to download, 5 to 15 minutes; see [Stem separation](#stem-separation-optional)).
-   Last question: **SongFormer structure analysis**, offered by default (*Enter* = yes); then type
-   **`I accept`** to accept the models' licences (non-commercial use). Models already on the computer are
-   reused ([details](#structure-analysis-songformer-default)).
+4. Answer the questions:
+   - Language (`fr` / `en`) and AI assistant / MCP server registration (Claude Desktop, Google Antigravity, Cursor, JSON export — optional).
+   - **Installation Mode:**
+     - **Mode 1: Automatic (Recommended / Beginner, press *Enter*):** ReaCue audits your hardware and automatically installs the optimal suite of AI models without technical questions (Demucs `htdemucs_6s` on GPU $\ge 8\text{ GB}$ / Apple Silicon or `htdemucs` on CPU, SongFormer structure analysis, ISMIR 2019 chord model, ADTOF drum transcription, and Whisper lyrics).
+     - **Mode 2: Custom (Advanced):** choose and configure each AI model and option individually.
+   - Existing models already on the machine are automatically reused without redownloading.
 5. Start REAPER. The bridge starts by itself and the actions are available in *Actions → Show action list*
    (on first launch, the ReaCue window opens an assistant that checks the installation):
    - **ReaCue** — the main window (Song, Concert, Stage, Lighting, Settings tabs): **add this one to a toolbar**
@@ -256,6 +257,7 @@ Details:
   same file imports them immediately, without separating again.
 - `stems_model` in the settings: `"htdemucs_6s"` (6 stems, default), `"htdemucs_ft"` (4 stems HQ fine-tuned, recommended with GPU) or `"htdemucs"` (4 stems: vocals,
   drums, bass, other — guitar and keys stay together in “other”).
+- **Comprehensive Guide:** For an in-depth comparison of Demucs models (`htdemucs_6s`, `htdemucs_ft`, `htdemucs`), hardware performance benchmarks (RTX 50 Blackwell, Apple Silicon, CPU), and band workflows, see the dedicated guide: **[ReaCue Guide: Team Best Practices, REAPER Project Organization, Stem Separation Models & Hardware Guide](docs/BEST_PRACTICES_AND_HARDWARE.md)**.
 - Quality: vocals, drums and bass are very good; guitar and especially piano are less clean than with
   commercial services (some bleed). Lead and rhythm guitars are not separated, so the solo detection
   that relies on a lead-guitar stem is not available.
@@ -837,6 +839,18 @@ prompter data: what the PDF shows is what the phones show.
 - Song tab: **PDF chart** pill (click = open, or create). Never blocking: on error, “PDF chart not created: …”.
   No chart for a concert (the songs' charts stay in their folders).
 - No dependency: the PDF is written by ReaCue itself (`reacue_mcp/sheet.py`, standard fonts).
+
+## Team Guide, REAPER Project Organization, Stems & Hardware
+
+A complete reference guide is available in the `docs/` folder to help your band structure projects, optimize stage routing, and select optimal AI models:
+
+👉 **[Read the Best Practices and Hardware Guide (docs/BEST_PRACTICES_AND_HARDWARE.md)](docs/BEST_PRACTICES_AND_HARDWARE.md)**
+
+This guide covers:
+- **REAPER Organization:** Single project per song rule, media isolation ("Copy all media into project directory"), avoiding OFFLINE items, guide track routing, and recommended audio buffers (48 kHz, 128 to 256 samples).
+- **Team Workflows:** Musician roles on the web prompter (Vocals with Whisper, Bass/Guitars with live transposition, Drums with ADTOF), using ReaCue Studio for rehearsals (loop practice and progressive Tempo Ramp), "Played Live" stage mute matrix, and PIN protection with anti-panic double-tap.
+- **Stem Separation Models:** Technical comparison between `htdemucs_6s` (6 stems isolating guitar & keys), `htdemucs_ft` (4 stems fine-tuned high fidelity), and `htdemucs` (4 stems standard CPU-optimized).
+- **Hardware Guide:** Hardware matching matrix (NVIDIA CUDA 12.8 Blackwell RTX 50 support, Apple Silicon Metal/MPS, CPU fallback), audio interface output routing (FOH vs In-Ears vs LTC timecode), and dedicated 5 GHz stage Wi-Fi router setup with static DHCP leases.
 
 ## Settings
 

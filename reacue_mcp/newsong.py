@@ -24,13 +24,13 @@ _ROLE_SEG = {
 _NOISE = ("official", "officiel", "officielle", "clip", "lyric", "lyrics", "video", "vidéo", "audio",
           "remaster", "remastered", "visualizer", "live", "hd", "4k")
 _ROLE_WORDS = [
-    ("vocals", ("vocal", "voice", "voix", "chant", "vox")),
-    ("drums", ("drum", "batterie", "perc", "kick")),
+    ("vocals", ("vocals", "vocal", "voice", "voices", "voix", "chant", "vox", "backing vocals", "choeurs", "chœurs")),
+    ("drums", ("drums", "drum", "batterie", "percussion", "percussions", "perc", "kick", "batt")),
     ("bass", ("bass", "basse")),
-    ("lead_guitar", ("lead guitar", "lead gtr", "guitare solo", "solo guitar")),
-    ("guitars", ("guitar", "guitare", "gtr")),
-    ("keys", ("piano", "keys", "clavier", "synth", "organ", "orgue")),
-    ("other", ("other", "autre")),
+    ("lead_guitar", ("lead guitar", "lead guitars", "lead gtr", "guitare solo", "solo guitar")),
+    ("guitars", ("guitars", "guitar", "guitares", "guitare", "gtr", "rhythm guitar")),
+    ("keys", ("piano", "keys", "clavier", "claviers", "synth", "synthesizer", "organ", "orgue")),
+    ("other", ("other", "others", "autre", "autres")),
 ]
 _ROLE_NAMES = {
     "fr": {"vocals": "Chant", "drums": "Batterie", "bass": "Basse", "lead_guitar": "Guitare solo",
@@ -88,10 +88,12 @@ def stems_title(folder: Path, files: list[Path]) -> str:
 
 
 def role_of(file: str | Path) -> str | None:
-    n = re.sub(r"\.\w+$", "", Path(str(file)).name).lower()
+    base = re.sub(r"\.\w+$", "", Path(str(file)).name).lower()
+    norm = re.sub(r"[^a-zA-Z0-9\u00C0-\u017F]+", " ", base).strip()
     for role, words in _ROLE_WORDS:
-        if any(w in n for w in words):
-            return role
+        for w in words:
+            if re.search(rf"\b{re.escape(w)}\b", norm, re.IGNORECASE):
+                return role
     return None
 
 
