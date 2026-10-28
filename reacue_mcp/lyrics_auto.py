@@ -2,8 +2,9 @@
 
 Quand le dossier du morceau n'a pas de fichier de paroles (paroles.txt, lyrics.txt… : lyrics.find_lyrics_file),
 ReaCue transcrit le stem voix avec Whisper (openai-whisper, code et poids MIT, modèle « large-v3-turbo ») et écrit
-un brouillon « paroles (auto).txt » dans le dossier du morceau. Ce brouillon est ensuite lu comme un fichier de
-paroles normal (calage par ligne de lyrics.py, puis mot par mot de words.py).
+un brouillon « paroles (auto).txt » dans le dossier du morceau et conserve les temps de Whisper dans un
+fichier .timing.json adjacent. Les temps restent valides pour la même source voix et le même texte ;
+les corrections manuelles restent prioritaires. Sans temps valides, le calage par ligne est utilisé.
 
 Règles :
   - le fichier de l'utilisateur (paroles.txt…) est toujours prioritaire ; le brouillon n'est jamais écrasé : il
@@ -22,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import subprocess
@@ -448,34 +450,98 @@ def write_draft(folder: Path, text: str) -> Path | None:
     return p
 
 
+
+def timing_path(path):
+    return Path(path).with_suffix(".timing.json")
+
+
+def source_stamp(a, items):
+    from .lyrics import _voice_source
+    src = _voice_source(a, items)
+    if not src:
+        return None
+    p = Path(src[0])
+    st = p.stat()
+    return [str(p.resolve()), st.st_size, st.st_mtime_ns, round(float(src[1]), 6)]
+
+
+def read_timing(path):
+    try:
+        data = json.loads(timing_path(path).read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_timing(a, items, path, lines):
+    from .lyrics import read_lyrics
+    texts = [x["text"] for x in read_lyrics(path)]
+    matches = [_norm(x) for x in texts] == [_norm(x["text"]) for x in lines]
+    data = {"version": 1, "source": source_stamp(a, items), "texts": texts,
+            "lines": lines if matches else [], "matched": matches}
+    target = timing_path(path)
+    tmp = target.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, target)
+
+
+def timed_draft(a, items, path, lines):
+    """Use Whisper times only for unchanged text and the same placed vocal source."""
+    from .lyrics import _entry
+    data = read_timing(path)
+    try:
+        if data.get("source") != source_stamp(a, items):
+            return None
+        if data.get("texts") != [x["text"] for x in lines]:
+            return None
+        timed = data.get("lines") or []
+        if len(timed) != len(lines) or any(x.get("repeat", 1) != 1 for x in lines):
+            return None
+        out, last = [], -1.0
+        for line, row in zip(lines, timed):
+            t0, t1 = float(row["t"]), float(row["end"])
+            if not (math.isfinite(t0) and math.isfinite(t1) and 0 <= t0 < t1 and t0 >= last):
+                return None
+            if _norm(line["text"]) != _norm(row["text"]):
+                return None
+            entry = _entry(a, line, t0, t1, 1, conf=0.5)
+            entry["timing_source"] = "whisper"
+            out.append(entry)
+            last = t0
+        return out or None
+    except (OSError, TypeError, ValueError, KeyError):
+        return None
+
+
 def ensure_auto_lyrics(a, items: list[dict] | None, files: list[str] | None = None, cache=None,
                        install_dir: Path | None = None) -> Path | None:
     """Brouillon de paroles du morceau : existant, ou créé par Whisper si possible ; None sinon.
     À n'appeler que s'il n'y a pas de fichier de paroles de l'utilisateur. Ne lève jamais d'exception."""
     from .i18n import t
     LAST_INFO.clear()
+    have = None
     try:
         if files is None:
             files = [d["file"] for d in items] if items else [a.file] + list((a.stems or {}).values())
         have = find_auto_file(files)
-        if have:
+        if have and read_timing(have).get("source") == source_stamp(a, items):
             LAST_INFO.update({"state": "existing", "file": str(have)})
             return have
         if setting() != "auto":
             LAST_INFO["state"] = "off"
-            return None
+            return have
         why = missing_reason(install_dir)
         if why:
             LAST_INFO.update({"state": "missing", "missing": why})
-            return None
+            return have
         from .lyrics import _voice_source
         if not _voice_source(a, items):
             LAST_INFO.update({"state": "no_voice"})
-            return None
-        folder = target_folder(files)
+            return have
+        folder = have.parent if have else target_folder(files)
         if folder is None or not folder.is_dir():
             LAST_INFO.update({"state": "no_folder"})
-            return None
+            return have
         from . import words
         lang = words.language_setting()
         if cache is None:
@@ -485,7 +551,7 @@ def ensure_auto_lyrics(a, items: list[dict] | None, files: list[str] | None = No
         memo = _memo_read(cache).get(key)
         if memo:                                         # échec ou morceau sans chant : pas de nouvel essai
             LAST_INFO.update({"state": memo.get("state", "error"), **memo, "cached": True})
-            return None
+            return have
         _progress(t("lyrics_auto_running", s=0))
         t0 = time.time()
         with tempfile.TemporaryDirectory(prefix="reacue_whisper_") as tmp:
@@ -502,14 +568,18 @@ def ensure_auto_lyrics(a, items: list[dict] | None, files: list[str] | None = No
         if not lines:
             _memo_write(cache, key, {"state": "empty", **info})
             LAST_INFO.update({"state": "empty", **info, "message": t("lyrics_auto_empty")})
-            return None
+            return have
         text = format_draft(lines, block_gap(a), info["model"], info["lang"])
-        p = write_draft(folder, text)
+        p = have or write_draft(folder, text)
         if p is None:                                    # créé entre-temps : on garde celui-là
             p = folder / AUTO_NAME
-        LAST_INFO.update({"state": "created", "file": str(p), **info,
+        try:
+            save_timing(a, items, p, lines)
+        except (OSError, ValueError):
+            pass  # Preserve the draft if a read-only folder prevents storing timing.
+        LAST_INFO.update({"state": "existing" if have else "created", "file": str(p), **info,
                           "message": t("lyrics_auto_created", name=AUTO_NAME, n=info["lines"], code=info["lang"])})
         return p
     except Exception as e:                               # noqa: BLE001 - pas de paroles, comme avant
         LAST_INFO.update({"state": "error", "error": str(e), "message": t("lyrics_auto_failed", e=e)})
-        return None
+        return have

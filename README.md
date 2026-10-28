@@ -77,6 +77,17 @@ at logical CPU count. Select Standard and auto to restore original behavior. Str
 transcription caches distinguish profiles; existing lyric drafts, stems and projects are kept.
 Settings affect future computations. Real-device speed measurements are still required.
 
+### Automatic lyric synchronization
+
+Whisper line timestamps are preserved in `paroles (auto).timing.json` next to the draft,
+instead of estimating line placement again from syllables. Older drafts without timing are
+transcribed once more at their next publication when Whisper is available. Existing text is
+never overwritten: timings are accepted only when text matches. The first repair can take
+several minutes. Manual timing corrections retain priority; changed text or vocal sources
+cannot reuse stale timings. Imported lyric files retain their existing alignment workflow.
+Publication results warn about missing, failed or partial word alignment. This preserves known
+timestamps and exposes fallback behavior; real-song timing accuracy still needs validation.
+
 ## Contents
 
 - [Features](#features)

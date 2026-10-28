@@ -81,6 +81,18 @@ initial. Les caches de structure et de transcription distinguent les profils ; l
 écrites sur disque sont conservées. Les changements concernent les prochains calculs, pas les stems
 ou projets existants. Les gains doivent être mesurés sur la machine réelle.
 
+### Synchronisation des paroles automatiques
+
+Les temps des lignes fournis par Whisper sont conservés dans `paroles (auto).timing.json`,
+à côté du brouillon texte. ReaCue les utilise plutôt que de recalculer le placement à partir des
+syllabes. Les anciens brouillons sans ces temps sont transcrits à nouveau une fois lors de leur
+prochaine publication, si Whisper est disponible. Leur texte n'est jamais écrasé : les temps ne
+sont acceptés que si le texte correspond. Ce premier passage peut prendre plusieurs minutes.
+Les corrections manuelles restent prioritaires. Si le texte ou le stem voix change, les temps
+périmés ne sont pas réutilisés. Les fichiers de paroles importés gardent leur procédure d'alignement.
+La publication signale un composant mot à mot manquant, un échec ou un alignement partiel.
+Ces contrôles améliorent la traçabilité ; ils ne garantissent pas la précision de Whisper sur chaque chant.
+
 ## Sommaire
 
 - [Fonctionnalités](#fonctionnalités)

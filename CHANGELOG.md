@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — lyrics synchronization
+
+- Preserve Whisper line timestamps alongside automatic lyric drafts instead of discarding them and estimating timing again. Repair older auto drafts once when the transcription matches their existing text; never overwrite edits.
+- Validate timing against the vocal source and text, retain manual timing overrides, and invalidate lyric caches when timing or vocal audio changes.
+- Report missing, failed or partial word alignment in publication results and warnings. Real-song validation is still required.
+
 ## Unreleased — macOS Metal/MPS
 
 - Add explicit Standard/Fast performance profiles and CPU thread controls in advanced settings.

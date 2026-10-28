@@ -467,3 +467,88 @@ def test_no_real_lyrics_or_weights_in_repo():
     for p in ROOT.rglob("paroles (auto).txt"):
         assert ".venv" in str(p) or "words" in p.parts, p
     assert not list((ROOT / "reacue_mcp").glob("*.pt"))
+
+
+def test_whisper_times_are_preserved_instead_of_reestimated(engine, monkeypatch, tmp_path):
+    _, _, song = engine
+    a = analysis(song)
+    path = LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    expected = LA.segments_to_lines(SEGS)
+    assert LA.timing_path(path).exists()
+    def must_not_realign(*args, **kwargs):
+        raise AssertionError("Known Whisper timing must not be replaced by heuristic timing")
+    monkeypatch.setattr(lyrics, "align_lyrics", must_not_realign)
+    monkeypatch.setattr(lyrics, "_with_words", lambda a, items, res, cache: res)
+    out = lyrics.cached_lyrics(a, None, path=path, cache=tmp_path / "lines.json")
+    assert [(x["t"], x["end"]) for x in out] == [(x["t"], x["end"]) for x in expected]
+    assert all(x["timing_source"] == "whisper" and x["anchored"] for x in out)
+
+
+def test_old_auto_draft_gets_timing_once_without_overwriting(engine, tmp_path):
+    calls, _, song = engine
+    a = analysis(song)
+    expected = LA.segments_to_lines(SEGS)
+    path = LA.write_draft(song, LA.format_draft(expected))
+    original = path.read_bytes()
+    assert not LA.timing_path(path).exists()
+    assert LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json") == path
+    assert path.read_bytes() == original and len(calls) == 1
+    assert LA.timed_draft(a, None, path, lyrics.read_lyrics(path)) is not None
+    LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    assert len(calls) == 1
+
+
+def test_edited_text_and_changed_audio_do_not_reuse_stale_timing(engine, tmp_path):
+    _, _, song = engine
+    a = analysis(song)
+    path = LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    original = path.read_text()
+    path.write_text("# user correction\nCompletely different words\n")
+    assert LA.timed_draft(a, None, path, lyrics.read_lyrics(path)) is None
+    path.write_text(original)
+    (song / "Demo-vocals.wav").write_bytes(b"different audio")
+    assert LA.timed_draft(a, None, path, lyrics.read_lyrics(path)) is None
+
+
+def test_timing_sidecar_invalidates_line_cache(engine, tmp_path):
+    _, _, song = engine
+    a = analysis(song)
+    path = LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    before = lyrics.lyrics_cache_key(a, None, path)
+    data = LA.read_timing(path)
+    data["lines"][0]["t"] += 0.2
+    LA.timing_path(path).write_text(json.dumps(data))
+    assert lyrics.lyrics_cache_key(a, None, path) != before
+
+
+def test_manual_calage_takes_priority_over_preserved_auto_times(engine, monkeypatch, tmp_path):
+    _, _, song = engine
+    a = analysis(song)
+    path = LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    monkeypatch.setattr(lyrics, "_with_words", lambda a, items, res, cache: res)
+    manual = {"anchors": {(1, 1): {"start": (2, 0.0), "end": (3, 0.0)}}, "off": set()}
+    monkeypatch.setattr(lyrics, "read_calage", lambda p: manual)
+    out = lyrics.cached_lyrics(a, None, path=path, cache=tmp_path / "lines.json")
+    first = next(x for x in out if x["line"] == 1)
+    assert first["t"] == 3.0 and first["end"] == 5.0
+
+
+def test_mismatched_old_draft_is_kept_and_repair_not_repeated(engine, tmp_path):
+    calls, _, song = engine
+    a = analysis(song)
+    path = LA.write_draft(song, "# previous edited draft\nDifferent words\n")
+    original = path.read_bytes()
+    LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    assert LA.read_timing(path)["matched"] is False
+    assert LA.timed_draft(a, None, path, lyrics.read_lyrics(path)) is None
+    LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    assert path.read_bytes() == original and len(calls) == 1
+
+
+def test_voice_audio_replacement_invalidates_line_cache(engine, tmp_path):
+    _, _, song = engine
+    a = analysis(song)
+    path = LA.ensure_auto_lyrics(a, None, cache=tmp_path / "memo.json")
+    before = lyrics.lyrics_cache_key(a, None, path)
+    (song / "Demo-vocals.wav").write_bytes(b"replacement voice audio")
+    assert lyrics.lyrics_cache_key(a, None, path) != before

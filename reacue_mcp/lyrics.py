@@ -60,7 +60,7 @@ import numpy as np
 from .analysis import Analysis, SR, HOP, _place, _frame_db, assign_roles
 from .i18n import t as _t
 
-VERSION = "lyrics-2"          # à changer quand l'algorithme change (invalide le cache)
+VERSION = "lyrics-3"          # à changer quand l'algorithme change (invalide le cache)
 CALAGE_NAME = "paroles_calage.json"
 CALAGE_NAMES = (CALAGE_NAME, "lyrics_timing.json")   # même format ; le premier trouvé est utilisé
 
@@ -1020,11 +1020,25 @@ def lyrics_cache_key(a: Analysis, items: list[dict] | None, path: Path) -> str:
         hc = hashlib.md5(cf.read_bytes()).hexdigest() if cf else None
     except OSError:
         hc = None
+    voice_stamp = None
+    if src:
+        try:
+            stat = Path(src[0]).stat()
+            voice_stamp = [stat.st_size, stat.st_mtime_ns]
+        except OSError:
+            pass
+    timing_hash = None
+    if path.name.lower() == AUTO_NAME.lower():
+        from .lyrics_auto import timing_path
+        try:
+            timing_hash = hashlib.md5(timing_path(path).read_bytes()).hexdigest()
+        except OSError:
+            pass
     files = [d["file"] for d in items] if items else [a.file]
     return hashlib.md5(json.dumps([h, hc, files, [src[0], round(src[1], 4)] if src else None,
                                    [round(float(x), 4) for x in a.downbeats], a.beats_per_bar,
                                    [(s.start_bar, s.end_bar, s.name) for s in a.sections],
-                                   VERSION]).encode()).hexdigest()
+                                   VERSION, timing_hash, voice_stamp]).encode()).hexdigest()
 
 
 def cached_lyrics(a: Analysis, items: list[dict] | None, cache=None, path=None) -> list[dict] | None:
@@ -1056,7 +1070,13 @@ def cached_lyrics(a: Analysis, items: list[dict] | None, cache=None, path=None) 
         pass
     lines = read_lyrics(path)
     cal = read_calage(path)
-    if calage_complete(lines, cal):
+    preserved = None
+    if auto:
+        from . import lyrics_auto
+        preserved = lyrics_auto.timed_draft(a, items, path, lines)
+    if preserved is not None:
+        res = apply_calage(a, lines, preserved, cal) if cal["anchors"] or cal["off"] else preserved
+    elif calage_complete(lines, cal):
         res = lyrics_from_calage(a, lines, cal)          # ancres exactes : pas d'analyse audio
     else:
         res = align_lyrics(a, items, lines, anchors=read_anchors(path))

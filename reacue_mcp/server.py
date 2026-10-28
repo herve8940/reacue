@@ -311,6 +311,17 @@ def _publish_prompter(analysis, item, timeline, items, project: str | None = Non
         peaks_warn = t("studio_peaks_failed", e=e)
     out["chords"] = bool(song.get("chords"))
     out["lyrics"] = len(song.get("lyrics") or [])
+    if lyrics:
+        from . import words
+        alignment = dict(words.LAST_INFO)
+        out["lyrics_alignment"] = alignment
+        if alignment.get("error"):
+            lyr_warn = alignment.get("message") or t("words_failed", e=alignment["error"])
+        elif alignment.get("missing"):
+            lyr_warn = t("words_unavailable")
+        elif alignment.get("total") and alignment.get("lines", 0) < alignment["total"]:
+            lyr_warn = t("words_partial", n=alignment.get("lines", 0), total=alignment["total"])
+
     out["drums"] = bool(song.get("drums"))
     if light:
         out["grandma3"] = {"cues": light["cues"], "dossier": light.get("dir")}
