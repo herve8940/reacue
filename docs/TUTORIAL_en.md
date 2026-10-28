@@ -30,7 +30,13 @@ structure analysis (SongFormer), chords and drums by a trained model, word-by-wo
 gives the next step, a line at the bottom of the window explains the button under the mouse, and an error
 tells you what to do with a button that does it.
 
-Time needed: 30 to 45 minutes the first time (installation included), then 5 to 10 minutes per song.
+Timing depends on the computer and optional components. First downloads and AI processing can take
+several minutes or longer per song, especially on Intel Macs.
+
+> **Studio Pro web interfaces:** console [17.3](#173-reacue-studio-the-practice-screen),
+> show/lighting [17.5](#175-reacue-studio-the-show-and-lights-screens), prompter [13.1](#131-prompter-stage-view-and-details).
+> After updating the repository, rerun the installer to copy web assets, then reload the pages.
+> The native ReaCue windows in REAPER and the Studio/Prompter web pages are separate interfaces.
 
 ---
 
@@ -535,6 +541,23 @@ comments (ignored).
 | Never blocking | if the transcription fails or finds no singing, the song is ready without lyrics, as before |
 | Turn off | setting `lyrics_auto` = `"off"` ([appendix](#21-appendix-all-settings)) |
 
+### 12.1 Preserve automatic lyric timestamps
+
+When Whisper generates lyrics, ReaCue now keeps line start/end timestamps in
+**`paroles (auto).timing.json`**, next to the text draft. Publication uses those times instead of
+estimating line placement again from syllables. Manual timing corrections retain priority.
+Changed text or vocal audio cannot reuse stale timestamps.
+
+For an older draft without this file: open the song, keep the Lyrics/Whisper component installed,
+then **republish the prompter**. ReaCue may transcribe once more to recover timestamps when text
+matches; allow several minutes. The existing draft is never overwritten. Edited text that no
+longer matches follows the line-alignment workflow.
+
+An imported `lyrics.txt` is not a Whisper transcription and retains its own alignment workflow.
+Publication warnings now distinguish a missing word-timing component, an error and partially
+aligned lyrics. Listen back and check those lines: automatic output is not a guarantee of perfect
+synchronization for every vocal performance.
+
 ---
 
 ## 13. Open the prompter on the phones
@@ -591,6 +614,19 @@ Tips:
   router dedicated to the band avoids any surprise.
 - The **FR/EN** button switches the prompter language on that phone.
 
+### 13.1 Prompter: Stage view and details
+
+<img src="images/design_prompter_en.png" width="300" alt="Guitar prompter in Stage view">
+
+Tap **STAGE** on the prompter to hide the detailed section list and secondary controls while keeping
+the current section, role-specific chords/lyrics/drums, notes and next change. **DETAILS** restores
+the full view. The role and connection indicator remain visible; this choice is remembered on the
+device. Stage view does not change audio or timing.
+
+Return to **DETAILS** to change language or use the fullscreen button. Fullscreen and keeping the
+screen awake depend on browser support; test the phone before the show. The layout was checked in
+Chromium at 390 × 844; Safari/iPhone still need real-device verification.
+
 ---
 
 ## 14. Set up the click, the spoken cues and the in-ears
@@ -630,6 +666,26 @@ The tab also shows the **installed version**. The settings live in the file **`r
 For the cue voices (`announce_voice`), see the *Settings* section of the README. The full list of keys, with
 their default values, is in the [appendix (chapter 21)](#21-appendix-all-settings); the lighting settings are
 in the **Lighting** tab ([16.9](#169-lighting-grandma3)).
+
+### 14.1 Performance: Standard, Fast and CPU threads
+
+In **Settings → Advanced settings**, choose **Standard** to preserve existing quality settings or
+**Fast** to reduce Demucs, SongFormer and Whisper work. Fast can change output quality: compare stems,
+structure and lyrics before validating a song. The selected stem model is preserved. **CPU threads**
+offers auto / 1 / 2 / 4 / 8; more threads are not necessarily faster.
+
+On Mac, after installing Structure, double-click **Optimize ReaCue Mac.command**. It compares actual
+SongFormer CPU inference (one model load, warm-up, then two timings per setting) and saves the fastest
+thread count on that sample. Allow several minutes. It does not change the quality profile, and the
+result is not a guarantee for other models. To use representative audio instead of 20s synthetic input:
+
+```bash
+.venv-structure/bin/python reacue_structure.py benchmark --input "/path/excerpt.wav" --threads 1,2,4 --save
+```
+
+Macs without working MPS use CPU. Compatible Apple Silicon Macs use Metal/MPS in the adapted engines,
+with CPU retry on failure; this calibration forces CPU, but normal analyses retain MPS. Select
+**Standard** and **auto** to restore the original settings.
 
 ---
 
@@ -983,7 +1039,7 @@ tablet.
 4. The first time you use a loop, a ramp, transpose or export, the page asks for the **PIN** (ReaCue window,
    **Stage** tab): it is remembered on the device.
 
-![ReaCue Studio, Practice screen](images/studio_en.png)
+![ReaCue Studio, Practice screen](images/design_console_en.png)
 
 | Area | What it does |
 |---|---|
@@ -1005,6 +1061,24 @@ kept); the counter shows “LOOP CHORUS 1 · 4/8”. After the last pass the loo
 > (mute, volume, transport still work; loop, ramp, transpose and export do not). Transpose stays clean up to
 > about ±2 semitones; beyond that, vocals and drums sound artificial. It changes the stem items: Ctrl/Cmd+Z
 > in REAPER undoes it.
+
+### 17.3.1 Stage view and precise controls
+
+The **STAGE** button in Studio hides secondary controls and enlarges the live display. **EXIT STAGE**
+restores the full view. This choice is remembered in that browser. The four-corner icon enters
+**fullscreen** when supported by the browser; neither presentation control starts playback.
+
+| Control | Mouse / touch | Keyboard after focusing with Tab |
+|---|---|---|
+| Volume fader | drag; double-click = 0 dB | ↑ / ↓: 1 dB; Shift: 0.1 dB; Home: 0 dB; End: −60 dB |
+| Pan | drag; double-click = centre | ← / →: 5%; Shift: 1%; Home: centre |
+| M / S | mute / solo; larger touch targets | Enter or Space on the button |
+
+**CLIP** appears when REAPER reports a peak at or above 0 dB during playback. Reduce the level and
+check the mix in REAPER. This indicates the received track peak, not a measurement of the whole audio
+chain. **Space** follows the active screen (Practice, Show or Band); it no longer controls hidden
+Practice transport from Library or Lights. It is ignored while typing, in a modal, on a slider,
+or for repeated keydown events.
 
 ### 17.4 Export stems and ranges (WAV / MP3)
 
@@ -1031,7 +1105,7 @@ On show night, `studio.html` also works as a **control desk** on the computer or
 2. In ReaCue Studio, click **SHOW** (or open `studio.html#concert` directly). The first time you press a
    command, enter the **PIN** (ReaCue window, Stage tab).
 
-![ReaCue Studio, Show screen](images/studio_concert_en.png)
+![ReaCue Studio, Show screen](images/design_concert_en.png)
 
 | Area | What it does |
 |---|---|
@@ -1057,6 +1131,13 @@ a message.
 - **grandMA3 files**: download the Sequences, the Timecode and the cue sheet.
 
 > The effects shown are the suggestions per section type (read-only); editing them comes in a later version.
+
+### 17.5.1 Stage view for show control
+
+Click **STAGE** to put the song, remaining time and lighting cues first, as in the screenshot above.
+**EXIT STAGE** restores the tabs without stopping playback. Setlist and Previous/Next protections
+remain active; Stage view does not grant additional commands. To select a section with the keyboard,
+Tab to its row, then press Enter or Space.
 
 ### 17.6 ReaCue Studio: the Library and Band screens
 
@@ -1292,6 +1373,8 @@ unknown key is ignored. Changes apply at the next preparation (*Prepare again*, 
 
 | Key | Default | Role | Where to set it |
 |---|---|---|---|
+| `performance_profile` | `"standard"` | `"standard"` or `"fast"`: explicit compute/quality tradeoff | Advanced settings |
+| `cpu_threads` | `0` | `0` = auto; otherwise PyTorch threads, capped at logical CPU count | Advanced settings / Mac calibration |
 | `language` | `"fr"` | `"fr"` or `"en"`: region names, spoken cues, prompter, messages | Settings |
 | `count_in_bars` | `2` | bars of click before bar 1 | Settings |
 | `cue_lead_bars` | `2` | spoken cue N bars before the section (2 = second-to-last bar) | Advanced settings |

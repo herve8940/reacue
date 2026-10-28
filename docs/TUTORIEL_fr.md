@@ -31,7 +31,13 @@ mot et paroles automatiques (Whisper). Sans eux, tout marche avec la détection 
 bouton te donne toujours l'étape suivante, une ligne en bas de la fenêtre explique le bouton survolé, et une
 erreur te dit quoi faire avec un bouton qui le fait.
 
-Durée : 30 à 45 minutes la première fois (installation comprise), puis 5 à 10 minutes par morceau.
+La durée dépend de la machine et des composants : les téléchargements initiaux et les modèles IA
+peuvent prendre plusieurs minutes ou davantage par morceau, notamment sur un Mac Intel.
+
+> **Interfaces web Studio Pro :** console [17.3](#173-reacue-studio--lécran-travail),
+> régie concert/lumière [17.5](#175-reacue-studio--écrans-concert-et-lumière), prompteur [13.1](#131-prompteur--mode-scène-et-détails).
+> Après mise à jour du dépôt, relance l'installateur pour recopier les ressources web, puis recharge les pages.
+> Les fenêtres natives ReaCue dans REAPER et les pages web Studio/Prompteur sont deux interfaces distinctes.
 
 ---
 
@@ -557,6 +563,23 @@ commentaires (ignorés).
 | Jamais bloquant | si la transcription échoue ou ne trouve pas de chant, le morceau est prêt sans paroles, comme avant |
 | Désactiver | réglage `lyrics_auto` = `"off"` ([annexe](#21-annexe--tous-les-réglages)) |
 
+### 12.1 Conserver les temps des paroles automatiques
+
+Quand Whisper génère les paroles, ReaCue conserve maintenant le début et la fin des lignes dans
+**`paroles (auto).timing.json`**, à côté du brouillon texte. Ces temps sont repris à la publication,
+au lieu de replacer les lignes par estimation des syllabes. Les corrections manuelles de calage restent
+prioritaires. Si le texte ou le stem voix change, des temps périmés ne sont pas réutilisés.
+
+Pour un ancien brouillon sans ce fichier : ouvre le morceau, garde le composant Paroles/Whisper installé,
+puis **republie le prompteur**. ReaCue peut transcrire à nouveau une fois pour récupérer les temps si le
+texte correspond ; prévois plusieurs minutes. Le brouillon existant n'est pas écrasé. Si tu as modifié
+le texte et qu'il ne correspond plus, le placement suit la procédure d'alignement des lignes.
+
+Un fichier `paroles.txt` importé n'est pas une transcription Whisper et garde son propre alignement.
+Les avertissements de publication distinguent maintenant le composant mot à mot manquant, un échec
+et un calage partiel. Vérifie les lignes concernées à l'écoute : un résultat automatique n'est pas
+une garantie de synchronisation parfaite sur tous les chants.
+
 ---
 
 ## 13. Ouvrir le prompteur sur les téléphones
@@ -614,6 +637,19 @@ Conseils :
   l'ordinateur. En concert, un petit routeur de voyage dédié au groupe évite toute surprise.
 - Le bouton **FR/EN** change la langue du prompteur sur ce téléphone.
 
+### 13.1 Prompteur : mode Scène et détails
+
+<img src="images/design_prompter.png" width="300" alt="Prompteur guitare en mode Scène">
+
+Sur le prompteur, touche **SCÈNE** : la liste détaillée des sections et certaines commandes secondaires
+s'effacent, tandis que la section, les accords/paroles/batterie du rôle, les notes et le prochain changement
+restent disponibles. **DÉTAILS** rétablit la vue complète. Le rôle et le voyant de liaison restent visibles,
+et ce choix est mémorisé sur cet appareil. Le mode Scène ne change pas le calage ni le son.
+
+Pour changer de langue ou accéder au bouton plein écran, repasse par **DÉTAILS**. Le plein écran et le
+maintien de l'écran allumé dépendent du navigateur ; teste le téléphone avant le concert. La mise en
+page a été vérifiée dans Chromium à 390 × 844 ; les essais Safari/iPhone restent nécessaires.
+
 ---
 
 ## 14. Régler le click, les annonces et les in-ears
@@ -653,6 +689,27 @@ Pour `click_hw_output` : `0` = sorties 1/2, `2` = sorties 3/4, `4` = sorties 5/6
 Pour les voix des annonces (`announce_voice`), voir la section *Réglages* du LISEZMOI. La liste complète des
 clés, avec leur valeur par défaut, est dans l'[annexe (chapitre 21)](#21-annexe--tous-les-réglages) ; les
 réglages lumière se font dans l'onglet **Lumière** ([16.9](#169-lumière--grandma3)).
+
+### 14.1 Performances : Standard, Rapide et threads CPU
+
+Dans **Réglages → Réglages avancés**, choisir **Standard** pour conserver la qualité initiale ou
+**Rapide** pour réduire le travail de Demucs, SongFormer et Whisper. Rapide peut modifier les résultats :
+compare les stems, la structure et les paroles avant de valider un morceau. Le modèle de stems sélectionné
+reste le même. **Threads CPU** propose auto / 1 / 2 / 4 / 8 ; plus de threads ne signifie pas toujours plus vite.
+
+Sur Mac, après installation du composant Structure, double-clique sur **Optimize ReaCue Mac.command**.
+L'outil compare des inférences SongFormer sur CPU (modèles chargés une seule fois, échauffement puis deux
+mesures par réglage) et enregistre le meilleur nombre de threads sur cet extrait. Prévois plusieurs minutes.
+Cela ne modifie pas le profil de qualité. Le résultat n'est pas une garantie pour les autres modèles.
+Pour mesurer sur un extrait réel plutôt que sur le signal synthétique de 20 s :
+
+```bash
+.venv-structure/bin/python reacue_structure.py benchmark --input "/chemin/extrait.wav" --threads 1,2,4 --save
+```
+
+Les Mac sans MPS fonctionnel utilisent le CPU. Sur une série M compatible, les moteurs adaptés utilisent
+Metal/MPS, avec reprise sur CPU en cas d'échec ; l'étalonnage ci-dessus force le CPU, mais pas les analyses
+normales. Reviens à **Standard** et **auto** pour retrouver les réglages initiaux.
 
 ---
 
@@ -1011,7 +1068,7 @@ l'ordinateur ou une tablette.
 4. Au premier usage d'une boucle, d'une rampe, de la transposition ou d'un export, la page demande le **PIN**
    (fenêtre ReaCue, onglet **Scène**) : il est mémorisé sur l'appareil.
 
-![ReaCue Studio, écran Travail](images/studio_fr.png)
+![ReaCue Studio, écran Travail](images/design_console.png)
 
 | Zone | Ce qu'elle fait |
 |---|---|
@@ -1033,6 +1090,24 @@ passage, la boucle continue à la vitesse finale. **ARRÊTER** (ou le bouton Bou
 > fermée (mute, volume, transport marchent encore ; pas la boucle, la rampe, la transposition ni l'export).
 > La transposition reste propre jusqu'à ±2 demi-tons environ ; au-delà, la voix et la batterie sonnent
 > artificiellement. Elle modifie les items des stems : Ctrl/Cmd+Z dans REAPER l'annule.
+
+### 17.3.1 Mode Scène et commandes précises
+
+Le bouton **SCÈNE**, dans le bandeau de Studio, masque les commandes secondaires et agrandit la lecture.
+**QUITTER** retrouve la vue complète. Le choix est mémorisé dans ce navigateur. Le bouton à quatre coins
+active le **plein écran** si ton navigateur le permet ; ces deux commandes ne démarrent pas la musique.
+
+| Contrôle | Souris / tactile | Clavier après sélection avec Tab |
+|---|---|---|
+| Fader de volume | glisser ; double-clic = 0 dB | ↑ / ↓ : 1 dB ; Maj : 0,1 dB ; Début : 0 dB ; Fin : −60 dB |
+| Panoramique | glisser ; double-clic = centre | ← / → : 5 % ; Maj : 1 % ; Début : centre |
+| M / S | mute / solo ; cibles agrandies sur écran tactile | Entrée ou Espace sur le bouton |
+
+Un indicateur **CLIP** apparaît si REAPER signale une crête à 0 dB ou au-dessus pendant la lecture.
+Baisse le niveau et vérifie le mix dans REAPER. Il indique la crête reçue, sans remplacer un contrôle
+de toute la chaîne audio. La **barre d'espace** pilote l'écran actif (Travail, Concert ou Groupe),
+et ne pilote pas un écran Travail caché depuis Biblio ou Lumière. Elle est ignorée pendant la saisie,
+dans une fenêtre modale, sur un curseur et lors des répétitions automatiques de touche.
 
 ### 17.4 Exporter des stems et des régions (WAV / MP3)
 
@@ -1059,7 +1134,7 @@ Le soir du concert, la page `studio.html` sert aussi de **poste de régie** sur 
 2. Dans ReaCue Studio, clique sur **CONCERT** (ou ouvre directement `studio.html#concert`). Au premier
    appui sur une commande, saisis le **PIN** (fenêtre ReaCue, onglet Scène).
 
-![ReaCue Studio, écran Concert](images/studio_concert_fr.png)
+![ReaCue Studio, écran Concert](images/design_concert.png)
 
 | Zone | Ce qu'elle fait |
 |---|---|
@@ -1088,6 +1163,13 @@ SUIV. passent d'une section à l'autre) avec un message.
 
 > Les effets affichés sont les suggestions par type de section (lecture seule) ; leur modification viendra
 > dans une prochaine version.
+
+### 17.5.1 Utiliser la régie en mode Scène
+
+Clique sur **SCÈNE** pour mettre en avant le morceau, le temps restant et les cues lumière comme sur
+la capture ci-dessus. **QUITTER** rétablit les onglets, sans arrêter la lecture. La setlist et les boutons
+PRÉC./SUIV. conservent leurs protections ; le mode Scène n'autorise pas davantage de commandes.
+Pour sélectionner une section au clavier : Tab jusqu'à la ligne, puis Entrée ou Espace.
 
 ### 17.6 ReaCue Studio : écrans Biblio et Groupe
 
@@ -1331,6 +1413,8 @@ valeur par défaut ; une clé inconnue est ignorée. Les changements s'appliquen
 
 | Clé | Défaut | Rôle | Où la régler |
 |---|---|---|---|
+| `performance_profile` | `"standard"` | `"standard"` ou `"fast"` : compromis calcul/qualité explicite | Réglages avancés |
+| `cpu_threads` | `0` | `0` = auto ; sinon threads PyTorch, bornés au nombre de processeurs logiques | Réglages avancés / étalonnage Mac |
 | `language` | `"fr"` | `"fr"` ou `"en"` : noms des régions, annonces, prompteur, messages | Réglages |
 | `count_in_bars` | `2` | mesures de click avant la mesure 1 | Réglages |
 | `cue_lead_bars` | `2` | annonce N mesures avant la section (2 = avant-dernière mesure) | Réglages avancés |

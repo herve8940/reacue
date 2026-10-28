@@ -12,6 +12,10 @@ count before each section. It also publishes a **web prompter** that each musici
 served by REAPER's built-in web interface: structure, chords (bass / guitars), timed lyrics (vocals) and a
 dedicated drummer view with the transcribed grooves and fills.
 
+**ReaCue Studio** brings stem waveforms, mixing, rehearsal loops, show control and lighting cues
+together in a dark web interface. **Stage view** puts the information musicians need while
+playing first, on a computer, tablet or phone.
+
 Everything runs locally: no cloud service and no internet once installed (the optional components — stem
 separation, structure analysis, chords, drums, word-by-word and automatic lyrics — use AI models that also run
 on your computer). An optional mode lets you drive it in plain
@@ -27,17 +31,25 @@ language with Claude (MCP server).
 > **Status: 1.2.1.** Developed and used on macOS (Intel). Windows and Apple Silicon support has **not yet been
 > tested on a real machine** — feedback welcome.
 
-| The ReaCue window in REAPER | The prompter on a phone | Stage control (remote, PIN) |
-|---|---|---|
-| <img src="docs/images/window_song_en.png" width="360"> | <img src="docs/images/prompter_concert_en.png" width="190"> | <img src="docs/images/prompter_regie_en.png" width="190"> |
+## See ReaCue
 
-| Drums | Bass | Vocals | Guitar |
-|---|---|---|---|
-| <img src="docs/images/prompter_drums_en.png" width="190"> | <img src="docs/images/prompter_bass_en.png" width="190"> | <img src="docs/images/prompter_vocals_en.png" width="190"> | <img src="docs/images/prompter_guitars_en.png" width="190"> |
+### Practice console
 
-<img src="docs/images/prompter_drums_en_tablet.png" width="780">
+![ReaCue Studio — stem waveforms and mixer](docs/images/design_console_en.png)
 
-*(Screenshots of a made-up “Demo Song”: structure, chords, lyrics and drums are all invented.)*
+### Show and lighting
+
+![ReaCue Studio — show control, sections and grandMA3 cues](docs/images/design_concert_en.png)
+
+### Musician prompter
+
+<img src="docs/images/design_prompter_en.png" width="300" alt="Guitar prompter in Stage view: chord, section and next change">
+
+*Actual interface screenshots using the repository's REAPER simulator, with fictional songs, notes,
+chords and cues. They do not establish validation with real REAPER hardware.*
+
+**Get started:** [English tutorial](docs/TUTORIAL_en.md) · [tutoriel français](docs/TUTORIEL_fr.md) ·
+[install ReaCue](#installation) · [interface controls](docs/STUDIO_DESIGN.md).
 
 ## GPU acceleration on Mac
 

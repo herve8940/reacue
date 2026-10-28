@@ -11,6 +11,10 @@ carte de tempo, régions nommées et colorées, click avec count-in, annonces vo
 sur son téléphone, servi par l'interface web intégrée de REAPER : structure, accords (basse / guitares),
 paroles calées (chant) et une vue batteur dédiée avec les grooves et les fills transcrits.
 
+**ReaCue Studio** réunit les formes d'onde des stems, le mixage, les boucles de répétition,
+la conduite du concert et les cues lumière dans une interface web sombre. Le **mode Scène**
+met en avant les informations utiles pendant le jeu, sur ordinateur, tablette ou téléphone.
+
 Tout tourne en local : aucun service en ligne et pas d'internet une fois installé (les composants facultatifs —
 séparation de stems, analyse de structure, accords, batterie, paroles mot par mot et automatiques — utilisent
 des modèles d'IA qui tournent eux aussi sur ton ordinateur).
@@ -26,17 +30,25 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 > **État : 1.2.1.** Développé et utilisé sur macOS (Intel). La prise en charge de Windows et des Mac Apple Silicon
 > **n'a pas encore été testée sur une vraie machine** — vos retours sont les bienvenus.
 
-| La fenêtre ReaCue dans REAPER | Le prompteur sur un téléphone | La Régie (télécommande, PIN) |
-|---|---|---|
-| <img src="docs/images/window_song_fr.png" width="360"> | <img src="docs/images/prompter_concert_fr.png" width="190"> | <img src="docs/images/prompter_regie_fr.png" width="190"> |
+## ReaCue en images
 
-| Batterie | Basse | Chant | Guitare |
-|---|---|---|---|
-| <img src="docs/images/prompter_drums_fr.png" width="190"> | <img src="docs/images/prompter_bass_fr.png" width="190"> | <img src="docs/images/prompter_vocals_fr.png" width="190"> | <img src="docs/images/prompter_guitars_fr.png" width="190"> |
+### Console de travail
 
-<img src="docs/images/prompter_drums_fr_tablet.png" width="780">
+![ReaCue Studio — formes d'onde des stems et console de mixage](docs/images/design_console.png)
 
-*(Captures d'un morceau fictif « Demo Song » : structure, accords, paroles et batterie sont inventés.)*
+### Concert et lumière
+
+![ReaCue Studio — conduite du concert, sections et cues grandMA3](docs/images/design_concert.png)
+
+### Prompteur du musicien
+
+<img src="docs/images/design_prompter.png" width="300" alt="Prompteur guitare en mode Scène : accord, section et prochain changement">
+
+*Captures réelles de l'interface, alimentée par le simulateur du dépôt : morceaux, notes, accords et
+cues fictifs. Elles ne constituent pas une validation avec REAPER réel.*
+
+**Commencer :** [tutoriel français](docs/TUTORIEL_fr.md) · [English tutorial](docs/TUTORIAL_en.md) ·
+[installer ReaCue](#installation) · [interfaces et commandes](docs/STUDIO_DESIGN.md).
 
 ## Accélération GPU sur Mac
 
