@@ -37,7 +37,8 @@ from .lyrics import AUTO_NAME, lyric_dirs
 ROOT = Path(__file__).resolve().parent.parent          # dossier d'installation de ReaCue
 ENGINE = "whisper"
 MODEL = os.environ.get("REACUE_LYRICS_MODEL") or "large-v3-turbo"
-CACHE_VERSION = 1
+CACHE_VERSION = 2
+ERROR_RETRY_S = 300  # Retry transient failures after five minutes; do not retry on every refresh.
 TIMEOUT_S = 1200                 # 20 min (Mac Intel, CPU : 3 à 6 min attendues) ; au-delà : pas de paroles
 SR = 16000
 
@@ -549,7 +550,8 @@ def ensure_auto_lyrics(a, items: list[dict] | None, files: list[str] | None = No
             cache = BRIDGE_DIR / "prompter_lyrics_auto.json"
         key = memo_key(a, items, lang, install_dir)
         memo = _memo_read(cache).get(key)
-        if memo:                                         # échec ou morceau sans chant : pas de nouvel essai
+        if memo and (memo.get("state") != "error" or
+                     time.time() - float(memo.get("failed_at", 0)) < ERROR_RETRY_S):
             LAST_INFO.update({"state": memo.get("state", "error"), **memo, "cached": True})
             return have
         _progress(t("lyrics_auto_running", s=0))
@@ -559,7 +561,7 @@ def ensure_auto_lyrics(a, items: list[dict] | None, files: list[str] | None = No
             try:
                 res = run_engine(wav, Path(tmp), lang, install_dir)
             except Exception as e:
-                _memo_write(cache, key, {"state": "error", "error": str(e)})
+                _memo_write(cache, key, {"state": "error", "error": str(e), "failed_at": time.time()})
                 raise
         lines = segments_to_lines(res.get("segments") or [])
         info = {"lang": res.get("language") or lang, "lines": len(lines),

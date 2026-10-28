@@ -552,3 +552,34 @@ def test_voice_audio_replacement_invalidates_line_cache(engine, tmp_path):
     before = lyrics.lyrics_cache_key(a, None, path)
     (song / "Demo-vocals.wav").write_bytes(b"replacement voice audio")
     assert lyrics.lyrics_cache_key(a, None, path) != before
+
+
+def test_transcription_failure_expires_and_repairs_old_draft(engine, monkeypatch, tmp_path):
+    calls, state, song = engine
+    a = analysis(song)
+    memo = tmp_path / "memo.json"
+    path = LA.write_draft(song, LA.format_draft(LA.segments_to_lines(SEGS)))
+    original = path.read_bytes()
+    clock = [10000.0]
+    monkeypatch.setattr(LA.time, "time", lambda: clock[0])
+    state["error"] = "Whisper timeout"
+    assert LA.ensure_auto_lyrics(a, None, cache=memo) == path
+    state["error"] = None
+    LA.ensure_auto_lyrics(a, None, cache=memo)
+    assert len(calls) == 1  # Refreshes must not repeatedly launch a failing model.
+    clock[0] += LA.ERROR_RETRY_S + 1
+    assert LA.ensure_auto_lyrics(a, None, cache=memo) == path
+    assert len(calls) == 2 and path.read_bytes() == original
+    assert LA.timed_draft(a, None, path, lyrics.read_lyrics(path)) is not None
+    LA.ensure_auto_lyrics(a, None, cache=memo)
+    assert len(calls) == 2
+
+
+def test_legacy_error_without_timestamp_is_retried(engine, tmp_path):
+    calls, _, song = engine
+    a = analysis(song)
+    memo = tmp_path / "memo.json"
+    key = LA.memo_key(a, None, "auto")
+    memo.write_text(json.dumps({key: {"state": "error", "error": "old timeout"}}))
+    assert LA.ensure_auto_lyrics(a, None, cache=memo) is not None
+    assert len(calls) == 1
