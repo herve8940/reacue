@@ -67,7 +67,7 @@ if (-not $accepted) {
   } else {
     $Ans = ""
     if (-not [Console]::IsInputRedirected) {
-      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly “I accept” (otherwise Enter)")
+      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly 'I accept' (otherwise Enter)")
     }
     if ($Ans) { $Ans = $Ans.Replace([string][char]0x2019, "'").Trim() }
     if ($Ans -cne $Want) {
@@ -192,5 +192,5 @@ Write-Host (T "  recherche de modèles déjà téléchargés (ReaCue-labo, cache
 Write-Host (T "  téléchargement des modèles manquants (jusqu'à 2 Go) et test…" "  downloading the missing models (up to 2 GB) and testing…")
 & $Py (Join-Path $Here "reacue_structure.py") check --lang $L
 if ($LASTEXITCODE -ne 0) { Fail "SongFormer ne fonctionne pas (voir ci-dessus)." "SongFormer does not work (see above)." }
-Write-Host (T "  Analyse de structure installée : utilisée automatiquement par « Analyser et préparer » (réglage « Détection de structure »)." "  Structure analysis installed: used automatically by “Analyse and prepare” (“Structure detection” setting).")
+Write-Host (T "  Analyse de structure installée : utilisée automatiquement par « Analyser et préparer » (réglage « Détection de structure »)." "  Structure analysis installed: used automatically by 'Analyse and prepare' ('Structure detection' setting).")
 exit 0

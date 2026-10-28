@@ -105,5 +105,5 @@ try {
 Write-Host (T "  vérification des modèles et test de vitesse…" "  verifying models and measuring speed…")
 & $Py (Join-Path $Here "reacue_stems.py") check --lang $L
 if ($LASTEXITCODE -ne 0) { Fail "Demucs ne fonctionne pas (voir ci-dessus)." "Demucs does not work (see above)." }
-Write-Host (T "  Séparation de stems installée : action « ReaCue - Séparer les stems » dans REAPER." "  Stem separation installed: “ReaCue - Separate stems” action in REAPER.")
+Write-Host (T "  Séparation de stems installée : action « ReaCue - Séparer les stems » dans REAPER." "  Stem separation installed: 'ReaCue - Separate stems' action in REAPER.")
 exit 0

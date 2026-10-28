@@ -255,11 +255,11 @@ if ($Stems -eq "ask") {
 if ($Stems -eq "yes") {
   & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Here "install\install_stems_windows.ps1") -Lang $L -ExtraIndexUrl $GpuExtraIndex
   if ($LASTEXITCODE -ne 0) {
-    Write-Host (T "  ! séparation de stems non installée (le reste de ReaCue fonctionne). Réessaie avec « Install ReaCue Stems.bat »." "  ! stem separation not installed (the rest of ReaCue works). Try again with “Install ReaCue Stems.bat”.") -ForegroundColor Yellow
+    Write-Host (T "  ! séparation de stems non installée (le reste de ReaCue fonctionne). Réessaie avec « Install ReaCue Stems.bat »." "  ! stem separation not installed (the rest of ReaCue works). Try again with 'Install ReaCue Stems.bat'.") -ForegroundColor Yellow
   }
 } else {
   if (-not (Test-Path -LiteralPath $demucsPy)) {
-    Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Stems.bat »." "  Not installed. Later: double-click “Install ReaCue Stems.bat”.")
+    Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Stems.bat »." "  Not installed. Later: double-click 'Install ReaCue Stems.bat'.")
   }
 }
 
@@ -289,18 +289,18 @@ if (Test-Path -LiteralPath $structurePy) {
 }
 if ($Structure -eq "ask") {
   Write-Host (T "  Détecte couplets, refrains, ponts… avec SongFormer (IA, en local) : c'est l'analyse par défaut de ReaCue." "  Detects verses, choruses, bridges… with SongFormer (AI, local): ReaCue's default analysis.")
-  Write-Host (T "  Usage non commercial (licence des poids MuQ) : il faudra taper « J'accepte » à l'étape suivante." "  Non-commercial use (MuQ weights licence): you will have to type “I accept” at the next step.")
+  Write-Host (T "  Usage non commercial (licence des poids MuQ) : il faudra taper « J'accepte » à l'étape suivante." "  Non-commercial use (MuQ weights licence): you will have to type 'I accept' at the next step.")
   $A = Read-Host (T "  Installer l'analyse de structure (environ 3 Go à télécharger, 10 à 40 min, 8 Go de RAM conseillés) ? [O/n]" "  Install structure analysis (about 3 GB to download, 10 to 40 min, 8 GB RAM recommended)? [Y/n]")
   $Structure = if ($A -and $A.ToLower().StartsWith("n")) { "no" } else { "yes" }
 }
 if ($Structure -eq "yes") {
   & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Here "install\install_structure_windows.ps1") -Lang $L -ExtraIndexUrl $GpuExtraIndex
   if ($LASTEXITCODE -ne 0) {
-    Write-Host (T "  ! analyse de structure non installée (ReaCue garde sa détection). Réessaie avec « Install ReaCue Structure.bat »." "  ! structure analysis not installed (ReaCue keeps its own detection). Try again with “Install ReaCue Structure.bat”.") -ForegroundColor Yellow
+    Write-Host (T "  ! analyse de structure non installée (ReaCue garde sa détection). Réessaie avec « Install ReaCue Structure.bat »." "  ! structure analysis not installed (ReaCue keeps its own detection). Try again with 'Install ReaCue Structure.bat'.") -ForegroundColor Yellow
   }
 } else {
   if (-not (Test-Path -LiteralPath $structurePy)) {
-    Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Structure.bat »." "  Not installed. Later: double-click “Install ReaCue Structure.bat”.")
+    Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Structure.bat »." "  Not installed. Later: double-click 'Install ReaCue Structure.bat'.")
   }
 }
 
@@ -329,7 +329,7 @@ if ($Chords -eq "yes") {
 } else {
   if (-not (Test-Path -LiteralPath $chordsPy)) {
     Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Chords.bat »." `
-                  "  Not installed. Later: double-click “Install ReaCue Chords.bat”.")
+                  "  Not installed. Later: double-click 'Install ReaCue Chords.bat'.")
   }
 }
 
@@ -358,7 +358,7 @@ if ($Drums -eq "yes") {
 } else {
   if (-not (Test-Path -LiteralPath $drumsPy)) {
     Write-Host (T "  Non installée. Plus tard : double-clic sur « Install ReaCue Drums.bat »." `
-                  "  Not installed. Later: double-click “Install ReaCue Drums.bat”.")
+                  "  Not installed. Later: double-click 'Install ReaCue Drums.bat'.")
   }
 }
 
@@ -387,7 +387,7 @@ if ($Words -eq "yes") {
 } else {
   if (-not (Test-Path -LiteralPath $wordsPy)) {
     Write-Host (T "  Non installés. Plus tard : double-clic sur « Install ReaCue Words.bat »." `
-                  "  Not installed. Later: double-click “Install ReaCue Words.bat”.")
+                  "  Not installed. Later: double-click 'Install ReaCue Words.bat'.")
   }
 }
 
@@ -402,6 +402,6 @@ Write-Host "====================================================================
 Write-Host (T "  Installation de ReaCue terminée avec succès !" `
               "  ReaCue installation completed successfully!") -ForegroundColor Green
 Write-Host (T "  Lancez REAPER et ouvrez l'action « ReaCue » depuis la barre d'outils." `
-              "  Launch REAPER and open the “ReaCue” action from the toolbar.")
+              "  Launch REAPER and open the 'ReaCue' action from the toolbar.")
 Write-Host "======================================================================" -ForegroundColor Green
 exit 0

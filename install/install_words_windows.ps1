@@ -100,5 +100,5 @@ if ($Whisper) {
 Write-Host (T "  téléchargement des modèles de calage et test sur un audio synthétique…" "  downloading the timing models and testing on synthetic audio…")
 & $Py (Join-Path $Here "reacue_words.py") check --langs $Langs --lang $L
 if ($LASTEXITCODE -ne 0) { Fail "le calage de paroles ne fonctionne pas (voir ci-dessus)." "lyrics timing does not work (see above)." }
-Write-Host (T "  Paroles mot par mot installées : actions « ReaCue - Caler les paroles » et « ReaCue - Paroles automatiques (Whisper) » dans REAPER." "  Word-by-word lyrics installed: “ReaCue - Time lyrics” and “ReaCue - Automatic lyrics (Whisper)” actions in REAPER.")
+Write-Host (T "  Paroles mot par mot installées : actions « ReaCue - Caler les paroles » et « ReaCue - Paroles automatiques (Whisper) » dans REAPER." "  Word-by-word lyrics installed: 'ReaCue - Time lyrics' and 'ReaCue - Automatic lyrics (Whisper)' actions in REAPER.")
 exit 0

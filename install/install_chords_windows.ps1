@@ -112,5 +112,5 @@ if ($LASTEXITCODE -ne 0) { Fail "installation des dépendances impossible (voir 
 Write-Host (T "  test du modèle sur un audio synthétique…" "  testing the model on synthetic audio…")
 & $Py (Join-Path $Here "reacue_chords.py") check --lang $L
 if ($LASTEXITCODE -ne 0) { Fail "le modèle d'accords ne fonctionne pas (voir ci-dessus)." "the chord model does not work (see above)." }
-Write-Host (T "  Reconnaissance d'accords installée : utilisée automatiquement pour le prompteur et la grille PDF (réglage « chords_engine »)." "  Chord recognition installed: used automatically for the prompter and the PDF chart (“chords_engine” setting).")
+Write-Host (T "  Reconnaissance d'accords installée : utilisée automatiquement pour le prompteur et la grille PDF (réglage « chords_engine »)." "  Chord recognition installed: used automatically for the prompter and the PDF chart ('chords_engine' setting).")
 exit 0

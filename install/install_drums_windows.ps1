@@ -65,7 +65,7 @@ if (-not $accepted) {
   } else {
     $Ans = ""
     if (-not [Console]::IsInputRedirected) {
-      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly “I accept” (otherwise Enter)")
+      $Ans = Read-Host (T "  Pour installer, tape exactement « J'accepte » (sinon Entrée)" "  To install, type exactly 'I accept' (otherwise Enter)")
     }
     if ($Ans) { $Ans = $Ans.Replace([string][char]0x2019, "'").Trim() }
     if ($Ans -cne $Want) {
