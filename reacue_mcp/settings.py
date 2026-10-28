@@ -33,7 +33,7 @@ DEFAULTS: dict = {
     "stems_model": "htdemucs_6s",  # séparation de stems (action REAPER) : htdemucs_6s (6 stems) | htdemucs_ft (4 HQ) | htdemucs (4)
     "structure_engine": "auto",  # sections : "auto" (SongFormer s'il est installé, sinon ReaCue) | "reacue"
     "chords_engine": "auto",     # accords : "auto" (modèle entraîné s'il est installé, sinon ReaCue) | "reacue"
-    "drums_engine": "auto",      # batterie : "auto" (ADTOF s'il est installé, sinon règles ReaCue) | "reacue"
+    "drums_engine": "auto",      # batterie : auto (ADT_STR > ADTOF > règles), adt-str, adtof, reacue
     "projects_dir": None,        # mode concert : dossier des projets des morceaux ; None = <Documents>/REAPER Media
     "concert_dir": None,         # mode concert : dossier des concerts ; None = <dossier des projets>/Concerts
     # paroles mot par mot (composant optionnel .venv-words)
@@ -87,7 +87,7 @@ def load_settings(path: Path | None = None) -> dict:
     ce = str(out.get("chords_engine") or "auto").lower()
     out["chords_engine"] = ce if ce in ("auto", "reacue") else "auto"
     de = str(out.get("drums_engine") or "auto").lower()
-    out["drums_engine"] = de if de in ("auto", "reacue") else "auto"
+    out["drums_engine"] = de if de in ("auto", "reacue", "adtof", "adt-str") else "auto"
     out["gma3_export"] = out["gma3_export"] is not False and str(out["gma3_export"]).lower() not in ("0", "false", "no")
     return out
 

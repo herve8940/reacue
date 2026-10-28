@@ -438,7 +438,7 @@ def test_pinned_revision_and_requirements():
         assert "reacue_drums.py" in txt and " check " in txt and "J'accepte" in txt and "CC BY-NC-SA 4.0" in txt
     req = (ROOT / "requirements-drums.txt").read_text(encoding="utf-8")
     assert 'torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"' in req
-    assert "numpy<2" in req and "torch==2.5.1" in req and "tensorflow" not in req.lower()
+    assert "numpy<2" in req and "torch>=2.5.1,<2.9" in req and "tensorflow" not in req.lower()
     stems = (ROOT / "requirements-stems.txt").read_text(encoding="utf-8")
     for line in re.findall(r"^torch==.*$", req, re.M):
         assert line in stems                                   # mêmes PyTorch que Demucs (cache partagé)
@@ -538,3 +538,71 @@ def test_notices_mention_adtof():
 def test_prompter_page_knows_open_hihat():
     html = (ROOT / "reacue_mcp" / "web" / "prompteur.html").read_text(encoding="utf-8")
     assert '"HO"' in html and "Charley ouv." in html and "Open hi-hat" in html and "i.cy.op" in html
+
+
+def test_advanced_preserves_raw_notes_and_sparse_hits(tmp_path):
+    db = [0., 2., 4.]
+    a = analysis_for([{}, {}], [(0, 2, 'A')], tmp_path/'drums.wav', db)
+    result = {'notes': [{'t': .123, 'end': .223, 'pitch': 46, 'velocity': 47},
+                        {'t': 2.13, 'end': 2.23, 'pitch': 56, 'velocity': 113}]}
+    out = D.from_advanced(a, result)
+    assert out['engine'] == 'adt-str'
+    assert out['raw_notes'] == result['notes']
+    assert 'HO' in out['lanes']
+    assert any(e.get('hits', {}).get('HO') for e in out['bars'])
+    path = tmp_path/'real.mid'
+    D.drums_to_midi(out, 120, path)
+    data = path.read_bytes()
+    assert bytes([0x99, 46, 47]) in data
+    assert bytes([0x99, 56, 113]) in data  # Percussion outside the simplified UI survives.
+    # First note starts at 118 ticks, preserving .123 s rather than snapping to a grid.
+    assert b'\x76\x99\x2e\x2f' in data
+
+
+def test_advanced_failure_uses_adtof_and_reports_warning(monkeypatch):
+    a = type('A', (), {})()
+    monkeypatch.setattr(D, '_drum_source', lambda *x: ('drums.wav', 0))
+    monkeypatch.setattr(D, '_load_placed', lambda *x: [])
+    monkeypatch.setattr(D, 'advanced_available', lambda *x: True)
+    def fail(*x):
+        raise RuntimeError('unsupported operation')
+    monkeypatch.setattr(D, 'advanced_onsets', fail)
+    monkeypatch.setattr(D, 'available', lambda *x: True)
+    monkeypatch.setattr(D, 'model_onsets', lambda *x: ({}, True))
+    monkeypatch.setattr(D, 'from_model', lambda *x: {'engine': 'adtof'})
+    out = D.detect_drums(a, engine='adt-str')
+    assert out['engine'] == 'adtof' and 'unsupported operation' in out['warning']
+
+
+def test_advanced_setting_and_cache_identity(monkeypatch, tmp_path):
+    a = analysis_for([{}, {}], [(0, 2, 'A')], tmp_path/'drums.wav', [0.,2.,4.])
+    monkeypatch.setenv('REACUE_DRUMS_ENGINE', 'adt-str')
+    assert D.engine_setting() == 'adt-str'
+    first = D.drums_cache_key(a, None)
+    monkeypatch.setenv('REACUE_DRUMS_ENGINE', 'reacue')
+    assert D.drums_cache_key(a, None) != first
+
+
+def test_advanced_empty_result_is_valid(tmp_path):
+    a = analysis_for([{}, {}], [(0, 2, 'A')], tmp_path/'drums.wav', [0.,2.,4.])
+    out = D.from_advanced(a, {'notes': []})
+    assert out['raw_notes'] == [] and len(out['bars']) == 2
+
+
+def test_advanced_subprocess_cache_preserves_extra_percussion(tmp_path, monkeypatch):
+    source = tmp_path/'drums.wav'
+    source.write_bytes(b'audio')
+    calls = []
+    raw = {'engine': 'adt-str', 'onsets': {},
+           'notes': [{'t': .1, 'end': .2, 'pitch': 56, 'velocity': 70}]}
+    def run(*args, **kwargs):
+        calls.append(kwargs)
+        return dict(raw)
+    monkeypatch.setattr(D, 'run_model', run)
+    first, cached = D.advanced_onsets(source, tmp_path)
+    second, cached2 = D.advanced_onsets(source, tmp_path)
+    assert not cached and cached2 and first['notes'] == second['notes'] == raw['notes']
+    assert len(calls) == 1 and calls[0]['script'].endswith('reacue_adt.py')
+    source.write_bytes(b'different audio')
+    D.advanced_onsets(source, tmp_path)
+    assert len(calls) == 2

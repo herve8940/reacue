@@ -423,15 +423,28 @@ def detect_drums(a: Analysis, items=None, engine: str | None = None, install_dir
     y = _load_placed(a, f, shift)
     eng = engine or engine_setting()
     warn = None
-    if eng == "auto" and available(install_dir):
+    if eng in ("auto", "adt-str") and advanced_available(install_dir):
+        try:
+            res, cached = advanced_onsets(f, install_dir)
+            out = from_advanced(a, res, shift)
+            out["model_cached"] = cached
+            return out
+        except Exception as e:
+            warn = "ADT_STR: " + str(e)
+            print(warn, file=sys.stderr)
+    elif eng == "adt-str":
+        warn = "ADT_STR is not installed; using the available fallback."
+    if eng in ("auto", "adt-str", "adtof") and available(install_dir):
         try:
             res, cached = model_onsets(f, install_dir)
             out = from_model(a, y, res, shift)
             out["model_cached"] = cached
+            if warn:
+                out["warning"] = warn
             return out
         except Exception as e:                    # noqa: BLE001 - les règles de ReaCue prennent le relais
             from .i18n import t as _t
-            warn = _t("drums_model_failed", e=e)
+            warn = ((warn + " | ") if warn else "") + _t("drums_model_failed", e=e)
             print(warn, file=sys.stderr)
     out = detect_rules(a, y)
     if warn:
@@ -456,7 +469,7 @@ def drums_cache_key(a: Analysis, items) -> str:
     return hashlib.md5(json.dumps([src and _file_sig(src[0]), src and round(src[1], 4),
                                    [round(float(x), 4) for x in a.downbeats], a.beats_per_bar,
                                    a.denominator, [(s.start_bar, s.end_bar, s.name) for s in a.sections],
-                                   VERSION, model]).encode()).hexdigest()
+                                   VERSION, model, eng, advanced_stamp() if eng in ("auto", "adt-str") else None]).encode()).hexdigest()
 
 
 # --------------------------------------------------------------------------- #
@@ -488,14 +501,14 @@ def available(install_dir: Path | None = None) -> bool:
 def engine_setting() -> str:
     """« auto » (ADTOF s'il est installé) | « reacue » (règles seules) ; REACUE_DRUMS_ENGINE l'emporte."""
     env = os.environ.get("REACUE_DRUMS_ENGINE", "").lower()
-    if env in ("auto", "reacue"):
+    if env in ("auto", "reacue", "adtof", "adt-str"):
         return env
     try:
         from .settings import load_settings
         v = str(load_settings().get("drums_engine") or "auto").lower()
     except Exception:
         v = "auto"
-    return v if v in ("auto", "reacue") else "auto"
+    return v if v in ("auto", "reacue", "adtof", "adt-str") else "auto"
 
 
 def run_model(audio: str, out_json: Path, install_dir: Path | None = None, timeout: float = TIMEOUT_S,
@@ -526,7 +539,7 @@ def run_model(audio: str, out_json: Path, install_dir: Path | None = None, timeo
             if time.time() - t0 > timeout:
                 proc.kill()
                 proc.wait()
-                raise RuntimeError(t("drums_model_timeout", min=max(1, int(timeout // 60))))
+                raise RuntimeError(("ADT_STR" if Path(sc).name == "reacue_adt.py" else "ADTOF") + f" timeout ({int(timeout // 60)} min)")
             time.sleep(0.2)
     try:
         res = json.loads(out_json.read_text(encoding="utf-8"))
@@ -538,6 +551,11 @@ def run_model(audio: str, out_json: Path, install_dir: Path | None = None, timeo
             msg = json.loads(status.read_text(encoding="utf-8")).get("message") or ""
         except (OSError, ValueError):
             pass
+        if not msg:
+            try:
+                msg = log.read_text(encoding="utf-8", errors="replace").strip().splitlines()[-1][:500]
+            except (OSError, IndexError):
+                pass
         raise RuntimeError(msg or f"exit {proc.returncode} ({log})")
     return res
 
@@ -835,6 +853,13 @@ def drums_to_midi(d: dict, bpm: float, path, beats_per_bar: int = 4, ppq: int = 
                 vel = 110 if (lane == "CR" or (lane in ("HH", "RD") and s % (steps // beats_per_bar) == 0)) else 90
                 ev.append((t, 1, GM[lane], vel))
                 ev.append((t + max(1, tps // 2), 0, GM[lane], 0))
+    if d.get("engine") == "adt-str" and "raw_notes" in d:
+        ev = []
+        for note in d["raw_notes"]:
+            start = max(0, round(float(note["t"]) * bpm / 60 * ppq))
+            end = max(start + 1, round(float(note["end"]) * bpm / 60 * ppq))
+            ev.extend([(start, 1, int(note["pitch"]), int(note["velocity"])),
+                       (end, 0, int(note["pitch"]), 0)])
     ev.sort(key=lambda x: (x[0], x[1]))
     tempo = int(round(60_000_000 / bpm))
     trk = bytearray(b"\x00\xff\x51\x03" + tempo.to_bytes(3, "big"))
@@ -849,3 +874,86 @@ def drums_to_midi(d: dict, bpm: float, path, beats_per_bar: int = 4, ppq: int = 
     with open(path, "wb") as fh:
         fh.write(data)
     return str(path)
+
+
+# Detailed ADT_STR transcription is isolated from the legacy PyTorch environment.
+def advanced_python(install_dir=None):
+    d = Path(install_dir or ROOT) / ".venv-drums-advanced"
+    return d / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+
+
+def advanced_available(install_dir=None):
+    d = Path(install_dir or ROOT)
+    from reacue_adt import CODE_REV, MODEL_REV
+    try:
+        stamp = (d / "drums/adt-str-model/.ready").read_text().splitlines()
+    except OSError:
+        return False
+    return (advanced_python(d).is_file() and (d / "drums/ADT_STR/adt_transcriber.py").is_file()
+            and stamp == [CODE_REV, MODEL_REV])
+
+
+def advanced_stamp(install_dir=None):
+    from reacue_adt import CODE_REV, MODEL_REV, VARIANT
+    return [CODE_REV, MODEL_REV, VARIANT, advanced_available(install_dir)]
+
+
+def advanced_onsets(f, install_dir=None):
+    import hashlib
+    import json
+    import tempfile
+    d = Path(install_dir or ROOT)
+    key = hashlib.sha1(json.dumps([_file_sig(f), advanced_stamp(d)]).encode()).hexdigest()
+    cp = Path(f).parent / ".reacue" / (Path(f).stem + "_drums_adt-str.json")
+    try:
+        cached = json.loads(cp.read_text())
+        if cached.get("key") == key and isinstance(cached.get("notes"), list):
+            return cached, True
+    except (OSError, ValueError):
+        pass
+    with tempfile.TemporaryDirectory(prefix="reacue_adt_") as tmp:
+        result = run_model(str(f), Path(tmp) / "out.json", d, timeout=3600,
+                           python=str(advanced_python(d)), script=str(d / "reacue_adt.py"))
+    if result.get("engine") != "adt-str" or not isinstance(result.get("notes"), list):
+        raise ValueError("Invalid ADT_STR result")
+    result["key"] = key
+    try:
+        cp.parent.mkdir(parents=True, exist_ok=True)
+        cp.write_text(json.dumps(result))
+    except OSError:
+        pass
+    return result, False
+
+
+# UI lanes are a projection only: all 26 GM classes remain in raw_notes / MIDI.
+ADVANCED_LANES = {35:"BD",36:"BD",37:"SD",38:"SD",40:"SD",42:"HH",44:"HH",46:"HO",
+                  41:"FT",43:"FT",45:"T2",47:"T2",48:"T1",50:"T1",
+                  49:"CR",52:"CR",55:"CR",57:"CR",51:"RD",53:"RD",59:"RD"}
+
+
+def from_advanced(a, result, shift=0.0):
+    import math
+    notes = []
+    for note in result["notes"]:
+        t, end = float(note["t"]) + shift, float(note["end"]) + shift
+        pitch, velocity = int(note["pitch"]), int(note["velocity"])
+        if math.isfinite(t) and math.isfinite(end) and 0 <= t < a.duration and end > t and 0 <= pitch <= 127 and 1 <= velocity <= 127:
+            notes.append(dict(t=t, end=min(end, a.duration), pitch=pitch, velocity=velocity))
+    db = np.asarray(a.downbeats[:a.n_bars + 1], float)
+    times = np.array([n["t"] for n in notes])
+    steps = choose_steps(times, db, a.beats_per_bar, a.denominator)
+    bi, si, ok = quantize(times, db, steps)
+    bars = [{} for _ in range(a.n_bars)]
+    for note, b, step, valid in zip(notes, bi, si, ok):
+        lane = ADVANCED_LANES.get(note["pitch"])
+        if valid and lane:
+            hits = bars[b].setdefault(lane, {})
+            hits[int(step)] = max(hits.get(int(step), -100), 20 * np.log10(note["velocity"] / 127))
+    rest = [not any(bar.values()) for bar in bars]
+    patterns, out = group(bars, a.sections, a.n_bars, rest, steps)
+    for name, pattern in patterns.items():
+        pattern["name"] = "Groove " + name
+        pattern.pop("sections", None)
+    return dict(engine="adt-str", version=VERSION, steps=steps, lanes=[l for l in LANES if any(l in b for b in bars)],
+                bars=out, patterns=patterns, offset_ms=0, raw_notes=notes,
+                model_revision=result.get("model_revision"), seconds=result.get("seconds"))

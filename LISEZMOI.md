@@ -1255,3 +1255,6 @@ S'appuie sur [librosa](https://librosa.org/), [NumPy](https://numpy.org/), [SciP
 [Model Context Protocol](https://modelcontextprotocol.io/), [uv](https://docs.astral.sh/uv/) et, bien sûr,
 [REAPER](https://www.reaper.fm/) de Cockos. ReaCue n'est affilié ni à Cockos ni à Anthropic. Liste complète :
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) ; pour citer ReaCue : [CITATION.cff](CITATION.cff).
+
+Option : [transcription de batterie avancée ADT_STR](docs/DRUMS_ADVANCED.md), avec
+export MIDI conservant placement et vélocités, et installateur Mac/Windows séparé.

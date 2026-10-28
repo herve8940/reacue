@@ -1,0 +1,13 @@
+# Isolated inference dependencies; no training stack or TorchCodec required.
+torch==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+torchaudio==2.2.2 ; sys_platform == "darwin" and platform_machine == "x86_64"
+torch==2.8.0 ; sys_platform != "darwin" or platform_machine != "x86_64"
+torchaudio==2.8.0 ; sys_platform != "darwin" or platform_machine != "x86_64"
+transformers==4.44.2
+numpy<2
+soundfile
+pretty_midi
+safetensors
+omegaconf
+huggingface-hub<1
+PyYAML

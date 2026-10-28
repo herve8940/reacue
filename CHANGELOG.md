@@ -498,3 +498,12 @@ First public (private-repository) release / Première version publique (dépôt 
 - `textutil` (RTF) only used on macOS.
 - Development tools moved to `tools/` (no private paths; `struct_eval.py` reads its songs from a private JSON).
 - Package version `0.9.0b1`.
+
+### Optional ADT_STR drum transcription
+
+- Added isolated advanced drum installer for macOS and Windows, pinned pretrained
+  weights, real inference installation check and automatic fallback to ADTOF/rules.
+- Preserved raw GM notes, measured timing and velocity in advanced MIDI exports;
+  existing prompter lanes remain a simplified view.
+- CPU smoke inference verified with PyTorch 2.8.0 and Intel-compatible 2.2.2 on Linux.
+  Actual Mac/Windows validation and musical accuracy comparison remain pending.

@@ -1175,3 +1175,6 @@ Built on [librosa](https://librosa.org/), [NumPy](https://numpy.org/), [SciPy](h
 [Model Context Protocol](https://modelcontextprotocol.io/) Python SDK, [uv](https://docs.astral.sh/uv/)
 and, of course, [REAPER](https://www.reaper.fm/) by Cockos. ReaCue is not affiliated with Cockos or
 Anthropic. Full list: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md); how to cite: [CITATION.cff](CITATION.cff).
+
+Optional: [advanced ADT_STR drum transcription](docs/DRUMS_ADVANCED.md), with raw
+MIDI timing/velocity export and a separate macOS/Windows installer.

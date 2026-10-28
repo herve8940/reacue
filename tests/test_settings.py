@@ -33,3 +33,13 @@ def test_server_new_options_uses_settings(lang):
     from reacue_mcp import server
     o = server._new_options(count_in_bars=None, cue_lead_bars=3)
     assert o.count_in_bars == 4 and o.cue_lead_bars == 3 and o.voice_name == "Microsoft Zira Desktop"
+
+
+def test_advanced_drums_setting_does_not_change_other_engines(tmp_path):
+    import json
+    from reacue_mcp.settings import load_settings
+    p = tmp_path/'settings.json'
+    p.write_text(json.dumps(dict(drums_engine='adt-str', chords_engine='adt-str', structure_engine='adt-str')))
+    result = load_settings(p)
+    assert result['drums_engine'] == 'adt-str'
+    assert result['chords_engine'] == result['structure_engine'] == 'auto'

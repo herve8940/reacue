@@ -144,3 +144,16 @@ dependencies follow their own licences (see PyPI).
   ICASSP 2023, arXiv:2211.08553. https://arxiv.org/abs/2211.08553
 - Junyan Jiang, Ke Chen, Wei Li, Gus Xia, *Large-Vocabulary Chord Transcription via Chord Structure
   Decomposition*, ISMIR 2019. https://archives.ismir.net/ismir2019/paper/000078.pdf
+
+## ADT_STR — optional advanced drum transcription
+
+Melucci, Merialdo and Akama, ADT_STR (2026).
+Code: https://github.com/pier-maker92/ADT_STR
+Weights: https://huggingface.co/Pierfrancesco/adt-str
+Code revision: 77dbef225e7029478ebfb916f20c7a00274f0f12.
+Weights revision: a33c5c6b191a4ca1e0f6dc22140947485eb36ce8, setting-tau-0.8.
+Upstream licence: CC BY-SA 4.0. Downloaded separately, including upstream
+LICENSE/README. ReaCue's adapter preserves the predicted events and projects
+supported GM drum notes onto its existing nine display lanes; it does not retrain
+or modify the model weights. Refer to the upstream licence for attribution and
+share-alike conditions when distributing adaptations.
