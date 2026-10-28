@@ -39,6 +39,19 @@ language with Claude (MCP server).
 
 *(Screenshots of a made-up “Demo Song”: structure, chords, lyrics and drums are all invented.)*
 
+## GPU acceleration on Mac
+
+On compatible Macs, ReaCue automatically selects Metal/MPS for Demucs (stems), SongFormer
+(structure), wav2vec2 (lyrics inference), and ADTOF (drums). Availability is checked in each
+component's PyTorch environment; Intel Macs without MPS keep using the CPU. Unsupported MPS
+operations may run on CPU. If a model still fails (unsupported operation or GPU memory pressure),
+it retries once on CPU with a warning. Installer checks exercise the same inference paths.
+
+Final CTC word alignment and chord recognition stay on CPU; Whisper keeps its existing CUDA/CPU
+selection. Speed depends on the Mac, model and available unified memory. Set `REACUE_DEVICE=cpu`
+in the ReaCue process environment (for example the MCP configuration's `env` section) to force CPU
+on Mac. Models and licences are unchanged. Real Apple Silicon hardware validation is still pending.
+
 ## Contents
 
 - [Features](#features)

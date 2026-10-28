@@ -139,6 +139,7 @@ def fake_install(tmp_path, segments, monkeypatch, sleep=0, fail=False):
     (sf / "app.py").write_text(FAKE_APP, encoding="utf-8")
     (sf / "torch.py").write_text("def set_num_threads(n): pass\n__version__ = 'fake'\n", encoding="utf-8")
     shutil.copy(ROOT / "reacue_structure.py", inst / "reacue_structure.py")
+    shutil.copy(ROOT / "reacue_metal.py", inst / "reacue_metal.py")
     py = ST.structure_python(inst)
     py.parent.mkdir(parents=True)
     if os.name == "nt":
@@ -531,6 +532,7 @@ def test_reuse_from_windows_profile_and_cli(tmp_path, monkeypatch):
     inst = tmp_path / "ReaCue"
     inst.mkdir()
     shutil.copy(ROOT / "reacue_structure.py", inst / "reacue_structure.py")
+    shutil.copy(ROOT / "reacue_metal.py", inst / "reacue_metal.py")
     env = {**os.environ, "HOME": str(tmp_path / "vide"), "USERPROFILE": str(tmp_path / "vide")}
     env.pop("HF_HOME", None)
     r = subprocess.run([sys.executable, str(inst / "reacue_structure.py"), "reuse", "--lang", "en"],

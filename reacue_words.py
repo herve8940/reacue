@@ -17,7 +17,7 @@ sur la machine (~/.cache/huggingface) est utilisé tel quel s'il contient le mod
             "lines": [{"id", "score", "words": [{"w", "t", "end", "score"}]} | {"id", "error"}]}
     <python> reacue_words.py check [--lang fr|en] [--langs fr,en]   # télécharge, teste, « WORDS_OK »
 
-Calcul sur CPU (GPU NVIDIA utilisé s'il est disponible), une ligne à la fois (mémoire modeste).
+Inférence wav2vec2 sur Metal/MPS si disponible sur Mac, sinon CPU ; alignement CTC sur CPU.
 """
 from __future__ import annotations
 
@@ -29,6 +29,10 @@ import time
 import traceback
 import unicodedata
 from pathlib import Path
+
+import reacue_metal
+
+reacue_metal.configure()
 
 HERE = Path(__file__).resolve().parent
 WORDS_DIR = Path(os.environ.get("REACUE_WORDS_DIR") or HERE / "words")
@@ -224,8 +228,7 @@ def emissions(model, wav, normalize: bool = True):
     x = wav.float()
     if normalize:
         x = (x - x.mean()) / torch.sqrt(x.var() + 1e-7)
-    with torch.inference_mode():
-        logits, _ = model(x.unsqueeze(0))
+    logits, _ = reacue_metal.forward(model, x.unsqueeze(0))
     em = torch.log_softmax(logits.float(), dim=-1)
     return em, len(wav) / SR / max(1, em.shape[1])
 
@@ -350,7 +353,7 @@ def check(lang: str = "fr", langs: str = "fr,en") -> int:
               + repr(e))
         return 1
     print(f"  python {sys.version.split()[0]} | torch {torch.__version__} | torchaudio {torchaudio.__version__} | "
-          f"numpy {np.__version__}")
+          f"numpy {np.__version__} | preferred device: {reacue_metal.device(torch)}")
     for lg in [x.strip() for x in langs.split(",") if x.strip() in MODELS]:
         print(t(f"  modèle {lg} : {MODELS[lg]} (environ 1,3 Go la première fois)…",
                 f"  {lg} model: {MODELS[lg]} (about 1.3 GB the first time)…"), flush=True)

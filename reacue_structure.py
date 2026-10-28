@@ -16,7 +16,7 @@ Modèles : dans <ReaCue>/structure/SongFormer/src/SongFormer/ckpts et <ReaCue>/s
         # Les sources ne sont jamais modifiées ni supprimées.
 
 Fenêtre globale : 420 s (réglage du modèle) si la mémoire vive est >= 15 Go, sinon 120 s (moins précis
-mais tient en ~4 Go). Calcul sur CPU (GPU NVIDIA utilisé s'il est disponible).
+mais tient en ~4 Go). Calcul sur CUDA, Metal/MPS sur Mac compatible, sinon CPU.
 """
 from __future__ import annotations
 
@@ -28,6 +28,10 @@ import time
 import traceback
 import types
 from pathlib import Path
+
+import reacue_metal
+
+reacue_metal.configure()
 
 HERE = Path(__file__).resolve().parent
 STRUCT_DIR = Path(os.environ.get("REACUE_STRUCTURE_DIR") or HERE / "structure")
@@ -116,10 +120,31 @@ def init_models(app):
     app.download_all(use_mirror=False)
     app.initialize_models(model_name="SongFormer", checkpoint="SongFormer.safetensors",
                           config_path="SongFormer.yaml")
+    import torch
+    if reacue_metal.device(torch) == "mps":
+        try:
+            _move_models(app, "mps")
+        except (RuntimeError, NotImplementedError, TypeError) as error:
+            _move_models(app, "cpu")
+            reacue_metal.cpu_fallback(error)
+
+
+def _move_models(app, target):
+    # Upstream initializes on CUDA/CPU and reads this global for input tensors.
+    for name in ("muq_model", "musicfm_model", "msa_model"):
+        getattr(app, name).to(target)
+    app.device = target
 
 
 def segments_from_app(app, audio: str, window: int) -> list[dict]:
-    _, msa = app.process_audio(audio, win_size=window, hop_size=window)
+    try:
+        _, msa = app.process_audio(audio, win_size=window, hop_size=window)
+    except (RuntimeError, NotImplementedError, TypeError) as error:
+        if str(getattr(app, "device", "cpu")) != "mps":
+            raise
+        _move_models(app, "cpu")
+        reacue_metal.cpu_fallback(error)
+        _, msa = app.process_audio(audio, win_size=window, hop_size=window)
     msa = app.rule_post_processing(msa)
     return [{"start": float(s["start"]), "end": float(s["end"]), "label": str(s["label"])}
             for s in app.format_as_segments(msa)]
@@ -326,6 +351,7 @@ def check(lang: str = "fr", seconds: int = 20) -> int:
             "  downloading the models (about 2 GB the first time)…"), flush=True)
     t0 = time.time()
     init_models(app)
+    print(f"  device: {getattr(app, 'device', 'cpu')}")
     print(t(f"  modèles prêts ({time.time() - t0:.0f} s)", f"  models ready ({time.time() - t0:.0f} s)"), flush=True)
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:

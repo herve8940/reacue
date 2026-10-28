@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — macOS Metal/MPS
+
+- macOS: use available MPS for SongFormer, wav2vec2 inference and ADTOF; retain CPU outputs for CTC/NumPy.
+- Retry failed Metal inference on CPU, including Demucs separation and installer benchmarks.
+- Preserve explicit `PYTORCH_ENABLE_MPS_FALLBACK`; allow `REACUE_DEVICE=cpu` on Mac.
+- Add simulated device, fallback and worker regression tests. Real Mac performance validation pending.
+
 ## 1.2.2 — 2026-10-27 — correction macOS (séparation de stems)
 
 ### Corrections
