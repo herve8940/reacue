@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="reacue_studio/travail.css">
 <link rel="stylesheet" href="reacue_studio/concert.css">
 <link rel="stylesheet" href="reacue_studio/biblio.css">
+<link rel="stylesheet" href="reacue_studio/studio-pro.css">
 </head>
 <body class="rc">
 <div class="rc-app">
@@ -25,6 +26,7 @@
       <button data-mode="lumiere" data-t="navLumiere">LUMIÈRE</button>
     </nav>
     <button class="rc-lang" id="langBtn" aria-label="Langue / Language">EN</button>
+    <div class="rc-view-tools"><button id="stageView" aria-pressed="false">MODE SCÈNE</button><button id="fullView" aria-pressed="false">PLEIN ÉCRAN</button></div>
     <div class="rc-lcds" aria-live="off">
       <div class="rc-lcd"><div class="k" data-t="lPos">POSITION</div><div class="v" id="lcdPos">---.-.-</div></div>
       <div class="rc-lcd"><div class="k" data-t="lTime">TEMPS</div><div class="v" id="lcdTime">00:00.00</div></div>
@@ -319,5 +321,6 @@
 <script src="reacue_studio/biblio.js"></script>
 <script src="reacue_studio/groupe.js"></script>
 <script src="reacue_studio/concert.js"></script>
+<script src="reacue_studio/presentation.js"></script>
 </body>
 </html>

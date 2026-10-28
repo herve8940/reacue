@@ -81,7 +81,7 @@
     const p = l.split("\t"), fl = parseInt(p[3], 10) || 0;
     return { idx: parseInt(p[1], 10), name: (p[2] || "").replace(/\\t/g, " ").replace(/\\n/g, " ").replace(/\\\\/g, "\\"),
       flags: fl, folder: !!(fl & 1), mute: !!(fl & 8), solo: !!(fl & 16) || !!(fl & 32), vol: parseFloat(p[4]) || 0,
-      pan: parseFloat(p[5]) || 0, peak: (parseInt(p[6], 10) || -1500) / 10, color: parseInt(p[13], 10) || 0 };
+      pan: parseFloat(p[5]) || 0, peak: Number.isFinite(parseFloat(p[6])) ? parseFloat(p[6]) / 10 : -150, color: parseInt(p[13], 10) || 0 };
   }).filter(t => t.idx > 0);
   RC.extVal = (txt, key) => {
     const l = txt.split("\n").find(x => x.startsWith("EXTSTATE\tReaCue\t" + key + "\t") || x === "EXTSTATE\tReaCue\t" + key);

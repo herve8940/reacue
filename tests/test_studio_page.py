@@ -543,3 +543,85 @@ def test_prompter_ready_button_and_heartbeat():
     assert o["mine"] and o["mine"][0] == "phone0xx|bass|Zo%C3%A9|1|E1" and len(o["mine"]) >= 2   # envoi doublé
     assert o["label"] == "Prêt ✓" and o["confirmed"]
     assert o["reset"] == "Prêt ?" and o["stored"] == "0"
+
+
+def test_stage_presentation_persists_without_transport_commands():
+    def go(M, browser, base):
+        _setup(M)
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(base + "/studio.html?lang=fr")
+        page.wait_for_selector(".tv-row")
+        page.locator("#stageView").click()
+        assert page.locator("body").evaluate("e => e.classList.contains('stage-view')")
+        page.reload()
+        page.wait_for_selector(".tv-row")
+        assert page.locator("#stageView").get_attribute("aria-pressed") == "true"
+        page.locator("#stageView").click()
+        assert page.locator("#nav").is_visible()
+        assert not any(x.startswith("SET/") or x.isdigit() for x in M.FakeReaper.log)
+    _run(go)
+
+
+def test_keyboard_mix_controls_use_native_reaper_commands():
+    def go(M, browser, base):
+        _setup(M)
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(base + "/studio.html?lang=fr")
+        rail = page.locator(".tv-rail").first
+        rail.wait_for()
+        rail.focus(); page.keyboard.press("Home")
+        page.wait_for_timeout(200)
+        assert any("/VOL/1.000000" in x for x in M.FakeReaper.log)
+        knob = page.locator(".tv-knob").first
+        knob.focus(); page.keyboard.press("ArrowRight")
+        page.wait_for_timeout(200)
+        assert any("/PAN/" in x for x in M.FakeReaper.log)
+        assert rail.get_attribute("aria-valuetext")
+        assert knob.get_attribute("aria-valuenow") is not None
+    _run(go)
+
+
+def test_space_does_not_control_hidden_practice_screen():
+    def go(M, browser, base):
+        _setup(M)
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(base + "/studio.html?lang=fr#lumiere")
+        page.wait_for_selector("#lumiere", state="visible")
+        page.locator("body").click(position={"x": 5, "y": 5})
+        M.FakeReaper.log = []
+        page.keyboard.press("Space");page.wait_for_timeout(200)
+        assert not any(x.isdigit() for x in M.FakeReaper.log)
+        assert page.evaluate("RC.parseTracks('TRACK\\t1\\tTest\\t0\\t1\\t0\\t0')[0].peak") == 0
+    _run(go)
+
+
+def test_prompter_stage_mode_preserves_role_and_avoids_phone_overflow():
+    def go(M, browser, base):
+        _setup(M)
+        page = browser.new_page(viewport={"width": 390, "height": 844})
+        page.goto(base + "/prompteur.html?role=guitars&lang=fr")
+        page.wait_for_selector("#nowName")
+        page.locator("#focusBtn").click()
+        assert page.locator("#focusBtn").get_attribute("aria-pressed") == "true"
+        assert page.locator("#roleBtn").is_visible() and page.locator("#dot").is_visible()
+        assert page.locator("#next").is_visible()
+        assert not page.evaluate("document.documentElement.scrollWidth > innerWidth")
+        page.reload()
+        assert page.locator("#focusBtn").get_attribute("aria-pressed") == "true"
+        page.locator("#focusBtn").click()
+        assert page.locator("#langBtn").is_visible()
+    _run(go)
+
+
+def test_space_routes_to_concert_transport_and_ignores_repeat():
+    def go(M, browser, base):
+        _concert(M)
+        page = browser.new_page(viewport={"width": 1440, "height": 900})
+        page.goto(base + "/studio.html?lang=fr#concert")
+        page.wait_for_selector("#concert", state="visible")
+        page.evaluate("window.calls=[]; document.getElementById('csPlay').onclick=()=>calls.push('concert'); document.getElementById('bPlay').onclick=()=>calls.push('practice'); null")
+        page.locator("body").click(position={"x": 5, "y": 5})
+        page.keyboard.press("Space")
+        page.evaluate("document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',repeat:true,bubbles:true}))")
+        assert page.evaluate("calls") == ["concert"]
+    _run(go)
