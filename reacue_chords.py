@@ -31,6 +31,10 @@ import traceback
 import types
 from pathlib import Path
 
+import reacue_performance
+
+reacue_performance.configure()
+
 HERE = Path(__file__).resolve().parent
 CHORDS_DIR = Path(os.environ.get("REACUE_CHORDS_DIR") or HERE / "chords")
 REPO = CHORDS_DIR / "model"
@@ -220,7 +224,7 @@ def analyze(audio: str, out: str, status: str | None = None, beats_file: str | N
         ChordNet, XHMMDecoder = load_repo()
         import numpy as np
         import torch
-        torch.set_num_threads(max(1, os.cpu_count() or 1))
+        reacue_performance.configure_torch(torch)
         key = key or file_key(audio)
         probs = None
         if pc and pc.is_file():

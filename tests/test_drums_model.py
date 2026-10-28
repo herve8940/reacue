@@ -271,6 +271,7 @@ def fake_install(tmp_path, onsets, monkeypatch, sleep=0, fail=False):
     (pkg.parent / "torch.py").write_text(FAKE_TORCH, encoding="utf-8")
     shutil.copy(ROOT / "reacue_drums.py", inst / "reacue_drums.py")
     shutil.copy(ROOT / "reacue_metal.py", inst / "reacue_metal.py")
+    shutil.copy(ROOT / "reacue_performance.py", inst / "reacue_performance.py")
     py = D.drums_python(inst)
     py.parent.mkdir(parents=True)
     if os.name == "nt":

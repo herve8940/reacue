@@ -881,3 +881,25 @@ def test_lyrics_pill_auto_draft(concert, tmp_path, lang):
     frame(L, g); frame(L, g)
     T = TL.texts(g)
     assert ("Paroles : 2 lignes" if lang == "fr" else "Lyrics: 2 lines") in T and lab not in T, T
+
+
+def test_performance_controls_keep_other_settings(concert, tmp_path):
+    L, g = rt(concert, proj=tmp_path / "performance.RPP", tracks=False)
+    sp = Path(g.RES) / "ReaCueMCP" / "reacue_settings.json"
+    sp.write_text(json.dumps({"language": "fr", "custom_key": 7, "stems_model": "htdemucs_6s"}))
+    open_window(L, g)
+    frame(L, g)
+    press_text(L, g, "Réglages", exact=True)
+    frame(L, g)
+    press_text(L, g, "Réglages avancés", exact=True)
+    frame(L, g)
+    press_text(L, g, "Rapide", exact=True)
+    frame(L, g)
+    assert any("QUALITÉ" in text.upper() for text in TL.texts(g)), (sp.read_text(), TL.texts(g))
+    press_text(L, g, "4", exact=True)
+    data = json.loads(sp.read_text())
+    assert data["performance_profile"] == "fast" and data["cpu_threads"] == 4
+    assert data["stems_model"] == "htdemucs_6s" and data["custom_key"] == 7
+    frame(L, g)
+    press_text(L, g, "Standard", exact=True)
+    assert json.loads(sp.read_text())["performance_profile"] == "standard"

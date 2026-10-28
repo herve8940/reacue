@@ -400,6 +400,9 @@ def memo_key(a, items: list[dict] | None, lang: str, install_dir: Path | None = 
     from .lyrics import _voice_source
     src = _voice_source(a, items)
     h = hashlib.sha1(f"{ENGINE}:{MODEL}:{CACHE_VERSION}:{lang}:{_install_stamp(install_dir)}".encode())
+    import reacue_performance
+    if reacue_performance.profile() == "fast":
+        h.update(b":fast")
     if src:
         p = Path(src[0])
         try:

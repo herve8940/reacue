@@ -13,6 +13,8 @@ from .bridge import BRIDGE_DIR
 SETTINGS_NAME = "reacue_settings.json"
 
 DEFAULTS: dict = {
+    "performance_profile": "standard",  # standard | fast (compromis vitesse/qualité explicite)
+    "cpu_threads": 0,             # 0 = automatique ; sinon nombre de threads PyTorch
     "language": "fr",            # "fr" | "en" : régions, annonces, prompteur, messages
     "announce_voice": None,      # voix des annonces (macOS : Thomas… ; Windows : Microsoft Hortense…) ; None = auto
     "count_voice": None,         # voix du décompte ; None = auto (voix anglaise si count_lang = "en")

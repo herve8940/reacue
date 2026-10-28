@@ -35,6 +35,10 @@ import time
 import traceback
 from pathlib import Path
 
+import reacue_performance
+
+reacue_performance.configure()
+
 HERE = Path(__file__).resolve().parent
 WORDS_DIR = Path(os.environ.get("REACUE_WORDS_DIR") or HERE / "words")
 WHISPER_DIR = WORDS_DIR / "whisper"
@@ -280,7 +284,9 @@ def transcribe_array(model, y, lang: str = "auto", status: Path | None = None, d
     regions = voiced_regions(y)
     clips = group_clips(regions)
     ym = masked(y, regions)
-    opts = dict(DECODE, **(decode or {}))
+    opts = dict(DECODE)
+    opts.update(reacue_performance.whisper_options())
+    opts.update(decode or {})
     opts["fp16"] = bool(torch.cuda.is_available() and str(model.device).startswith("cuda"))
     if lang in (None, "", "auto"):
         _write_status(status, "running", step="langue / language")
@@ -317,7 +323,7 @@ def transcribe(audio: str, out: str, lang: str = "auto", model_name: str = DEFAU
     try:
         _write_status(st, "running", step="chargement du modèle / loading model")
         import torch
-        torch.set_num_threads(max(1, os.cpu_count() or 1))
+        reacue_performance.configure_torch(torch)
         model = load(model_name)
         y = _load_audio(audio)
         res = transcribe_array(model, y, lang, st)

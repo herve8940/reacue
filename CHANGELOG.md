@@ -2,6 +2,11 @@
 
 ## Unreleased — macOS Metal/MPS
 
+- Add explicit Standard/Fast performance profiles and CPU thread controls in advanced settings.
+- Add SongFormer CPU calibration (warm-up and repeated inference, one model load) with a Mac launcher.
+- Fast mode reduces Demucs overlap/random shifts, SongFormer automatic context and Whisper decoding work; quality tradeoffs are documented.
+- Preserve selected stem models and invalidate profile-dependent structure/transcription caches.
+
 - macOS: use available MPS for SongFormer, wav2vec2 inference and ADTOF; retain CPU outputs for CTC/NumPy.
 - Retry failed Metal inference on CPU, including Demucs separation and installer benchmarks.
 - Preserve explicit `PYTORCH_ENABLE_MPS_FALLBACK`; allow `REACUE_DEVICE=cpu` on Mac.

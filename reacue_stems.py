@@ -46,6 +46,10 @@ import traceback
 
 from pathlib import Path
 
+import reacue_performance
+
+reacue_performance.configure()
+
 import reacue_metal
 
 reacue_metal.configure()
@@ -251,7 +255,7 @@ def separate(input_file: str, out: str, model: str = DEFAULT_MODEL, repo: str | 
 
         from demucs.separate import main as demucs_main
 
-        extra_args = []
+        extra_args = reacue_performance.demucs_args()
 
         if repo:
 
@@ -262,6 +266,9 @@ def separate(input_file: str, out: str, model: str = DEFAULT_MODEL, repo: str | 
         try:
 
             import torch
+
+            if reacue_performance.cpu_threads():
+                reacue_performance.configure_torch(torch)
 
             if torch.cuda.is_available():
 
@@ -370,6 +377,9 @@ def check(lang: str = "fr", seconds: int = 10) -> int:
 
 
     # Détection de l'accélération matérielle
+
+    if reacue_performance.cpu_threads():
+        reacue_performance.configure_torch(torch)
 
     if torch.cuda.is_available():
 

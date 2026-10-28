@@ -52,6 +52,31 @@ selection. Speed depends on the Mac, model and available unified memory. Set `RE
 in the ReaCue process environment (for example the MCP configuration's `env` section) to force CPU
 on Mac. Models and licences are unchanged. Real Apple Silicon hardware validation is still pending.
 
+### Performance controls and CPU calibration
+
+In **Settings → Advanced settings**, select **Performance: Standard / Fast** and
+**CPU threads: auto / 1 / 2 / 4 / 8**. Standard preserves existing quality settings. Fast uses 10%
+Demucs overlap without random shifts, limits the automatic SongFormer window to 120s, and uses
+Whisper greedy decoding without temperature retries. Output quality may change; compare stems,
+structure and lyrics. The selected stem model and number of sources are preserved.
+
+On Intel or Apple Silicon Macs, double-click **Optimize ReaCue Mac.command** to compare CPU thread
+counts using actual SongFormer inference: one model load, warm-up, then two timings per count.
+The fastest count on that sample is saved without changing the quality profile. This calibration
+forces CPU; normal analysis retains MPS when available. It needs the installed Structure component
+and can take several minutes. The default 20s synthetic sample is not a guarantee for real songs
+or other models. To use representative audio:
+
+```bash
+.venv-structure/bin/python reacue_structure.py benchmark --input "/path/excerpt.wav" --threads 1,2,4 --save
+```
+
+JSON settings: `performance_profile` (`standard` / `fast`) and `cpu_threads` (0 = auto).
+Environment overrides: `REACUE_PERFORMANCE_PROFILE`, `REACUE_CPU_THREADS`. Thread counts are capped
+at logical CPU count. Select Standard and auto to restore original behavior. Structure and
+transcription caches distinguish profiles; existing lyric drafts, stems and projects are kept.
+Settings affect future computations. Real-device speed measurements are still required.
+
 ## Contents
 
 - [Features](#features)

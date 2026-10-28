@@ -7,6 +7,8 @@ return function(ctx)
   local L, U, T, R, SEP = ctx.L, ctx.U, ctx.T, ctx.R, ctx.SEP
   local TXT = {
     fr = {
+      performance = "Performances", standard = "Standard", fast = "Rapide", cpu_threads = "Threads CPU",
+      fast_note = "Rapide : séparation moins lissée, contexte de structure réduit, transcription simplifiée. Qualité à vérifier.",
       general = "Général", cues = "Décompte et annonces", outputs = "Click et voix", other = "Analyse, séparation, dossiers",
       language = "Langue", count_in = "Décompte avant le morceau", cue_lead = "Annonce avant la section",
       bars_n = "%d mes.", count_lang = "Décompte", voice_cues = "Annonces vocales", count_in_voice = "Décompte parlé",
@@ -28,6 +30,8 @@ return function(ctx)
       count_rate = "Débit du décompte", rate_n = "%d mots/min", announce = "Annonces", install_sf = "Installer",
     },
     en = {
+      performance = "Performance", standard = "Standard", fast = "Fast", cpu_threads = "CPU threads",
+      fast_note = "Fast: less separation smoothing, shorter structure context, simpler transcription. Check quality.",
       general = "General", cues = "Count-in and spoken cues", outputs = "Click and voice", other = "Analysis, separation, folders",
       language = "Language", count_in = "Count-in before the song", cue_lead = "Cue before the section",
       bars_n = "%d bars", count_lang = "Count", voice_cues = "Spoken cues", count_in_voice = "Spoken count-in",
@@ -55,6 +59,7 @@ return function(ctx)
     language = "fr", announce_voice = nil, count_voice = nil, count_lang = "en", count_in_bars = 2, cue_lead_bars = 2,
     voice_cues = true, voice_count_in = true, voice_count_each = true, voice_volume = 0.8, click_volume = 0.5,
     click_to_master = true, click_hw_output = nil, tempo_mode = "auto", stems_model = "htdemucs_6s",
+    performance_profile = "standard", cpu_threads = 0,
     structure_engine = "auto", projects_dir = nil, concert_dir = nil, count_rate = 240,
     -- lumière grandMA3 (onglet Lumière)
     gma3_export = true, gma3_fps = 25, gma3_tc_start = "00:00:00:00", gma3_tc_slot = 1, gma3_song_slot = 0,
@@ -84,7 +89,7 @@ return function(ctx)
     if v == nil then data[k] = nil end
     local order = { "language", "announce_voice", "count_voice", "count_lang", "count_in_bars", "cue_lead_bars",
       "voice_cues", "voice_count_in", "voice_count_each", "voice_volume", "click_volume", "click_to_master",
-      "click_hw_output", "tempo_mode", "count_rate", "stems_model", "structure_engine", "projects_dir", "concert_dir",
+      "click_hw_output", "tempo_mode", "count_rate", "stems_model", "structure_engine", "performance_profile", "cpu_threads", "projects_dir", "concert_dir",
       "gma3_export", "gma3_fps", "gma3_tc_start", "gma3_song_gap", "gma3_song_slot", "gma3_ltc_output",
       "gma3_mtc_output", "gma3_tc_slot" }
     reaper.RecursiveCreateDirectory(reaper.GetResourcePath() .. SEP .. "ReaCueMCP", 0)
@@ -314,6 +319,17 @@ return function(ctx)
     y = y + 16
     y = y + U.para(t("noncommercial"), cx, y, cw, 11, U.WARN, 2) + 2
     if adv then
+      label(t("performance"), x, y, w)
+      v, ch = seg("performance_profile", cx, y, cw, { { "standard", t("standard") }, { "fast", t("fast") } }, get("performance_profile"), 11)
+      if ch then M.set("performance_profile", v) end
+      y = y + row
+      if get("performance_profile") == "fast" then
+        y = y + U.para(t("fast_note"), cx, y, cw, 11, U.WARN, 4) + 4
+      end
+      label(t("cpu_threads"), x, y, w)
+      v, ch = seg("cpu_threads", cx, y, cw, { { 0, t("auto") }, { 1, "1" }, { 2, "2" }, { 4, "4" }, { 8, "8" } }, get("cpu_threads"), 11)
+      if ch then M.set("cpu_threads", v) end
+      y = y + row
       label(t("tempo"), x, y, w)
       v, ch = seg("tempo", cx, y, cw, { { "auto", t("tempo_auto") }, { "constant", t("tempo_constant") }, { "beatmap", t("tempo_beatmap") } },
         get("tempo_mode"), 11)

@@ -27,6 +27,10 @@ import traceback
 import types
 from pathlib import Path
 
+import reacue_performance
+
+reacue_performance.configure()
+
 import reacue_metal
 
 reacue_metal.configure()
@@ -114,7 +118,7 @@ def weights_path() -> Path:
 def load_model():
     M = load_adtof()
     import torch
-    torch.set_num_threads(max(1, os.cpu_count() or 1))
+    reacue_performance.configure_torch(torch)
     net = M.create_frame_rnn_model(M.calculate_n_bins())
     w = weights_path()
     if not w.is_file():

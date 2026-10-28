@@ -29,6 +29,10 @@ import traceback
 import types
 from pathlib import Path
 
+import reacue_performance
+
+reacue_performance.configure()
+
 import reacue_metal
 
 reacue_metal.configure()
@@ -64,7 +68,7 @@ def choose_window(window: str | int | None = "auto", ram: float | None = None) -
     if str(window).isdigit():
         return max(30, int(window))
     ram = ram_gb() if ram is None else ram
-    return 420 if ram >= 15 else 120
+    return 120 if reacue_performance.profile() == "fast" else (420 if ram >= 15 else 120)
 
 
 def _write_status(path: Path | None, state: str, **kw):
@@ -162,7 +166,7 @@ def analyze(audio: str, out: str, status: str | None = None, window: str = "auto
         _write_status(st, "running", step="chargement des modèles / loading models", window_s=win)
         app = load_app()
         import torch
-        torch.set_num_threads(max(1, os.cpu_count() or 1))
+        reacue_performance.configure_torch(torch)
         init_models(app)
         _write_status(st, "running", step="analyse / analysing", window_s=win)
         segs = segments_from_app(app, audio, win)
@@ -344,6 +348,7 @@ def check(lang: str = "fr", seconds: int = 20) -> int:
     except Exception as e:                           # noqa: BLE001
         print(t("ÉCHEC : SongFormer n'est pas importable : ", "FAILED: SongFormer cannot be imported: ") + repr(e))
         return 1
+    reacue_performance.configure_torch(torch)
     win = choose_window("auto")
     print(f"  python {sys.version.split()[0]} | torch {torch.__version__} | numpy {np.__version__} | "
           f"RAM {ram_gb():.0f} Go/GB -> {t('fenêtre', 'window')} {win} s")
@@ -368,6 +373,62 @@ def check(lang: str = "fr", seconds: int = 20) -> int:
     return 0
 
 
+
+def benchmark_threads(app, audio, counts, repeats=2, window=120, clock=time.perf_counter, progress=None):
+    """Compare actual SongFormer CPU inference, excluding model load and warm-up."""
+    import torch
+    _move_models(app, "cpu")
+    previous = torch.get_num_threads()
+    results = []
+    try:
+        for count in counts:
+            if progress:
+                progress(f"Testing / Test : {count} threads…", flush=True)
+            torch.set_num_threads(count)
+            segments_from_app(app, str(audio), window)  # warm-up for this thread count
+            times = []
+            for _ in range(repeats):
+                start = clock()
+                segments_from_app(app, str(audio), window)
+                times.append(clock() - start)
+            results.append({"threads": count, "seconds": sum(times) / len(times)})
+    finally:
+        torch.set_num_threads(previous)
+    return sorted(results, key=lambda row: row["seconds"])
+
+
+def benchmark(args):
+    import tempfile
+    import numpy as np
+    import soundfile as sf
+    counts = sorted(set(int(x) for x in args.threads.split(",")))
+    if not counts or any(x < 1 or x > (os.cpu_count() or 1) for x in counts):
+        raise ValueError("Threads must be between 1 and the logical CPU count")
+    if args.input and not Path(args.input).is_file():
+        raise FileNotFoundError(args.input)
+    os.environ["REACUE_DEVICE"] = "cpu"  # This benchmark intentionally calibrates CPU inference.
+    print("CPU benchmark / Étalonnage CPU — SongFormer, model loaded once.", flush=True)
+    print("This can take several minutes / Cela peut prendre plusieurs minutes.", flush=True)
+    app = load_app()
+    init_models(app)
+    with tempfile.TemporaryDirectory() as tmp:
+        audio = args.input
+        if not audio:
+            audio = str(Path(tmp) / "benchmark.wav")
+            noise = np.random.default_rng(0).standard_normal(24000 * 20).astype(np.float32) * 0.05
+            sf.write(audio, noise, 24000)
+        results = benchmark_threads(app, audio, counts, progress=print)
+    for row in results:
+        print(f"  {row['threads']} threads: {row['seconds']:.3f} s")
+    best = results[0]["threads"]
+    print(f"Best on this sample / Meilleur sur cet extrait: {best} threads")
+    if args.save:
+        reacue_performance.save_threads(best)
+        print("Saved for subsequent analyses / Enregistré pour les prochaines analyses.")
+    print("Results depend on the audio and model / Résultat dépendant de l'audio et du modèle.")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="reacue_structure")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -379,10 +440,16 @@ def main(argv=None) -> int:
     c = sub.add_parser("check")
     c.add_argument("--lang", default="fr", choices=["fr", "en"])
     c.add_argument("--seconds", type=int, default=20)
+    b = sub.add_parser("benchmark", help="Compare CPU threads using actual SongFormer inference")
+    b.add_argument("--input", help="Optional representative audio excerpt (otherwise 20s synthetic audio)")
+    b.add_argument("--threads", default=",".join(str(n) for n in (1, 2, 4, 8) if n <= (os.cpu_count() or 1)))
+    b.add_argument("--save", action="store_true", help="Save fastest thread count to ReaCue settings")
     r = sub.add_parser("reuse")
     r.add_argument("--lang", default="fr", choices=["fr", "en"])
     r.add_argument("--from", dest="sources", action="append", default=[])
     args = ap.parse_args(argv)
+    if args.cmd == "benchmark":
+        return benchmark(args)
     if args.cmd == "analyze":
         return analyze(args.input, args.out, args.status, args.window)
     if args.cmd == "reuse":

@@ -30,6 +30,10 @@ import traceback
 import unicodedata
 from pathlib import Path
 
+import reacue_performance
+
+reacue_performance.configure()
+
 import reacue_metal
 
 reacue_metal.configure()
@@ -322,7 +326,7 @@ def align(audio: str, jobs_path: str, out: str, lang: str = "fr", status: str | 
         lang = lang if lang in MODELS else "fr"
         _write_status(st, "running", step="chargement du modèle / loading model")
         import torch
-        torch.set_num_threads(max(1, os.cpu_count() or 1))
+        reacue_performance.configure_torch(torch)
         model, vocab, blank, norm = load_model(lang)
         wav = _load_audio(audio)
         _write_status(st, "running", step="alignement / aligning")

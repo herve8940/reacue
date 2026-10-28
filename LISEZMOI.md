@@ -54,6 +54,33 @@ Pour forcer le CPU sur Mac, définir `REACUE_DEVICE=cpu` dans l'environnement du
 (par exemple la section `env` de sa configuration MCP). Aucun changement de modèle ni de licence.
 La validation sur un vrai Mac Apple Silicon reste à effectuer.
 
+### Réglages de performances et étalonnage CPU
+
+Dans **Réglages → Réglages avancés**, choisir **Performances : Standard / Rapide** et
+**Threads CPU : auto / 1 / 2 / 4 / 8**. Standard conserve les réglages de qualité existants.
+Rapide réduit le recouvrement de Demucs à 10 %, désactive son décalage aléatoire, limite la fenêtre
+SongFormer automatique à 120 s et utilise un décodage Whisper glouton sans reprises de température.
+Ces compromis peuvent modifier les stems, les sections et les paroles : comparer les résultats.
+Le modèle de stems choisi reste inchangé (6 stems restent 6 stems).
+
+Sur Mac Intel ou série M, double-cliquer **Optimize ReaCue Mac.command** pour comparer les threads
+CPU avec le vrai SongFormer : modèles chargés une seule fois, échauffement puis deux mesures par
+configuration. Le meilleur nombre sur cet échantillon est enregistré ; le profil de qualité n'est
+pas modifié. Le test force le CPU, même sur une série M ; l'analyse normale garde Metal/MPS si disponible.
+Prévoir plusieurs minutes. Il faut avoir installé le composant Structure. Les résultats du bruit
+synthétique de 20 s ne prédisent pas tous les morceaux ni les autres modèles. Pour un extrait réel :
+
+```bash
+.venv-structure/bin/python reacue_structure.py benchmark --input "/chemin/extrait.wav" --threads 1,2,4 --save
+```
+
+Réglages JSON : `performance_profile` (`standard` / `fast`) et `cpu_threads` (0 = auto).
+Variables prioritaires : `REACUE_PERFORMANCE_PROFILE` et `REACUE_CPU_THREADS`. Les threads sont bornés
+au nombre de processeurs logiques. Revenir à **Standard** et **auto** pour retrouver le comportement
+initial. Les caches de structure et de transcription distinguent les profils ; les paroles déjà
+écrites sur disque sont conservées. Les changements concernent les prochains calculs, pas les stems
+ou projets existants. Les gains doivent être mesurés sur la machine réelle.
+
 ## Sommaire
 
 - [Fonctionnalités](#fonctionnalités)

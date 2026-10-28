@@ -40,7 +40,7 @@ class Model:
 @pytest.fixture
 def torch_stub(monkeypatch):
     cleared = []
-    stub = SimpleNamespace(backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: True)),
+    stub = SimpleNamespace(set_num_threads=lambda n: None, backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: True)),
                            inference_mode=nullcontext,
                            mps=SimpleNamespace(empty_cache=lambda: cleared.append(True)))
     monkeypatch.setitem(sys.modules, "torch", stub)

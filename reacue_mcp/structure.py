@@ -260,6 +260,9 @@ def _safe(name: str) -> str:
 def cache_key(files: list[str], window: str = "auto") -> str:
     h = hashlib.sha1()
     h.update(f"{ENGINE}:{SONGFORMER_REV}:{CACHE_VERSION}:{window}".encode())
+    import reacue_performance
+    if reacue_performance.profile() == "fast":
+        h.update(b":fast")
     for f in sorted(str(x) for x in files):
         p = Path(f)
         try:
