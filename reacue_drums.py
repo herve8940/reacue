@@ -27,6 +27,10 @@ import traceback
 import types
 from pathlib import Path
 
+import reacue_metal
+
+reacue_metal.configure()
+
 HERE = Path(__file__).resolve().parent
 DRUMS_DIR = Path(os.environ.get("REACUE_DRUMS_DIR") or HERE / "drums")
 REPO = DRUMS_DIR / "ADTOF-pytorch"
@@ -134,7 +138,7 @@ def activations(audio: str, M=None, net=None):
         while s < T:
             a = max(0, s - OVERLAP)
             b = min(T, s + CHUNK + OVERLAP)
-            y = net(x[:, a:b]).cpu().numpy()[0]
+            y = reacue_metal.forward(net, x[:, a:b]).numpy()[0]
             e = min(T, s + CHUNK)
             out[s:e] = y[s - a:e - a]
             s = e

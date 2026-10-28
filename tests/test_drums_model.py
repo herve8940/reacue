@@ -225,7 +225,9 @@ class _Out:
 class _X:
     def __init__(self, idx): self.idx = idx; self.shape = (1, len(idx), 84, 1)
     def __getitem__(self, k): return _X(self.idx[k[1]])
+    def to(self, device): return self
 class _Net:
+    def to(self, device): return self
     def eval(self): return self
     def __call__(self, x):
         if os.environ.get("FAKE_FAIL"):
@@ -255,6 +257,7 @@ FAKE_TORCH = '''
 import contextlib
 def set_num_threads(n): pass
 def no_grad(): return contextlib.nullcontext()
+def inference_mode(): return contextlib.nullcontext()
 '''
 
 
@@ -267,6 +270,7 @@ def fake_install(tmp_path, onsets, monkeypatch, sleep=0, fail=False):
     (pkg / "data" / "adtof_frame_rnn_pytorch_weights.pth").write_bytes(b"fake")
     (pkg.parent / "torch.py").write_text(FAKE_TORCH, encoding="utf-8")
     shutil.copy(ROOT / "reacue_drums.py", inst / "reacue_drums.py")
+    shutil.copy(ROOT / "reacue_metal.py", inst / "reacue_metal.py")
     py = D.drums_python(inst)
     py.parent.mkdir(parents=True)
     if os.name == "nt":

@@ -46,6 +46,10 @@ import traceback
 
 from pathlib import Path
 
+import reacue_metal
+
+reacue_metal.configure()
+
 # S'assurer que le cache PyTorch pointe vers un disque approprié (TORCH_HOME)
 if "TORCH_HOME" not in os.environ:
     try:
@@ -263,7 +267,7 @@ def separate(input_file: str, out: str, model: str = DEFAULT_MODEL, repo: str | 
 
                 extra_args.extend(["-d", "cuda"])
 
-            elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+            elif reacue_metal.device(torch) == "mps":
 
                 extra_args.extend(["-d", "mps"])
 
@@ -277,9 +281,15 @@ def separate(input_file: str, out: str, model: str = DEFAULT_MODEL, repo: str | 
 
         try:
 
-            demucs_main(["-n", model, "-o", str(out_dir), "--filename", FILENAME]
-
-                        + extra_args + [str(input_file)])
+            args = ["-n", model, "-o", str(out_dir), "--filename", FILENAME] + extra_args + [str(input_file)]
+            try:
+                demucs_main(args)
+            except (RuntimeError, NotImplementedError, TypeError) as error:
+                if "-d" not in extra_args or extra_args[extra_args.index("-d") + 1] != "mps":
+                    raise
+                reacue_metal.cpu_fallback(error)
+                args[args.index("-d") + 1] = "cpu"
+                demucs_main(args)
 
         except SystemExit as e:              # Demucs appelle sys.exit en cas d'erreur
 
@@ -369,7 +379,7 @@ def check(lang: str = "fr", seconds: int = 10) -> int:
 
         device_label = f"NVIDIA CUDA ({gpu_name})"
 
-    elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+    elif reacue_metal.device(torch) == "mps":
 
         device = "mps"
 
@@ -415,9 +425,20 @@ def check(lang: str = "fr", seconds: int = 10) -> int:
 
         t0 = time.time()
 
-        with torch.no_grad():
-
-            apply_model(m, x, shifts=1, split=True, overlap=0.25, progress=False, device=device)
+        try:
+            with torch.no_grad():
+                apply_model(m, x, shifts=1, split=True, overlap=0.25, progress=False, device=device)
+            if device == "mps":
+                torch.mps.synchronize()
+        except (RuntimeError, NotImplementedError, TypeError) as error:
+            if device != "mps":
+                raise
+            m.to("cpu")
+            reacue_metal.cpu_fallback(error)
+            device = "cpu"
+            t0 = time.time()
+            with torch.no_grad():
+                apply_model(m, x, shifts=1, split=True, overlap=0.25, progress=False, device=device)
 
         per_song_m = (time.time() - t0) / seconds * 240 / 60
 

@@ -38,6 +38,22 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 
 *(Captures d'un morceau fictif « Demo Song » : structure, accords, paroles et batterie sont inventés.)*
 
+## Accélération GPU sur Mac
+
+Sur un Mac compatible, ReaCue sélectionne automatiquement Metal/MPS pour Demucs (stems),
+SongFormer (structure), wav2vec2 (inférence des paroles) et ADTOF (batterie). La disponibilité
+est vérifiée dans l'environnement PyTorch du composant ; un Mac Intel sans MPS reste sur CPU.
+Les opérations MPS non prises en charge peuvent passer sur CPU. Si le modèle échoue encore
+(incompatibilité ou mémoire GPU insuffisante), il est relancé une fois sur CPU avec un avertissement.
+Les tests des installateurs utilisent les mêmes chemins que l'analyse.
+
+L'alignement CTC final des mots et les accords restent sur CPU ; Whisper conserve sa sélection
+CUDA/CPU existante. Il ne s'agit donc pas d'une accélération de tous les calculs. Aucun gain de vitesse
+n'est garanti : il dépend du Mac, du modèle et de la mémoire partagée disponible.
+Pour forcer le CPU sur Mac, définir `REACUE_DEVICE=cpu` dans l'environnement du processus ReaCue
+(par exemple la section `env` de sa configuration MCP). Aucun changement de modèle ni de licence.
+La validation sur un vrai Mac Apple Silicon reste à effectuer.
+
 ## Sommaire
 
 - [Fonctionnalités](#fonctionnalités)
