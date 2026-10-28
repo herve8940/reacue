@@ -338,7 +338,9 @@ d'entrées/sorties par instrument, accords et sections moins sûrs). **Mieux : s
 Autres**, calées exactement comme le MP3. L'item du MP3 a été retiré du projet (le fichier, lui, est toujours
 sur le disque ; *Edit → Undo* le remet).
 
-Les fichiers des stems sont rangés à côté du MP3, dans `<nom du morceau>-stems/htdemucs_6s/`. Si tu relances
+Les fichiers des stems sont rangés à côté du MP3, dans `<nom du morceau>-stems/htdemucs_6s/`.
+> 💡 **Guide complet Stems & Matériel :** Pour comprendre en détail les différences entre les modèles Demucs (`htdemucs_6s`, `htdemucs_ft`, `htdemucs`), les exigences matérielles (GPU NVIDIA RTX 50 Blackwell, Apple Silicon, CPU) et les bonnes pratiques de découpe, consultez le **[Guide Bonnes Pratiques & Matériel](BONNES_PRATIQUES_ET_MATERIEL.md)**.
+ Si tu relances
 l'action sur le même MP3, l'import est immédiat (pas de nouvelle séparation).
 
 > Écoute les pistes en solo (bouton **S**) : voix, batterie et basse sont en général très propres ; guitare

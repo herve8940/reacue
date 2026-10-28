@@ -329,7 +329,9 @@ entries/rests, less reliable chords and sections). **Better: split it into stems
 aligned exactly like the MP3. The MP3 item was removed from the project (the file itself is still on disk;
 *Edit → Undo* brings it back).
 
-The stem files are stored next to the MP3, in `<song name>-stems/htdemucs_6s/`. If you run the action again
+The stem files are stored next to the MP3, in `<song name>-stems/htdemucs_6s/`.
+> 💡 **Complete Stems & Hardware Guide:** For an in-depth breakdown of Demucs models (`htdemucs_6s`, `htdemucs_ft`, `htdemucs`), hardware performance (NVIDIA RTX 50 Blackwell, Apple Silicon, CPU), and band routing best practices, see the **[Best Practices & Hardware Guide](BEST_PRACTICES_AND_HARDWARE.md)**.
+ If you run the action again
 on the same MP3, the import is immediate (no new separation).
 
 > Listen to the tracks solo (**S** button): vocals, drums and bass are usually very clean; guitar and piano

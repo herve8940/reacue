@@ -56,6 +56,7 @@ Un mode facultatif permet de piloter ReaCue en langage naturel avec Claude (serv
 - [Paroles](#paroles)
 - [Grille PDF](#grille-pdf)
 - [Lumière : export grandMA3](#lumière--export-grandma3)
+- [Guide d'équipe, organisation REAPER, stems et matériel](#guide-déquipe-organisation-reaper-stems-et-matériel)
 - [Réglages](#réglages)
 - [Facultatif : piloter ReaCue avec un assistant IA (MCP)](#facultatif--piloter-reacue-avec-un-assistant-ia-mcp--claude-antigravity-cursor-etc)
 - [Limites connues](#limites-connues)
@@ -263,6 +264,7 @@ Détails :
   même fichier les importe immédiatement, sans refaire la séparation.
 - `stems_model` dans les réglages : `"htdemucs_6s"` (6 stems, par défaut), `"htdemucs_ft"` (4 stems HQ fine-tuned, recommandé avec GPU) ou `"htdemucs"` (4 stems : voix,
   batterie, basse, autres — guitare et claviers restent ensemble dans « autres »).
+- **Guide complet :** Pour une analyse détaillée des différences entre les modèles Demucs (htdemucs_6s, htdemucs_ft, htdemucs), les temps de calcul selon le matériel (RTX 50 Blackwell, Apple Silicon, etc.) et les bonnes pratiques scéniques, consultez le **[Guide ReaCue : Bonnes Pratiques en Équipe, Organisation REAPER, Découpe de Stems & Guide Matériel](docs/BONNES_PRATIQUES_ET_MATERIEL.md)**.
 - Qualité : voix, batterie et basse sont très bonnes ; guitare et surtout piano sont moins propres qu'avec
   les services commerciaux (un peu de repisse). Guitare lead et rythmique ne sont pas séparées : la détection
   des solos, qui s'appuie sur un stem de guitare lead, n'est donc pas disponible.
@@ -888,6 +890,18 @@ est construite à partir des données du prompteur : ce que montre le PDF est ce
 - Onglet Morceau : pastille **Grille PDF** (clic = ouvrir, ou créer). Jamais bloquante : en cas d'erreur,
   « Grille PDF non créée : … ». Pas de grille pour un concert (celles des morceaux restent dans leurs dossiers).
 - Aucune dépendance : PDF écrit par ReaCue lui-même (`reacue_mcp/sheet.py`, polices standard).
+
+## Guide d'équipe, organisation REAPER, stems et matériel
+
+Un document de référence complet est disponible dans le dossier docs/ pour vous accompagner dans la structuration de vos projets et la réussite de vos prestations en groupe :
+
+👉 **[Consulter le Guide des Bonnes Pratiques et du Matériel (docs/BONNES_PRATIQUES_ET_MATERIEL.md)](docs/BONNES_PRATIQUES_ET_MATERIEL.md)**
+
+Ce guide approfondi aborde :
+- **L'organisation REAPER :** Règle absolue du projet unique par morceau, isolation des médias (« Copy all media into project directory »), prévention des items OFFLINE, routage des pistes de guidage et buffers audio recommandés (48 kHz, 128 à 256 samples).
+- **Le travail en équipe :** Rôles musiciens sur le prompteur web (Chant avec Whisper, Basse/Guitares avec transposition automatique, Batterie avec ADTOF), utilisation de ReaCue Studio en répétition (boucles de travail et rampe d'accélération progressive), matrice scénique « Joué en live » pour éliminer le déphasage acoustique, et sécurisation par code PIN / double-appui anti-panique.
+- **Les modèles de découpe de stems :** Comparatif technique entre htdemucs_6s (6 stems isolant guitare et piano), htdemucs_ft (4 stems haute fidélité fine-tuned) et htdemucs (4 stems standard optimisé CPU).
+- **Le guide matériel :** Matrice d'adéquation matérielle (cartes NVIDIA avec support spécifique CUDA 12.8 pour l'architecture Blackwell RTX 50, Apple Silicon Metal/MPS, repli CPU), interfaces audio recommandées (routage multi-sorties façade vs in-ears), et configuration d'un réseau Wi-Fi scénique indépendant avec routeur de voyage 5 GHz et bail DHCP statique.
 
 ## Réglages
 
