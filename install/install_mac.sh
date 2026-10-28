@@ -183,7 +183,7 @@ if [ "$CHORDS" = ask ]; then
     "  AI chord recognition (Large-Vocabulary CNN, local, MIT license):"
   t "  Détecte avec précision accords majeurs/mineurs, 7e, m7, maj7, dim, aug, sus et renversements (D/F#)." \
     "  Accurately detects major/minor, 7th, m7, maj7, dim, aug, sus, and inversions (D/F#)."
-  read -r -p "$(t '  Installer la reconnaissance d'accords (environ 60 Mo, rapide) ? [O/n] ' \
+  read -r -p "$(t "  Installer la reconnaissance d'accords (environ 60 Mo, rapide) ? [O/n] " \
                   '  Install chord recognition (about 60 MB, fast)? [Y/n] ')" A || true
   case "$(echo "${A:-o}" | tr '[:upper:]' '[:lower:]')" in
     n*) CHORDS=no ;;
