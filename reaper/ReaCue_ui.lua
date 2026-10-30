@@ -97,8 +97,9 @@ local UP = { ["à"] = "À", ["â"] = "Â", ["ä"] = "Ä", ["á"] = "Á", ["ç"] 
   ["ë"] = "Ë", ["î"] = "Î", ["ï"] = "Ï", ["í"] = "Í", ["ô"] = "Ô", ["ö"] = "Ö", ["ó"] = "Ó", ["ù"] = "Ù", ["û"] = "Û",
   ["ü"] = "Ü", ["ú"] = "Ú", ["ÿ"] = "Ÿ", ["ñ"] = "Ñ", ["æ"] = "Æ", ["œ"] = "Œ" }
 function U.upper(s)
-  s = tostring(s or ""):upper()
-  return (s:gsub("[\xC3\xC5][\x80-\xBF]", function(c) return UP[c] or c end))
+  s = tostring(s or "")
+  s = s:gsub("[\xC3\xC5][\x80-\xBF]", function(c) return UP[c] or c end)
+  return (s:gsub("[a-z]", string.upper))
 end
 
 function U.rgb(r, g, b, a) gfx.set(r / 255, g / 255, b / 255, a or 1) end
@@ -171,8 +172,12 @@ function U.fit(s, w, size, bold, font)
   if U.text_w(s, size, bold, font) <= w then return s end
   if U.on_cut then U.on_cut(s) end
   while #s > 1 and U.text_w(s .. "…", size, bold, font) > w do
-    local cut = utf8.offset(s, -1) or #s
-    s = s:sub(1, math.max(1, cut - 1))
+    local cut = utf8.offset(s, -1)
+    if not cut then
+      s = s:sub(1, math.max(1, #s - 1))
+    else
+      s = s:sub(1, math.max(1, cut - 1))
+    end
   end
   return s .. "…"
 end
@@ -181,8 +186,10 @@ end
 -- clicked : appui gauche (front montant) ; released : relâchement ; long_id : appui long en cours déclenché
 U.clicked, U.released, U.right = false, false, false
 U.hover = nil
+U.clip = nil
 local prev_cap = 0
 local press = nil            -- {id, t, fired}
+local sb_drag = nil          -- {id, start_my, start_scroll}
 
 function U.frame_begin(now)
   local cap = gfx.mouse_cap or 0
@@ -193,14 +200,96 @@ function U.frame_begin(now)
   prev_cap = cap
   U.hover = nil
   U.hover_tip = nil
+  U.clip = nil
   U.now = now or (reaper.time_precise and reaper.time_precise() or 0)
   U.wheel = gfx.mouse_wheel or 0
   gfx.mouse_wheel = 0
+  if not U.down then sb_drag = nil end
+end
+
+function U.set_clip(x1, y1, x2, y2)
+  if x1 and y1 and x2 and y2 then
+    U.clip = { x1 = x1, y1 = y1, x2 = x2, y2 = y2 }
+  else
+    U.clip = nil
+  end
 end
 
 function U.over(x, y, w, h)
   local mx, my = gfx.mouse_x, gfx.mouse_y
+  if U.clip then
+    if mx < U.clip.x1 or mx >= U.clip.x2 or my < U.clip.y1 or my >= U.clip.y2 then return false end
+    if x + w <= U.clip.x1 or x >= U.clip.x2 or y + h <= U.clip.y1 or y >= U.clip.y2 then return false end
+  end
   return mx >= x and mx < x + w and my >= y and my < y + h
+end
+
+-- défilement molette : supporte les crans Windows (120) et trackpads continus macOS
+function U.apply_wheel(scroll_y, max_scroll, wheel)
+  wheel = wheel or U.wheel
+  if not wheel or wheel == 0 or max_scroll <= 0 then return scroll_y end
+  local step = 48
+  local delta
+  if math.abs(wheel) >= 60 then
+    delta = (wheel / 120) * step
+  else
+    delta = wheel * 24
+  end
+  return math.max(0, math.min(max_scroll, scroll_y - delta))
+end
+
+-- barre de défilement verticale : track + curseur proportionnel, drag souris + clic saut de page
+function U.scrollbar(id, x, y, w, h, total_h, scroll_y)
+  scroll_y = scroll_y or 0
+  total_h = total_h or h
+  local max_scroll = math.max(0, total_h - h)
+  if max_scroll <= 0 then
+    if sb_drag and sb_drag.id == id then sb_drag = nil end
+    return 0, 0
+  end
+
+  local thumb_h = math.max(24, math.min(h, math.floor(h * (h / total_h))))
+  local track_room = h - thumb_h
+  local thumb_y = y + (track_room > 0 and math.floor(track_room * (scroll_y / max_scroll)) or 0)
+
+  local mx, my = gfx.mouse_x, gfx.mouse_y
+  local over_track = mx >= x and mx < x + w and my >= y and my < y + h
+  local over_thumb = mx >= x and mx < x + w and my >= thumb_y and my < thumb_y + thumb_h
+  if over_track then U.hover = id end
+
+  if over_track and U.clicked then
+    if over_thumb then
+      sb_drag = { id = id, start_my = my, start_scroll = scroll_y }
+    else
+      if my < thumb_y then
+        scroll_y = math.max(0, scroll_y - h * 0.8)
+      else
+        scroll_y = math.min(max_scroll, scroll_y + h * 0.8)
+      end
+    end
+  end
+
+  if sb_drag and sb_drag.id == id then
+    if U.down then
+      local dy = my - sb_drag.start_my
+      if track_room > 0 then
+        scroll_y = math.max(0, math.min(max_scroll, sb_drag.start_scroll + (dy / track_room) * max_scroll))
+      end
+    else
+      sb_drag = nil
+    end
+  end
+
+  U.set(U.INSET)
+  gfx.rect(x, y, w, h, 1)
+
+  local active = sb_drag and sb_drag.id == id
+  local col = active and U.SIG or ((over_thumb or over_track) and U.INK2 or U.PANEL)
+  U.set(col, active and 1 or 0.85)
+  gfx.rect(x + 1, thumb_y, w - 2, thumb_h, 1)
+  U.frame(x + 1, thumb_y, w - 2, thumb_h, U.EDGE)
+
+  return scroll_y, max_scroll
 end
 
 -- bouton ; style : nil, "primary" (orange), "on" (bascule active : clair), "warn" / "armed" (jaune), "ghost" (encastré)
@@ -386,7 +475,7 @@ function U.para(s, x, y, w, size, col, max_lines)
   local n = 0
   for line in (tostring(s or "") .. "\n"):gmatch("(.-)\n") do
     local words, cur = {}, ""
-    for word in line:gmatch("%S+") do
+    for word in line:gmatch("[^ \t\r\n]+") do
       -- ponctuation française : « » : ; ! ? jamais seuls en début ou en fin de ligne
       local prev = words[#words]
       if prev and (word:sub(1, 2) == "»" or word:match("^[:;!?%)]") or prev:sub(-2) == "«" or prev:sub(-1) == "(") then

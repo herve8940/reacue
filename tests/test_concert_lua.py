@@ -41,7 +41,7 @@ reaper = {
   time_precise=function() return state.t end,
   defer=function(f) state.deferred=f end, atexit=function(f) state.atexit=f end,
   get_ini_file=function() return INIPATH end,
-  ExecProcess=function(cmd, t) table.insert(state.execs, {cmd, t}); return EXEC(cmd) end,
+  ExecProcess=function(cmd, t) table.insert(state.execs, {cmd, t}); table.insert(state.shell, cmd); return EXEC(cmd) end,
   EnumProjectMarkers3=function(p, i) local r=REGIONS[i+1]; if not r then return 0 end return i+1, r[1], r[2], r[3], r[4], i+1, r[5] end,
   ColorFromNative=function(c) return (c>>16)&255, (c>>8)&255, c&255 end,
   TimeMap2_timeToBeats=function(p, t) local m=0; for k=1,#BARS do if BARS[k] <= t + 1e-9 then m=k-1 end end; return 0, m, 4, 0, 4 end,
@@ -84,7 +84,7 @@ gfx = setmetatable({w=540,h=300,mouse_x=0,mouse_y=0,mouse_cap=0,x=0,y=0}, {__ind
   return function(...)
     local a = {...}
     if k=="getchar" then return 0
-    elseif k=="measurestr" then local s=a[1]; return utf8.len(s)*state.font[1]*(FONTW[state.font[3] or ""] or 0.55), state.font[1]
+    elseif k=="measurestr" then local s=a[1]; local l = utf8.len(s) or #s; return l*state.font[1]*(FONTW[state.font[3] or ""] or 0.55), state.font[1]
     elseif k=="dock" then if a[1] and a[1] >= 0 then state.dock=a[1] end return state.dock
     elseif k=="set" then state.color={a[1],a[2],a[3],a[4] or 1}
     elseif k=="setfont" then state.font={a[3] or 14, a[4] or 0, a[2]}
