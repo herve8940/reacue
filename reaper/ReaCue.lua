@@ -93,6 +93,7 @@ function ctx.goto_tab(t)
   if not tabs[t] then return end
   ctx.tab = t
   ctx.overlay = nil
+  ctx.scroll_y = 0
   reaper.SetExtState("ReaCue", "tab", t, true)
   if tabs[t].enter then tabs[t].enter() end
 end
@@ -302,7 +303,8 @@ local function close_qr()
   local d = qr and qr.dock or 0
   qr = nil
   ctx.overlay = nil
-  if d > 0 then gfx.dock(d) else gfx.init("", ctx.W, gfx.h) end
+  local sh = tonumber(reaper.GetExtState("ReaCue", "win_h")) or 560
+  if d > 0 then gfx.dock(d) else gfx.init("", ctx.W, sh) end
 end
 
 local function draw_qr()
@@ -418,6 +420,8 @@ local function draw_brand(x, y)
 end
 
 local function draw_header(w)
+  local header_h = (ctx.tab == "stage") and 45 or 118
+  U.set(U.BG); gfx.rect(0, 0, w, header_h, 1)
   U.set(U.PANEL2); gfx.rect(0, 0, w, 44, 1)
   U.set(U.EDGE); gfx.rect(0, 44, w, 1, 1)
   local x = 14 + draw_brand(14, 11) + 12
@@ -574,24 +578,39 @@ function ctx.reset_loop() loop_last = nil; last_pos = nil end
 
 -- ligne d'aide (bas de la fenêtre) : rôle de l'élément survolé -------------------------------------
 local HELP_H = 26
+local function help_height(w)
+  local txt = ctx.help_text(U.hover) or ctx.guide.default_help()
+  return (U.text_w(txt, 12) > w - 28) and (HELP_H + 16) or HELP_H
+end
+
 local function draw_help(y, w)
   local txt = ctx.help_text(U.hover) or ctx.guide.default_help()
-  local h = U.text_w(txt, 12) > w - 28 and HELP_H + 16 or HELP_H     -- texte long : 2 lignes
+  local h = (U.text_w(txt, 12) > w - 28) and (HELP_H + 16) or HELP_H     -- texte long : 2 lignes
   U.set(U.PANEL2); gfx.rect(0, y, w, h, 1)
   U.set(U.EDGE); gfx.rect(0, y, w, 1, 1)
   local hov = U.hover ~= nil or U.hover_tip ~= nil
   U.para(txt, 14, y + 6, w - 28, 12, hov and U.INK or U.MUTED, 2)
-  return y + h
+  return h
 end
 
 -- boucle ---------------------------------------------------------------------------------------
+local DEFAULT_W, DEFAULT_H = 920, 560
+local MIN_W, MIN_H = 480, 240
+
 local dock = tonumber(reaper.GetExtState("ReaCue", "concert_dock")) or 0
-gfx.init(T("title"), ctx.W, 420, dock)
+local saved_w = tonumber(reaper.GetExtState("ReaCue", "win_w")) or DEFAULT_W
+local saved_h = tonumber(reaper.GetExtState("ReaCue", "win_h")) or DEFAULT_H
+ctx.W = math.max(MIN_W, saved_w)
+local init_h = math.max(MIN_H, saved_h)
+
+gfx.init(T("title"), ctx.W, init_h, dock)
 reaper.SetExtState("ReaCue", "win_script", SCRIPT, false)
 L.remote_pin()
 pcall(L.publish_page)
 L.publish_reh()
 pcall(L.run_cli, "library")                  -- ReaCue Studio, BIBLIO : reacue_library.json à jour
+
+local last_save_w, last_save_h, last_save_t = ctx.W, init_h, 0
 
 local function loop()
   local ch = gfx.getchar()
@@ -611,8 +630,17 @@ local function loop()
   end
   U.tick_armed()
 
-  ctx.W = gfx.w > 0 and gfx.w or ctx.W
-  local w = ctx.W
+  -- Mémorisation de la taille personnalisée de la fenêtre (non ancrée)
+  if gfx.dock(-1) == 0 and gfx.w >= MIN_W and gfx.h >= MIN_H then
+    ctx.W = gfx.w
+    if (gfx.w ~= last_save_w or gfx.h ~= last_save_h) and (now - last_save_t > 0.8) then
+      reaper.SetExtState("ReaCue", "win_w", tostring(gfx.w), true)
+      reaper.SetExtState("ReaCue", "win_h", tostring(gfx.h), true)
+      last_save_w, last_save_h, last_save_t = gfx.w, gfx.h, now
+    end
+  end
+
+  local w = gfx.w > 0 and gfx.w or ctx.W
   U.set(U.BG); gfx.rect(0, 0, gfx.w, gfx.h, 1)
   local docked_low = gfx.dock(-1) > 0 and gfx.h < 130
   if ctx.overlay == "qr" and qr then
@@ -620,19 +648,55 @@ local function loop()
   elseif docked_low then
     draw_docked()
   else
-    local y = draw_header(w) + 12
-    if ctx.overlay == "result" and ctx.result then
-      y = draw_result(14, y + 4, w - 28)
-    elseif ctx.overlay == "check" and chk then
-      y = draw_check(14, y + 4, w - 28)
-    elseif ctx.overlay and ctx.overlays[ctx.overlay] then
-      y = ctx.overlays[ctx.overlay](14, y + 4, w - 28) or y
-    else
-      y = tabs[ctx.tab].draw(14, y, w - 28) or y
+    -- 1. Calcul du viewport scrollable entre en-tête fixe et pied de page fixe
+    local header_h = (ctx.tab == "stage") and 45 or 118
+    local help_h = help_height(w)
+    local v_top = header_h + 1
+    local v_bottom = math.max(v_top + 60, gfx.h - help_h)
+    local v_h = v_bottom - v_top
+
+    local cur_tab_key = ctx.overlay or ctx.tab or ""
+    local last_ch = (ctx.tab_content_h and ctx.tab_content_h[cur_tab_key]) or v_h
+    local has_sb = last_ch > v_h
+    local sb_w = 8
+    local content_w = w - 28
+
+    -- Défilement à la molette si la souris est dans le viewport
+    local max_scroll = math.max(0, last_ch - v_h)
+    if U.wheel ~= 0 and gfx.mouse_y >= v_top and gfx.mouse_y < v_bottom then
+      ctx.scroll_y = U.apply_wheel(ctx.scroll_y, max_scroll, U.wheel)
     end
-    y = draw_help(math.max(y + 6, (gfx.dock(-1) > 0) and (gfx.h - HELP_H) or 0), gfx.w)
-    ctx.layout_h = math.max(160, math.floor(y))
-    if gfx.dock(-1) == 0 and math.abs(gfx.h - ctx.layout_h) > 2 then gfx.init("", w, ctx.layout_h) end
+    ctx.scroll_y = math.max(0, math.min(max_scroll, ctx.scroll_y or 0))
+
+    -- 2. Rendu du contenu du tab / overlay avec découpe et décalage scroll_y
+    U.set_clip(0, v_top, w, v_bottom)
+    local content_y = v_top + 8 - ctx.scroll_y
+    local end_y
+    if ctx.overlay == "result" and ctx.result then
+      end_y = draw_result(14, content_y, content_w)
+    elseif ctx.overlay == "check" and chk then
+      end_y = draw_check(14, content_y, content_w)
+    elseif ctx.overlay and ctx.overlays[ctx.overlay] then
+      end_y = ctx.overlays[ctx.overlay](14, content_y, content_w) or content_y
+    else
+      end_y = tabs[ctx.tab].draw(14, content_y, content_w) or content_y
+    end
+    U.set_clip(nil)
+
+    -- Mesure de la hauteur totale du contenu
+    local measured_h = math.max(v_h, (end_y + ctx.scroll_y) - v_top + 16)
+    ctx.tab_content_h = ctx.tab_content_h or {}
+    ctx.tab_content_h[cur_tab_key] = measured_h
+    ctx.layout_h = measured_h
+
+    -- 3. Rendu par-dessus de l'en-tête (opaque) et de la barre d'aide (opaque)
+    draw_header(w)
+    draw_help(v_bottom, w)
+
+    -- 4. Tracé et gestion de la scrollbar sur le bord droit
+    if max_scroll > 0 then
+      ctx.scroll_y = U.scrollbar("main_scroll", w - sb_w - 2, v_top, sb_w, v_h, measured_h, ctx.scroll_y)
+    end
   end
   gfx.update()
   reaper.defer(loop)
@@ -650,6 +714,10 @@ reaper.atexit(function()
   reaper.SetExtState("ReaCue", "win_alive", "", false)
   reaper.SetExtState("ReaCue", "win_script", "", false)
   L.remote_off()
+  if gfx.dock(-1) == 0 and gfx.w >= MIN_W and gfx.h >= MIN_H then
+    reaper.SetExtState("ReaCue", "win_w", tostring(gfx.w), true)
+    reaper.SetExtState("ReaCue", "win_h", tostring(gfx.h), true)
+  end
   reaper.SetExtState("ReaCue", "concert_dock", tostring(gfx.dock(-1)), true)
 end)
 

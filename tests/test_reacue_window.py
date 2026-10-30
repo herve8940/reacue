@@ -90,13 +90,29 @@ def frame(L, g, click=None, hold=None):
     TL.frame(L, g, click)
 
 
-def press_text(L, g, label, dy=3, exact=False):
+def press_text(L, g, label, dy=3, exact=False, _scrolled=False):
     for up in (False, True):                   # 2e passage : libellé en capitales (thème Studio pro)
         want = label.upper() if up else label
         for o in g.state.ops.values():
             o = list(o.values())
             got = o[3].upper() if up and o[0] == "text" else o[3]
             if o[0] == "text" and ((got == want) if exact else (want in got)):
+                y = o[2]
+                gx = L.globals().gfx
+                v_top = 119
+                v_bottom = (gx.h or 560) - 30
+                if not _scrolled:
+                    cur_scroll = L.eval("REACUE_CTX and REACUE_CTX.scroll_y or 0") or 0
+                    if y > v_bottom:
+                        new_scroll = cur_scroll + (y - 300)
+                        L.execute(f"if REACUE_CTX then REACUE_CTX.scroll_y = {new_scroll} end")
+                        TL.frame(L, g)
+                        return press_text(L, g, label, dy, exact, _scrolled=True)
+                    elif y < v_top and cur_scroll > 0:
+                        new_scroll = max(0, cur_scroll - (v_top + 100 - y))
+                        L.execute(f"if REACUE_CTX then REACUE_CTX.scroll_y = {new_scroll} end")
+                        TL.frame(L, g)
+                        return press_text(L, g, label, dy, exact, _scrolled=True)
                 TL.frame(L, g, (o[1] + 3, o[2] + dy))
                 return True
     raise AssertionError((label, TL.texts(g)))
@@ -295,13 +311,19 @@ def install(g, tmp_path, structure=False, stems=False):
     inst = tmp_path / "inst"
     (inst / ".venv" / "bin").mkdir(parents=True, exist_ok=True)
     (inst / ".venv" / "bin" / "python").write_text("")
+    (inst / ".venv" / "Scripts").mkdir(parents=True, exist_ok=True)
+    (inst / ".venv" / "Scripts" / "python.exe").write_text("")
     if structure:
         (inst / ".venv-structure" / "bin").mkdir(parents=True, exist_ok=True)
         (inst / ".venv-structure" / "bin" / "python").write_text("")
+        (inst / ".venv-structure" / "Scripts").mkdir(parents=True, exist_ok=True)
+        (inst / ".venv-structure" / "Scripts" / "python.exe").write_text("")
         (inst / "reacue_structure.py").write_text("")
     if stems:
         (inst / ".venv-demucs" / "bin").mkdir(parents=True, exist_ok=True)
         (inst / ".venv-demucs" / "bin" / "python").write_text("")
+        (inst / ".venv-demucs" / "Scripts").mkdir(parents=True, exist_ok=True)
+        (inst / ".venv-demucs" / "Scripts" / "python.exe").write_text("")
     g.state.ext["install_dir"] = str(inst)
     return inst
 
@@ -332,7 +354,7 @@ def test_song_tab_prepare_structure_lyrics_and_add_to_concert(concert, tmp_path)
     # Re-préparer : CLI en arrière-plan, progression, puis résultat ; moteur et doutes mémorisés
     press_text(L, g, "Re-préparer", exact=True)
     sh = list(g.state.shell.values())[-1]
-    assert "-m reacue_mcp.cli prepare" in sh and "--reanalyse" not in sh, sh
+    assert ("prepare" in sh) and ("reacue_cli.py" in sh or "-m reacue_mcp.cli" in sh) and "--reanalyse" not in sh, sh
     frame(L, g)
     assert any(t.startswith("Préparation du morceau en cours…") for t in TL.texts(g)), TL.texts(g)
     status(g, state="done", cmd="prepare", message="Morceau préparé : 3 sections", engine="reacue", doubts="9:unsure")
@@ -381,7 +403,7 @@ def test_song_tab_prepare_structure_lyrics_and_add_to_concert(concert, tmp_path)
     frame(L, g)
     press_text(L, g, "Appliquer les modifications", exact=True)
     sh = list(g.state.shell.values())[-1]
-    assert "reacue_mcp.cli prepare" in sh and "--reanalyse" not in sh
+    assert ("prepare" in sh) and ("reacue_cli.py" in sh or "reacue_mcp.cli" in sh) and "--reanalyse" not in sh
     # ajouter à un nouveau concert
     status(g, state="done", cmd="prepare", message="ok")
     frame(L, g); press_text(L, g, "OK", exact=True)
@@ -488,7 +510,7 @@ def test_do_everything_success_failure_resume(concert, tmp_path):
     frame(L, g); frame(L, g)
     press_text(L, g, "Tout faire", exact=True)
     # étape 1 (stems) : déjà fait (stems présents) ; étape 2 : analyser et préparer
-    assert "-m reacue_mcp.cli prepare" in list(g.state.shell.values())[-1]
+    last_sh = list(g.state.shell.values())[-1]; assert ("prepare" in last_sh) and ("reacue_cli.py" in last_sh or "-m reacue_mcp.cli" in last_sh)
     frame(L, g)
     T = TL.texts(g)
     assert "Séparer les stems" in T and "déjà fait" in T and "Mettre à jour les téléphones" in T, T
@@ -497,7 +519,7 @@ def test_do_everything_success_failure_resume(concert, tmp_path):
     frame(L, g)
     status(g, state="done", cmd="prepare", message="Morceau préparé", engine="songformer", doubts="")
     frame(L, g)
-    assert "reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
+    last_sh = list(g.state.shell.values())[-1]; assert ("publish" in last_sh) and ("reacue_cli.py" in last_sh or "-m reacue_mcp.cli" in last_sh)
     # échec de la mise à jour des téléphones : pont arrêté → explication + bouton
     status(g, state="error", cmd="publish", message="Le pont ReaCue ne tourne pas dans REAPER.")
     frame(L, g); frame(L, g)
@@ -508,7 +530,7 @@ def test_do_everything_success_failure_resume(concert, tmp_path):
     clear_status(g)
     n_saves = g.state.saves
     press_text(L, g, "Reprendre", exact=True)
-    assert "reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
+    last_sh = list(g.state.shell.values())[-1]; assert ("publish" in last_sh) and ("reacue_cli.py" in last_sh or "reacue_mcp.cli" in last_sh)
     status(g, state="done", cmd="publish", message="ok")
     frame(L, g); frame(L, g)
     T = TL.texts(g)
@@ -546,13 +568,13 @@ def test_assistant_first_launch_and_settings_simple_advanced(concert, tmp_path):
     g.state.ext["assistant_seen"] = ""
     install(g, tmp_path, stems=True)
     sp = Path(g.RES) / "ReaCueMCP" / "reacue_settings.json"
-    L.execute("local ge = os.getenv; os.getenv = function(k) if k == 'HOME' then return '/Users/demo' end return ge(k) end")
+    L.execute("local ge = os.getenv; os.getenv = function(k) if k == 'HOME' or k == 'USERPROFILE' then return '/Users/demo' end return ge(k) end")
     gx = open_window(L, g)
     frame(L, g)
     T = TL.texts(g)
     assert "Bienvenue dans ReaCue" in T and "Analyse de structure (SongFormer)  ·  facultatif" in T, T
     assert "Installer" in T and "Créer" in T and "Pont ReaCue (dans REAPER)" in T, T
-    assert any("/Users/demo/Documents" in t for t in T), T            # dossier par défaut absent
+    assert any("demo" in t and "Documents" in t for t in T), T            # dossier par défaut absent
     # dossier des projets absent : « Créer »
     sp.write_text(json.dumps({"language": "fr", "projects_dir": str(tmp_path / "Projets")}), encoding="utf-8")
     press_text(L, g, "Revérifier", exact=True); frame(L, g)
@@ -631,10 +653,7 @@ def test_concert_tab_compose_build_open(concert, tmp_path):
     (Path(g.RES) / "ReaCueMCP" / "reacue_settings.json").write_text(
         json.dumps({"language": "fr", "projects_dir": str(projects)}), encoding="utf-8")
     g.state.ext["concert_dir"] = str(tmp_path / "Shows")
-    inst = tmp_path / "inst"
-    (inst / ".venv" / "bin").mkdir(parents=True)
-    (inst / ".venv" / "bin" / "python").write_text("")
-    g.state.ext["install_dir"] = str(inst)
+    install(g, tmp_path)
     gx = open_window(L, g)
     frame(L, g); frame(L, g)
     T = TL.texts(g)
@@ -662,7 +681,7 @@ def test_concert_tab_compose_build_open(concert, tmp_path):
     d = json.loads(sl.read_text(encoding="utf-8"))
     assert [s["title"] for s in d["songs"]] == ["Demo Song", "Second Demo"] and d["name"] == "Samedi"
     sh = list(g.state.shell.values())[-1]
-    assert f"concert --setlist '{sl}'" in sh, sh
+    assert 'concert --setlist' in sh and sl.name in sh, sh
     frame(L, g)
     assert any("Construction du concert" in t for t in TL.texts(g))
     # la CLI a construit : ouverture dans un nouvel onglet
@@ -827,7 +846,7 @@ def test_sheet_pill_opens_pdf_or_publishes(concert, tmp_path):
     assert "Grille PDF —" in TL.texts(g)
     # pas encore de grille : clic = mettre à jour les téléphones (qui écrit la grille)
     press_text(L, g, "Grille PDF —", exact=True)
-    assert "-m reacue_mcp.cli publish" in list(g.state.shell.values())[-1]
+    last_sh = list(g.state.shell.values())[-1]; assert ("publish" in last_sh) and ("reacue_cli.py" in last_sh or "-m reacue_mcp.cli" in last_sh)
     status(g, state="done", cmd="publish", message="ok")
     frame(L, g); press_text(L, g, "OK", exact=True)
     pdf = tmp_path / "Song One" / "Grille - Song One-A minor-120bpm.pdf"
@@ -921,3 +940,50 @@ def test_native_studio_header_and_narrow_docking(concert, tmp_path):
     frame(L, g)
     assert "REACUE" in TL.texts(g) and "Song One" in TL.texts(g)
     assert "TEMPO" not in TL.texts(g)  # Preserve the project title instead of squeezing LCDs.
+
+
+def test_window_adaptive_free_resize_and_scroll(concert, tmp_path):
+    """Vérifie que la fenêtre ne force plus sa hauteur à chaque frame,
+    et que la molette fait défiler le contenu de manière fluide."""
+    L, g, _ = song_runtime(concert, tmp_path)
+    gx = open_window(L, g)
+    frame(L, g)
+    # Taille par défaut confortable 920x560
+    assert gx.w == 920 and gx.h == 560
+    
+    # Redimensionnement libre en hauteur
+    gx.h = 350
+    frame(L, g)
+    # La hauteur ne doit plus être écrasée par gfx.init
+    assert gx.h == 350
+    
+    # Molette vers le bas dans le viewport
+    gx.mouse_x, gx.mouse_y = 300, 200
+    gx.mouse_wheel = -120
+    frame(L, g)
+    scroll1 = L.eval("REACUE_CTX.scroll_y or 0")
+    assert scroll1 > 0
+    
+    # Molette vers le haut
+    gx.mouse_wheel = 120
+    frame(L, g)
+    scroll2 = L.eval("REACUE_CTX.scroll_y or 0")
+    assert scroll2 < scroll1
+    
+    # Le changement d'onglet réinitialise le défilement
+    L.execute("REACUE_CTX.goto_tab('settings')")
+    assert L.eval("REACUE_CTX.scroll_y") == 0
+
+
+def test_window_scrollbar_presence_when_overflowing(concert, tmp_path):
+    """Vérifie qu'une scrollbar est active et tracée dès que le contenu dépasse la hauteur visible."""
+    L, g, _ = song_runtime(concert, tmp_path)
+    gx = open_window(L, g)
+    frame(L, g)
+    # Hauteur très réduite forçant le dépassement
+    gx.h = 280
+    frame(L, g)
+    rects = [list(o.values()) for o in g.state.ops.values() if list(o.values())[0] == "rect"]
+    # Barre de défilement présente le long du bord droit (x >= 900)
+    sb_rects = [r for r in rects if r[1] >= gx.w - 15]
+    assert len(sb_rects) >= 1

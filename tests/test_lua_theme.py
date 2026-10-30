@@ -54,7 +54,8 @@ gfx = { w = 500, h = 300, x = 0, y = 0 }
 function gfx.setfont(i, face, size, flags) font = { size or 14, flags or 0, face } end
 function gfx.measurestr(s)
   if not READY then return 0, 0 end
-  return utf8.len(s) * font[1] * (FONTW[font[3] or ""] or 0.55), font[1]
+  local l = utf8.len(s) or #s
+  return l * font[1] * (FONTW[font[3] or ""] or 0.55), font[1]
 end
 function gfx.set() end
 function gfx.drawstr(s) table.insert(DRAW, { s, font[3], font[1], font[2] }) end

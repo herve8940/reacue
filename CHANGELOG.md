@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — adaptive window resizing and vertical scrolling
+
+- ReaCue Lua window (`reaper/ReaCue.lua`): remove forced height overwrite on every frame, allowing users to freely resize and stretch the window.
+- Window geometry persistence: memorize custom dimensions in REAPER ExtState (`win_w`, `win_h`) with a 0.8s debounce (default 920×560, min 480×240).
+- Viewport clipping: content renders between sticky header and sticky help footer with `U.set_clip` and `U.over`, preventing off-screen interactions.
+- Vertical scrolling & scrollbar (`reaper/ReaCue_ui.lua`): add native proportional "Studio Pro" scrollbar (`U.scrollbar`) with mouse drag and page jump, plus smooth mouse wheel scrolling (`U.apply_wheel`) supporting both Windows notch steps (120) and macOS continuous/fractional trackpads.
+- Robust UTF-8 handling: fix `U.upper`, `U.para`, and `U.fit` under Windows CRT for accented and multibyte characters.
+
 ## Unreleased — native REAPER Studio styling
 
 - Apply the effective Studio graphite/orange/green palette to the native Lua window; prefer Studio font families with system fallbacks.

@@ -463,6 +463,7 @@ sur le bon (projet concert → **Scène**, projet d'un morceau → **Morceau**, 
 Clic droit : ancrer / détacher — ancrée en bas, elle devient une barre de transport compacte. Tant qu'elle
 est ouverte, quel que soit l'onglet, elle assure aussi l'arrêt automatique du concert, la boucle de
 répétition, la télécommande Régie et le profil « joué en live ».
+La fenêtre est librement redimensionnable : ses dimensions personnalisées sont mémorisées d'une session à l'autre. Lorsque le contenu dépasse la hauteur visible, une barre de défilement verticale apparaît et le défilement à la molette ou au trackpad s'active, tandis que l'en-tête et la barre d'aide restent toujours visibles.
 
 **Apparence « Studio pro »** (la même que ReaCue Studio) : fond sombre, panneaux nets, afficheurs LCD en police
 monospace (Menlo / Monaco sur Mac, Consolas sur Windows), titres en capitales condensées (Avenir Next

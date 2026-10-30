@@ -440,6 +440,9 @@ Action **ReaCue** (put it on a toolbar). One window, five tabs; it opens on the 
 (a concert project → **Stage**, a song project → **Song**, otherwise the last tab used). Right-click: dock /
 undock — docked low, it becomes a compact transport bar. While it is open, on any tab, it also runs the
 concert's automatic stop, the rehearsal loop, the Stage control remote and the “played live” profile.
+The window is freely resizable: custom dimensions are saved across sessions. When content overflows
+the visible height, a vertical scrollbar appears and smooth mouse wheel / trackpad scrolling is enabled,
+while the header and bottom help line remain pinned.
 
 **“Studio pro” look** (the same as ReaCue Studio): dark background, sharp panels, LCD readouts in a monospace
 font (Menlo / Monaco on Mac, Consolas on Windows), titles in condensed capitals (Avenir Next Condensed or
