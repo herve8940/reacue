@@ -1108,6 +1108,10 @@ python tools/make_screenshots.py           # regenerates docs/images/prompter_* 
 REACUE_SHOTS=docs/images python -m pytest tests/test_doc_screenshots.py   # regenerates docs/images/window_* (FR + EN)
 ```
 
+### AI Assistants & Vibe Coding
+
+If you develop or collaborate using an AI assistant (Cursor, GitHub Copilot, Claude Code, Windsurf, Aider, ChatGPT, Claude Web, etc.), please check the [`instructions/`](instructions/) directory. It contains ready-to-use configuration files and mandatory project rules (Windows/macOS installer parity, strict bilingual documentation, modular virtualenvs, `pytest` validation, and Pull Requests targeting the `DEV` branch).
+
 Project layout:
 
 | Path | Content |
