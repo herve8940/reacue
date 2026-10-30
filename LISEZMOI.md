@@ -1171,6 +1171,10 @@ python tools/make_screenshots.py           # régénère docs/images/prompter_* 
 REACUE_SHOTS=docs/images python -m pytest tests/test_doc_screenshots.py   # régénère docs/images/window_* (FR + EN)
 ```
 
+### Assistants IA & Vibe Coding
+
+Si vous développez ou collaborez à l'aide d'un assistant IA (Cursor, GitHub Copilot, Claude Code, Windsurf, Aider, ChatGPT, Claude Web, etc.), consultez le dossier [`instructions/`](instructions/). Il contient des fichiers de configuration prêts à l'emploi et les règles obligatoires du projet (parité des installateurs Windows/macOS, documentation bilingue stricte, virtualenvs modulaires, validation par `pytest`, et Pull Requests ciblant impérativement la branche `DEV`).
+
 Organisation :
 
 | Chemin | Contenu |
